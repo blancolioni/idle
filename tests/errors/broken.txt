@@ -1,0 +1,2 @@
+errors/broken.idl:6:35: error: missing ')'
+errors/broken.idl:10:5: error: end name should be Broken

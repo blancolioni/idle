@@ -1,0 +1,10 @@
+interface Executable is
+
+   function Launch
+     (Name  : String;
+      Image : interface Region;
+      Store : interface Storage;
+      Caps  : Capability_Array)
+     return interface Process;
+
+end Executable;
