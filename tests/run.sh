@@ -29,7 +29,8 @@ fi
 rm -rf output && mkdir output
 while read -r name; do
   [ -n "$name" ] || continue
-  if $idle --endpoints rose/interfaces.txt -o output "rose/$name.idl" \
+  if $idle --target kernel --endpoints rose/interfaces.txt -o output \
+       "rose/$name.idl" \
      && diff -u "expected/rose-interfaces-$name.ads" \
                 "output/rose-interfaces-$name.ads"; then
     pass "rose-interfaces-$name.ads"
@@ -37,6 +38,18 @@ while read -r name; do
     fail "rose-interfaces-$name.ads"
   fi
 done < generated.txt
+
+# An unknown target is rejected, naming the targets there are.
+
+if $idle --target nonesuch --endpoints rose/interfaces.txt -o output \
+     rose/timer.idl 2> output/target.txt; then
+  fail "unknown target (expected failure)"
+elif grep -q "unknown target nonesuch; the targets are kernel" \
+       output/target.txt; then
+  pass "unknown target"
+else
+  fail "unknown target (message)"
+fi
 
 # 3. Diagnostics
 

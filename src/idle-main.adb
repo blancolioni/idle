@@ -11,7 +11,8 @@ with Idle.Targets.Kernel;
 
 procedure Idle.Main is
 
-   --  idle [--syntax-only] [--endpoints FILE] [-o DIRECTORY] FILE.idl...
+   --  idle [--syntax-only] [--target TARGET] [--endpoints FILE]
+   --       [-o DIRECTORY] FILE.idl...
 
    use Ada.Strings.Unbounded;
 
@@ -23,6 +24,7 @@ procedure Idle.Main is
    Files            : String_Vectors.Vector;
    Endpoint_File    : Unbounded_String;
    Output_Directory : Unbounded_String := To_Unbounded_String (".");
+   Target           : Idle.Targets.Target := Idle.Targets.Default_Target;
    Syntax_Only      : Boolean := False;
    Arguments_OK     : Boolean := True;
    Index            : Positive := 1;
@@ -35,8 +37,13 @@ procedure Idle.Main is
    begin
       Ada.Text_IO.Put_Line
         (Ada.Text_IO.Standard_Error,
-         "usage: idle [--syntax-only] [--endpoints FILE] [-o DIRECTORY]"
-         & " FILE.idl...");
+         "usage: idle [--syntax-only] [--target TARGET] [--endpoints FILE]"
+         & " [-o DIRECTORY] FILE.idl...");
+      Ada.Text_IO.Put_Line
+        (Ada.Text_IO.Standard_Error,
+         "targets: " & Idle.Targets.Names
+         & " (default " & Idle.Targets.Name (Idle.Targets.Default_Target)
+         & ")");
    end Usage;
 
 begin
@@ -46,7 +53,9 @@ begin
       begin
          if Argument = "--syntax-only" then
             Syntax_Only := True;
-         elsif Argument = "--endpoints" or else Argument = "-o" then
+         elsif Argument = "--endpoints" or else Argument = "-o"
+           or else Argument = "--target"
+         then
             if Index = Ada.Command_Line.Argument_Count then
                Ada.Text_IO.Put_Line
                  (Ada.Text_IO.Standard_Error,
@@ -54,13 +63,23 @@ begin
                Arguments_OK := False;
             else
                Index := Index + 1;
-               if Argument = "-o" then
-                  Output_Directory :=
-                    To_Unbounded_String (Ada.Command_Line.Argument (Index));
-               else
-                  Endpoint_File :=
-                    To_Unbounded_String (Ada.Command_Line.Argument (Index));
-               end if;
+               declare
+                  Value : constant String := Ada.Command_Line.Argument (Index);
+               begin
+                  if Argument = "-o" then
+                     Output_Directory := To_Unbounded_String (Value);
+                  elsif Argument = "--target" then
+                     if not Idle.Targets.Find (Value, Target) then
+                        Ada.Text_IO.Put_Line
+                          (Ada.Text_IO.Standard_Error,
+                           "idle: unknown target " & Value
+                           & "; the targets are " & Idle.Targets.Names);
+                        Arguments_OK := False;
+                     end if;
+                  else
+                     Endpoint_File := To_Unbounded_String (Value);
+                  end if;
+               end;
             end if;
          elsif Argument'Length > 0 and then Argument (Argument'First) = '-'
          then
@@ -104,8 +123,11 @@ begin
             if not Syntax_Only
               and then Idle.Diagnostics.Error_Count = Errors_Before
             then
-               Idle.Targets.Kernel.Generate_Interface_Package
-                 (Item, Endpoints, To_String (Output_Directory));
+               case Target is
+                  when Idle.Targets.Kernel_Target =>
+                     Idle.Targets.Kernel.Generate_Interface_Package
+                       (Item, Endpoints, To_String (Output_Directory));
+               end case;
             end if;
          end;
       end loop;
