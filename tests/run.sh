@@ -2,8 +2,8 @@
 # idle's tests. Run from anywhere; uses ../bin/idle.
 #
 #  1. Parse every interface in rose/, a snapshot of Rose's interfaces/.
-#  2. Generate the kernel-target package for each interface in
-#     generated.txt, and compare it with expected/.
+#  2. Generate the kernel-target packages for each interface in
+#     generated.txt, and compare them with expected/
 #  3. Run idle on each file in errors/ and compare its diagnostics with
 #     the .txt file of the same name.
 #  4. Compile every expected Ada file with GNAT's style checks, as strict
@@ -29,14 +29,22 @@ fi
 rm -rf output && mkdir output
 while read -r name; do
   [ -n "$name" ] || continue
-  if $idle --target kernel --endpoints rose/interfaces.txt -o output \
-       "rose/$name.idl" \
-     && diff -u "expected/rose-interfaces-$name.ads" \
-                "output/rose-interfaces-$name.ads"; then
-    pass "rose-interfaces-$name.ads"
-  else
-    fail "rose-interfaces-$name.ads"
+  if ! $idle --target kernel --endpoints rose/interfaces.txt -o output \
+         "rose/$name.idl"; then
+    fail "kernel target for $name"
+    continue
   fi
+  for file in "rose-interfaces-$name.ads" \
+              "rose-interfaces-$name-client.ads" \
+              "rose-interfaces-$name-client.adb" \
+              "rose-interfaces-$name-server.ads" \
+              "rose-interfaces-$name-server.adb"; do
+    if diff -u "expected/$file" "output/$file"; then
+      pass "$file"
+    else
+      fail "$file"
+    fi
+  done
 done < generated.txt
 
 # An unknown target is rejected, naming the targets there are.

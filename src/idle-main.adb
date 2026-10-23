@@ -125,7 +125,7 @@ begin
             then
                case Target is
                   when Idle.Targets.Kernel_Target =>
-                     Idle.Targets.Kernel.Generate_Interface_Package
+                     Idle.Targets.Kernel.Generate
                        (Item, Endpoints, To_String (Output_Directory));
                end case;
             end if;
