@@ -1,0 +1,10 @@
+interface.Orphan_Interface = 16#3333_0000_0001#
+interface.Loop_A_Interface = 16#3333_0000_0002#
+interface.Loop_B_Interface = 16#3333_0000_0003#
+interface.Named_Interface = 16#3333_0000_0004#
+interface.Twice_Interface = 16#3333_0000_0005#
+Orphan.Reset = 16#4444_0000_0001#
+Loop_A.Reset = 16#4444_0000_0002#
+Loop_B.Stop = 16#4444_0000_0003#
+Named.Badge = 16#4444_0000_0004#
+Twice.Badge = 16#4444_0000_0005#

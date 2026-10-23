@@ -1,0 +1,7 @@
+interface.Named_Interface = 16#1111_0000_0001#
+interface.Counter_Interface = 16#1111_0000_0002#
+interface.Meter_Interface = 16#1111_0000_0003#
+Named.Badge = 16#2222_0000_0001#
+Counter.Increment = 16#2222_0000_0002#
+Counter.Value = 16#2222_0000_0003#
+Meter.Reset = 16#2222_0000_0004#

@@ -4,12 +4,14 @@ with Syn;
 with Syn.Factory;
 with Syn.Units;
 
+with Idle.Hierarchy;
 with Idle.Names;
 with Idle.Targets.Kernel.Support;
 
 package body Idle.Targets.Kernel.Server is
 
    use Ada.Strings.Unbounded;
+   use type Idle.Hierarchy.Interface_Vectors.Vector;
    use Idle.Targets.Kernel.Support;
    use type Syn.Node_Array;
 
@@ -29,8 +31,12 @@ package body Idle.Targets.Kernel.Server is
       Package_Name   : constant String :=
         "Rose.Interfaces." & Ada_Name & ".Server";
       Interface_Id   : constant String := Interface_Name (Item);
-      Get_Interface  : constant String :=
-        "Handle_Get_" & Ada_Name & "_Interface";
+      Subprograms    : constant Idle.Syntax.Subprogram_Vectors.Vector :=
+        Support.Subprograms (Item);
+      Interfaces     : constant Idle.Hierarchy.Interface_Vectors.Vector :=
+        Idle.Hierarchy.Ancestors (Item) & Item;
+      --  The server handles the interface id of each ancestor as well as
+      --  its own.
 
       F              : Syn.Factory.Factory;
       Spec_Context   : Context_List;
@@ -50,6 +56,14 @@ package body Idle.Targets.Kernel.Server is
       --  The object that holds the cap of the endpoint of Subprogram, if
       --  the server is not instanced.
 
+      function Get_Interface
+        (For_Interface : Idle.Syntax.Interface_Declaration)
+         return String
+      is ("Handle_Get_" & Idle.Names.Ada_Name (To_String (For_Interface.Name))
+          & "_Interface");
+      --  The procedure that replies to an invocation of the interface id
+      --  of For_Interface.
+
       function Handle (Subprogram : Idle.Syntax.Subprogram) return String
       is ("Handle_" & Name (Subprogram));
       --  The procedure that decodes an invocation of Subprogram.
@@ -64,7 +78,8 @@ package body Idle.Targets.Kernel.Server is
       --  The object that holds the server's handler for Subprogram.
 
       procedure Add_Attach;
-      procedure Add_Get_Interface;
+      procedure Add_Get_Interface
+        (For_Interface : Idle.Syntax.Interface_Declaration);
       procedure Add_Getters;
       procedure Add_Handler (Subprogram : Idle.Syntax.Subprogram);
       procedure Add_Handler_Type (Subprogram : Idle.Syntax.Subprogram);
@@ -81,7 +96,8 @@ package body Idle.Targets.Kernel.Server is
       --  Register Handler for invocations of Endpoint.
 
       function Registrations return Syn.Node_Array;
-      --  Register the handler of the interface, and of each subprogram.
+      --  Register the handler of each interface id, and of each
+      --  subprogram.
 
       ----------------
       -- Add_Attach --
@@ -89,9 +105,10 @@ package body Idle.Targets.Kernel.Server is
 
       --  Create_Server and Attach_Interface do the same: register the
       --  handlers and, unless the server is instanced, create a single
-      --  endpoint for each subprogram. An instanced server creates an
-      --  endpoint for each identifier when it is first asked for the
-      --  interface (see Add_Get_Interface).
+      --  endpoint for each subprogram, and an anonymous endpoint for each
+      --  interface id. An instanced server creates an endpoint for each
+      --  identifier when it is first asked for the interface (see
+      --  Add_Get_Interface).
 
       procedure Add_Attach is
 
@@ -120,20 +137,24 @@ package body Idle.Targets.Kernel.Server is
               (Specification => Attach,
                Statements    =>
                  Keep_Handlers
-                 & [Register (Interface_Id, Get_Interface),
-                    F.New_If
+                 & [for For_Interface of Interfaces =>
+                      Register (Interface_Name (For_Interface),
+                                Get_Interface (For_Interface))]
+                 & [F.New_If
                       (Condition =>
                          F.New_Unary ("not", F.New_Name ("Instanced")),
                        Then_Part =>
-                         [for Subprogram of Item.Subprograms =>
+                         [for Subprogram of Subprograms =>
                             F.New_Assignment
                               (F.New_Name (Cap_Object (Subprogram)),
                                F.New_Call
                                  (Server & "Create_Endpoint",
                                   [F.New_Name (Endpoint_Name (Subprogram))]))]
-                         & [Call (Server & "Create_Anonymous_Endpoint",
-                                  [F.New_Name (Interface_Id)])])]
-                 & [for Subprogram of Item.Subprograms =>
+                         & [for For_Interface of Interfaces =>
+                              Call (Server & "Create_Anonymous_Endpoint",
+                                    [F.New_Name
+                                       (Interface_Name (For_Interface))])])]
+                 & [for Subprogram of Subprograms =>
                       Register (Endpoint_Name (Subprogram),
                                 Handle (Subprogram))]));
 
@@ -144,7 +165,7 @@ package body Idle.Targets.Kernel.Server is
                Statements    =>
                  [Call ("Attach_Interface",
                         [F.New_Name ("Server_Context")]
-                        & [for Subprogram of Item.Subprograms =>
+                        & [for Subprogram of Subprograms =>
                              F.New_Name (Name (Subprogram))]
                         & [F.New_Name ("Instanced")])]));
       end Add_Attach;
@@ -153,14 +174,22 @@ package body Idle.Targets.Kernel.Server is
       -- Add_Get_Interface --
       -----------------------
 
-      --  Invoking the interface cap returns a cap for each subprogram. An
+      --  Invoking the interface cap of For_Interface returns a cap for each
+      --  of its subprograms, including those it inherits. They are sent in
+      --  the order of Support.Subprograms (For_Interface), which is the
+      --  order of the index constants in its interface package. An
       --  instanced server has one endpoint for each subprogram and
       --  identifier, which it creates the first time it is needed.
 
-      procedure Add_Get_Interface is
+      procedure Add_Get_Interface
+        (For_Interface : Idle.Syntax.Interface_Declaration)
+      is
+         Sent : constant Idle.Syntax.Subprogram_Vectors.Vector :=
+           Support.Subprograms (For_Interface);
+
          Specification : constant not null Syn.Node_Access :=
            F.New_Procedure
-             (Get_Interface,
+             (Get_Interface (For_Interface),
               [F.New_Parameter
                  ("Parameters", F.New_Name (Record_Name), Syn.In_Out_Mode)]);
 
@@ -219,7 +248,7 @@ package body Idle.Targets.Kernel.Server is
       begin
          Handler_Specs.Append (Specification);
 
-         if not Item.Subprograms.Is_Empty then
+         if not Sent.Is_Empty then
             Declarations.Append
               (F.New_Use ("Rose.Capabilities.Capability", Use_Type => True));
             Declarations.Append
@@ -236,14 +265,14 @@ package body Idle.Targets.Kernel.Server is
            (Call (System_Calls & "Initialize_Reply",
                   [F.New_Name ("Parameters"),
                    F.New_Name ("Parameters.Reply_Cap")]));
-         for Subprogram of Item.Subprograms loop
+         for Subprogram of Sent loop
             for Statement of Send_Cap (Subprogram) loop
                Statements.Append (Statement);
             end loop;
          end loop;
 
          Bodies.Add
-           (Get_Interface,
+           (Get_Interface (For_Interface),
             F.New_Subprogram_Body
               (Specification => Specification,
                Declarations  => Declarations.To_Array,
@@ -256,7 +285,7 @@ package body Idle.Targets.Kernel.Server is
 
       procedure Add_Getters is
       begin
-         for Subprogram of Item.Subprograms loop
+         for Subprogram of Subprograms loop
             declare
                Getter : constant String := "Get_" & Cap_Object (Subprogram);
                Specification : constant not null Syn.Node_Access :=
@@ -436,7 +465,7 @@ package body Idle.Targets.Kernel.Server is
               (Specification => Specification,
                Statements    =>
                  Keep_Handlers
-                 & [for Subprogram of Item.Subprograms =>
+                 & [for Subprogram of Subprograms =>
                       F.New_Assignment
                         (F.New_Name (Cap_Object (Subprogram)),
                          F.New_Call
@@ -475,7 +504,7 @@ package body Idle.Targets.Kernel.Server is
 
       function Handler_Parameters return Syn.Node_Array is
       begin
-         return [for Subprogram of Item.Subprograms =>
+         return [for Subprogram of Subprograms =>
                    F.New_Parameter
                      (Name (Subprogram),
                       F.New_Name (Handler_Type (Subprogram)))];
@@ -487,7 +516,7 @@ package body Idle.Targets.Kernel.Server is
 
       function Keep_Handlers return Syn.Node_Array is
       begin
-         return [for Subprogram of Item.Subprograms =>
+         return [for Subprogram of Subprograms =>
                    F.New_Assignment
                      (F.New_Name (Local (Subprogram)),
                       F.New_Name (Name (Subprogram)))];
@@ -513,8 +542,10 @@ package body Idle.Targets.Kernel.Server is
 
       function Registrations return Syn.Node_Array is
       begin
-         return [Register (Interface_Id, Get_Interface)]
-           & [for Subprogram of Item.Subprograms =>
+         return [for For_Interface of Interfaces =>
+                   Register (Interface_Name (For_Interface),
+                             Get_Interface (For_Interface))]
+           & [for Subprogram of Subprograms =>
                 Register (Endpoint_Name (Subprogram), Handle (Subprogram))];
       end Registrations;
 
@@ -526,15 +557,17 @@ package body Idle.Targets.Kernel.Server is
         (F.New_Object
            ("Server_Instance", F.New_Name ("Rose.Server.Server_Instance")));
 
-      for Subprogram of Item.Subprograms loop
+      for Subprogram of Subprograms loop
          Add_Handler_Type (Subprogram);
       end loop;
       Add_Attach;
       Add_Publish;
       Add_Getters;
 
-      Add_Get_Interface;
-      for Subprogram of Item.Subprograms loop
+      for For_Interface of Interfaces loop
+         Add_Get_Interface (For_Interface);
+      end loop;
+      for Subprogram of Subprograms loop
          Add_Handler (Subprogram);
       end loop;
 

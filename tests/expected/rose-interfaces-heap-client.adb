@@ -89,10 +89,10 @@ package body Rose.Interfaces.Heap.Client is
       Client.Is_Open := False;
       Client.Interface_Cap := Interface_Cap;
       Rose.System_Calls.Initialize_Send (Params, Interface_Cap);
-      Rose.System_Calls.Receive_Caps (Params, 2);
+      Rose.System_Calls.Receive_Caps (Params, Subprogram_Count);
       Rose.System_Calls.Invoke_Capability (Params);
-      Client.Current_Bound := Params.Caps (0);
-      Client.Request_New_Bound := Params.Caps (1);
+      Client.Current_Bound := Params.Caps (Current_Bound_Index);
+      Client.Request_New_Bound := Params.Caps (Request_New_Bound_Index);
       Client.Is_Open := True;
    end Open;
 

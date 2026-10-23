@@ -1,0 +1,5 @@
+interface Loop_A : Loop_B is
+
+   procedure Reset;
+
+end Loop_A;
