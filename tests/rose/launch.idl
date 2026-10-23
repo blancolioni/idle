@@ -1,0 +1,8 @@
+interface Launch is
+
+   function Launch
+     (Caps        : Capability_Array;
+      Environment : Storage_Array)
+     return interface Process;
+
+end Launch;

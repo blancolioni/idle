@@ -1,0 +1,21 @@
+interface Segment is
+
+   Segment_Readable    : constant := 1;
+   Segment_Writable    : constant := 2;
+   Segment_Executable  : constant := 4;
+   Segment_Resizable   : constant := 8;
+   Segment_Initialized : constant := 16;
+
+   procedure Add_Segment
+     (Virtual_Base  : Word;
+      Virtual_Bound : Word;
+      Region        : interface Region;
+      Region_Offset : Word;
+      Flags         : Word);
+
+   procedure Add_Nonpersistent_Segment
+     (Virtual_Base  : Word;
+      Virtual_Bound : Word;
+      Flags         : Word);
+
+end Segment;

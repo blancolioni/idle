@@ -1,0 +1,10 @@
+interface Broken is
+
+   --  The ')' is missing, and the end name is wrong. The parser should
+   --  report both, and recover to parse Reset.
+
+   function Count (Item : Natural return Natural;
+
+   procedure Reset;
+
+end Wrong;
