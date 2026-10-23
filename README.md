@@ -15,9 +15,14 @@ This is the first version, which replaces the current compiler step by step (see
 ## Usage
 
 ```sh
-idle --endpoints interfaces.txt -o generated timer.idl
+idle --target kernel --endpoints interfaces.txt -o generated timer.idl
 idle --syntax-only *.idl
 ```
+
+- `--target TARGET` chooses the code generator. `kernel`, the default, is the only target so far.
+- `--endpoints FILE` is the endpoint id table, needed unless `--syntax-only` is given.
+- `-o DIRECTORY` is where generated files are written (default: the current directory).
+- `--syntax-only` parses the files and reports errors, without generating anything.
 
 ## Building and testing
 
