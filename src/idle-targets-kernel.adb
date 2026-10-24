@@ -1,4 +1,3 @@
-with Ada.Containers;
 with Ada.Strings.Unbounded;
 
 with Syn;
@@ -11,11 +10,11 @@ with Idle.Names;
 with Idle.Targets.Kernel.Client;
 with Idle.Targets.Kernel.Server;
 with Idle.Targets.Kernel.Support;
+with Idle.Targets.Kernel.Types;
 
 package body Idle.Targets.Kernel is
 
    use Ada.Strings.Unbounded;
-   use type Ada.Containers.Count_Type;
    use type Syn.Node_Array;
    use Idle.Targets.Kernel.Support;
 
@@ -86,13 +85,28 @@ package body Idle.Targets.Kernel is
                    What & " are not yet supported by the kernel target");
          end Unsupported;
 
+         Declared : Idle.Syntax.String_Vectors.Vector;
+         --  The keys of the types declared so far.
+
       begin
-         if Declaration.Types.Length > 0 then
-            Unsupported ("type declarations");
-         end if;
-         if Declaration.Constants.Length > 0 then
-            Unsupported ("constant declarations");
-         end if;
+         for Declared_Type of Declaration.Types loop
+            if Declared_Type.Kind in Idle.Syntax.Derived_Type then
+               declare
+                  Parent : constant String :=
+                    To_String (Declared_Type.Parent.Name);
+               begin
+                  if Declared_Type.Parent.Is_Interface then
+                     Unsupported ("types derived from interfaces");
+                  elsif Standard_Type (Parent) = ""
+                    and then not Declared.Contains (Idle.Names.Key (Parent))
+                  then
+                     Error (Declaration.File_Name, Declared_Type.Position,
+                            "unknown parent type " & Parent);
+                  end if;
+               end;
+            end if;
+            Declared.Append (Idle.Names.Key (To_String (Declared_Type.Name)));
+         end loop;
 
          if not Endpoints.Has_Interface_Id (Name) then
             Error (Declaration.File_Name, Declaration.Position,
@@ -106,7 +120,16 @@ package body Idle.Targets.Kernel is
       ------------------
 
       procedure Check_Member (Member : Idle.Hierarchy.Member) is
-         Subprogram : Idle.Syntax.Subprogram renames Member.Subprogram;
+         use all type Types.Category;
+         use type Idle.Syntax.Parameter_Mode;
+
+         Subprogram     : Idle.Syntax.Subprogram renames Member.Subprogram;
+         Buffers        : Natural := 0;
+         Cap_Array_Seen : Boolean := False;
+
+         function Unsupported_Text (What : String) return String
+         is (What & " are not yet supported by the kernel target");
+
       begin
          if not Endpoints.Has_Method_Id
            (To_String (Member.Declared_In), To_String (Subprogram.Name))
@@ -119,27 +142,74 @@ package body Idle.Targets.Kernel is
          end if;
 
          for Parameter of Subprogram.Parameters loop
-            if Parameter.Mode not in Idle.Syntax.In_Mode then
-               Error (Member.File_Name, Parameter.Position,
-                      "out and in out parameters are not yet supported "
-                      & "by the kernel target");
-            elsif Kind (Parameter.Of_Type) not in Word_Type | Capability_Type
-            then
-               Error (Member.File_Name, Parameter.Position,
-                      (if Parameter.Of_Type.Is_Interface
-                       then "interface parameters"
-                       else "parameters of type "
-                            & To_String (Parameter.Of_Type.Name))
-                      & " are not yet supported by the kernel target");
-            end if;
+            declare
+               Info      : constant Types.Type_Info :=
+                 Types.Resolve (Member.Owner, Parameter.Of_Type);
+               Type_Name : constant String :=
+                 To_String (Parameter.Of_Type.Name);
+            begin
+               if Info.Category = Unknown then
+                  Error (Member.File_Name, Parameter.Position,
+                         "unknown type " & Type_Name);
+               else
+                  if Cap_Array_Seen
+                    and then Info.Category in
+                      Capability_Value | Interface_Value
+                      | Capability_Array_Value
+                  then
+                     Error (Member.File_Name, Parameter.Position,
+                            "a capability array must be the last "
+                            & "capability parameter");
+                  end if;
+
+                  if Info.Category = Capability_Array_Value then
+                     Cap_Array_Seen := True;
+                  end if;
+
+                  if Types.Is_Buffer (Info) then
+                     Buffers := Buffers + 1;
+                  end if;
+
+                  if Parameter.Mode /= Idle.Syntax.In_Mode
+                    and then Info.Category in
+                      Capability_Value | Interface_Value
+                      | Capability_Array_Value | String_Value
+                  then
+                     Error (Member.File_Name, Parameter.Position,
+                            Unsupported_Text
+                              ("out and in out parameters of type "
+                               & Type_Name));
+                  end if;
+               end if;
+            end;
          end loop;
 
-         if Subprogram.Is_Function
-           and then Kind (Subprogram.Result) = Other_Type
-         then
+         if Subprogram.Is_Function then
+            declare
+               Info      : constant Types.Type_Info :=
+                 Types.Resolve (Member.Owner, Subprogram.Result);
+               Type_Name : constant String :=
+                 To_String (Subprogram.Result.Name);
+            begin
+               case Info.Category is
+                  when Unknown =>
+                     Error (Member.File_Name, Subprogram.Position,
+                            "unknown type " & Type_Name);
+                  when Capability_Array_Value | Storage_Value =>
+                     Error (Member.File_Name, Subprogram.Position,
+                            Unsupported_Text ("results of type " & Type_Name));
+                  when String_Value =>
+                     Buffers := Buffers + 1;
+                  when others =>
+                     null;
+               end case;
+            end;
+         end if;
+
+         if Buffers > 1 then
             Error (Member.File_Name, Subprogram.Position,
-                   "results of type " & To_String (Subprogram.Result.Name)
-                   & " are not yet supported by the kernel target");
+                   "only one string or array can be passed in an "
+                   & "invocation");
          end if;
       end Check_Member;
 
@@ -243,6 +313,99 @@ package body Idle.Targets.Kernel is
 
       Members : constant Idle.Hierarchy.Member_Vectors.Vector :=
         Idle.Hierarchy.Members (Item);
+      Context : Context_List;
+
+      function Types_And_Constants return Syn.Node_Array;
+      --  Item's constants and types, in the order they are declared.
+
+      -------------------------
+      -- Types_And_Constants --
+      -------------------------
+
+      function Types_And_Constants return Syn.Node_Array is
+         use Idle.Syntax;
+
+         function Before (Left, Right : Source_Position) return Boolean
+         is (Left.Line < Right.Line
+             or else (Left.Line = Right.Line
+                      and then Left.Column < Right.Column));
+
+         function Constant_Node
+           (Item : Constant_Declaration)
+            return not null Syn.Node_Access
+         is (F.New_Object
+               (Name          => Idle.Names.Ada_Name (To_String (Item.Name)),
+                Initial_Value => F.New_Name (To_String (Item.Value)),
+                Is_Constant   => True));
+
+         function Type_Node
+           (Item : Type_Declaration)
+            return not null Syn.Node_Access;
+
+         ---------------
+         -- Type_Node --
+         ---------------
+
+         function Type_Node
+           (Item : Type_Declaration)
+            return not null Syn.Node_Access
+         is
+            Type_Name : constant String :=
+              Idle.Names.Ada_Name (To_String (Item.Name));
+         begin
+            case Item.Kind is
+               when Range_Type =>
+                  return F.New_Range_Type
+                    (Type_Name,
+                     F.New_Name (To_String (Item.Low)),
+                     F.New_Name (To_String (Item.High)));
+               when Derived_Type =>
+                  declare
+                     Parent : constant String := To_String (Item.Parent.Name);
+                  begin
+                     if Standard_Type (Parent) = "" then
+                        return F.New_Derived_Type
+                          (Type_Name,
+                           F.New_Name (Idle.Names.Ada_Name (Parent)));
+                     else
+                        if Standard_Package (Parent) /= "" then
+                           Context.Add (Standard_Package (Parent));
+                        end if;
+                        return F.New_Derived_Type
+                          (Type_Name, F.New_Name (Standard_Type (Parent)));
+                     end if;
+                  end;
+               when Enumeration_Type =>
+                  return F.New_Enumeration_Type
+                    (Type_Name,
+                     [for Literal of Item.Literals =>
+                        F.New_Name (Idle.Names.Ada_Name (Literal))]);
+            end case;
+         end Type_Node;
+
+         Result        : Node_List;
+         Next_Constant : Positive := 1;
+         Next_Type     : Positive := 1;
+
+      begin
+         while Next_Constant <= Item.Constants.Last_Index
+           or else Next_Type <= Item.Types.Last_Index
+         loop
+            if Next_Type > Item.Types.Last_Index
+              or else (Next_Constant <= Item.Constants.Last_Index
+                       and then Before
+                                  (Item.Constants (Next_Constant).Position,
+                                   Item.Types (Next_Type).Position))
+            then
+               Result.Append (Constant_Node (Item.Constants (Next_Constant)));
+               Next_Constant := Next_Constant + 1;
+            else
+               Result.Append (Type_Node (Item.Types (Next_Type)));
+               Next_Type := Next_Type + 1;
+            end if;
+         end loop;
+         return Result.To_Array;
+      end Types_And_Constants;
 
       --  The interface ids of the ancestors and of Item, the endpoint id
       --  of each subprogram, and then the position of each subprogram's
@@ -251,7 +414,8 @@ package body Idle.Targets.Kernel is
       --  than assuming an order.
 
       Declarations : constant Syn.Node_Array :=
-        [for Ancestor of Idle.Hierarchy.Ancestors (Item) =>
+        Types_And_Constants
+        & [for Ancestor of Idle.Hierarchy.Ancestors (Item) =>
            Endpoint_Constant
              (Interface_Name (Ancestor),
               Endpoints.Interface_Id (To_String (Ancestor.Name)))]
@@ -277,9 +441,10 @@ package body Idle.Targets.Kernel is
               Is_Constant   => True)];
 
    begin
+      Context.Add ("Rose.Objects");
       Syn.Units.Write
         (F.New_Compilation_Unit
-           (Context => [F.New_With ("Rose.Objects")],
+           (Context => Context.To_Array (F),
             Item    =>
               F.New_Package
                 (Name        =>

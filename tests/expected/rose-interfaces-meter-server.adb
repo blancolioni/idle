@@ -468,7 +468,7 @@ package body Rose.Interfaces.Meter.Server is
         (Server_Context,
          Reset_Endpoint,
          Handle_Reset'Access);
-      Rose.Server.Publish_Interface (1, Published_Cap);
+      Rose.Server.Publish_Interface (Published_Cap);
    end Publish_Interface;
 
 end Rose.Interfaces.Meter.Server;

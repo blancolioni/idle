@@ -7,6 +7,7 @@ with Syn.Units;
 with Idle.Hierarchy;
 with Idle.Names;
 with Idle.Targets.Kernel.Support;
+with Idle.Targets.Kernel.Types;
 
 package body Idle.Targets.Kernel.Server is
 
@@ -40,6 +41,9 @@ package body Idle.Targets.Kernel.Server is
 
       F              : Syn.Factory.Factory;
       Spec_Context   : Context_List;
+      Body_Context   : Context_List;
+      Uses_Words     : Boolean := False;
+      --  True if the body converts values to Rose.Words types.
       Public_Part    : Node_List;
       Objects        : Node_List;
       Handler_Specs  : Node_List;
@@ -81,8 +85,17 @@ package body Idle.Targets.Kernel.Server is
       procedure Add_Get_Interface
         (For_Interface : Idle.Syntax.Interface_Declaration);
       procedure Add_Getters;
-      procedure Add_Handler (Subprogram : Idle.Syntax.Subprogram);
-      procedure Add_Handler_Type (Subprogram : Idle.Syntax.Subprogram);
+      procedure Add_Handler (Member : Idle.Hierarchy.Member);
+      procedure Add_Handler_Type (Member : Idle.Hierarchy.Member);
+
+      function Server_Type_Of (Info : Types.Type_Info) return String
+      is (if Info.Category in Types.Interface_Value
+          then Capability_Name
+          else To_String (Info.Ada_Name));
+      --  The Ada type of Info in the server, where an interface is a cap.
+
+      procedure Use_Type (Info : Types.Type_Info);
+      --  Add what the server needs to name values of type Info.
       procedure Add_Publish;
 
       function Handler_Parameters return Syn.Node_Array;
@@ -305,15 +318,63 @@ package body Idle.Targets.Kernel.Server is
       -----------------
 
       --  Words arrive in data words and caps in cap slots, each in the
-      --  order of the parameters. A function's result is sent back as a
-      --  data word or a cap; an interface result is a cap.
+      --  order of the parameters; a string or array is the invocation
+      --  buffer, used in place, and a cap array is every remaining cap.
+      --  The reply holds the out values, in order, then the function
+      --  result; a cap or interface result is a cap, and a string result
+      --  is written to the buffer and its length sent as a data word.
 
-      procedure Add_Handler (Subprogram : Idle.Syntax.Subprogram) is
+      procedure Add_Handler (Member : Idle.Hierarchy.Member) is
+         use all type Types.Category;
+         use type Idle.Syntax.Parameter_Mode;
+
+         Subprogram     : Idle.Syntax.Subprogram renames Member.Subprogram;
+         Result         : constant Types.Type_Info :=
+           (if Subprogram.Is_Function
+            then Types.Resolve (Member.Owner, Subprogram.Result)
+            else (others => <>));
+         Returns_String : constant Boolean :=
+           Subprogram.Is_Function and then Result.Category = String_Value;
+
          Specification : constant not null Syn.Node_Access :=
            F.New_Procedure
              (Handle (Subprogram),
               [F.New_Parameter
                  ("Parameters", F.New_Name (Record_Name), Syn.In_Out_Mode)]);
+
+         function Parameters return not null Syn.Node_Access
+         is (F.New_Name ("Parameters"));
+
+         function Literal (Value : Natural) return not null Syn.Node_Access
+         is (F.New_Integer_Literal (Long_Long_Long_Integer (Value)));
+
+         function Buffer_Overlay
+           (Object_Name : String;
+            Object_Type : not null Syn.Node_Access)
+            return not null Syn.Node_Access
+         is (F.New_Object
+               (Object_Name, Object_Type,
+                Aspects =>
+                  [F.New_Aspect ("Import"),
+                   F.New_Aspect
+                     ("Address", F.New_Name ("Parameters.Buffer_Address"))]));
+         --  An object of type Object_Type at the invocation buffer.
+
+         function String_Type return not null Syn.Node_Access
+         is (F.New_Call
+               ("String",
+                [F.New_Binary
+                   (Literal (1), "..",
+                    F.New_Call
+                      ("Natural",
+                       [F.New_Name ("Parameters.Buffer_Length")]))]));
+
+         function Storage_Type return not null Syn.Node_Access
+         is (F.New_Call
+               ("System.Storage_Elements.Storage_Array",
+                [F.New_Binary
+                   (Literal (1), "..",
+                    F.New_Name ("Parameters.Buffer_Length"))]));
 
          Declarations : Node_List;
          Arguments    : Node_List;
@@ -327,42 +388,87 @@ package body Idle.Targets.Kernel.Server is
 
          for Parameter of Subprogram.Parameters loop
             declare
-               Value : Syn.Node_Access;
+               Info        : constant Types.Type_Info :=
+                 Types.Resolve (Member.Owner, Parameter.Of_Type);
+               Object_Name : constant String := Name (Parameter);
+               Object_Type : constant not null Syn.Node_Access :=
+                 F.New_Name (Server_Type_Of (Info));
+               Argument    : Syn.Node_Access := F.New_Name (Object_Name);
             begin
-               if Kind (Parameter.Of_Type) = Word_Type then
-                  Value :=
-                    F.New_Call
-                      (System_Calls & "Get_Word_32",
-                       [F.New_Name ("Parameters"),
-                        F.New_Integer_Literal
-                          (Long_Long_Long_Integer (Next_Word))]);
-                  Next_Word := Next_Word + 1;
-               else
-                  Value :=
-                    F.New_Call
-                      ("Parameters.Caps",
-                       [F.New_Integer_Literal
-                          (Long_Long_Long_Integer (Next_Cap))]);
-                  Next_Cap := Next_Cap + 1;
-               end if;
-
-               Declarations.Append
-                 (F.New_Object
-                    (Name (Parameter),
-                     F.New_Name (Ada_Type (Parameter.Of_Type)),
-                     Value,
-                     Is_Constant => True));
-               Arguments.Append (F.New_Name (Name (Parameter)));
+               case Info.Category is
+                  when Word_Value | Double_Word_Value =>
+                     if Parameter.Mode = Idle.Syntax.Out_Mode then
+                        Declarations.Append
+                          (F.New_Object (Object_Name, Object_Type));
+                     else
+                        Declarations.Append
+                          (F.New_Object
+                             (Object_Name, Object_Type,
+                              Types.Decode
+                                (F, Info, "Parameters", Next_Word),
+                              Is_Constant =>
+                                Parameter.Mode = Idle.Syntax.In_Mode));
+                        Next_Word := Next_Word + Types.Words (Info);
+                     end if;
+                  when Capability_Value | Interface_Value =>
+                     Declarations.Append
+                       (F.New_Object
+                          (Object_Name, Object_Type,
+                           F.New_Call
+                             ("Parameters.Caps", [Literal (Next_Cap)]),
+                           Is_Constant => True));
+                     Next_Cap := Next_Cap + 1;
+                  when Capability_Array_Value =>
+                     Declarations.Append
+                       (F.New_Object
+                          (Object_Name,
+                           F.New_Call
+                             (Capability_Name & "_Array",
+                              [F.New_Binary
+                                 (Literal (1), "..",
+                                  F.New_Name
+                                    ("Rose.Invocation.Max_Capabilities"))])));
+                     Declarations.Append
+                       (F.New_Object
+                          (Object_Name & "_Count", F.New_Name ("Natural"),
+                           F.New_Call
+                             (System_Calls & "Copy_Received_Caps",
+                              [Parameters, Literal (Next_Cap),
+                               F.New_Name (Object_Name)]),
+                           Is_Constant => True));
+                     Argument :=
+                       F.New_Call
+                         (Object_Name,
+                          [F.New_Binary
+                             (Literal (1), "..",
+                              F.New_Name (Object_Name & "_Count"))]);
+                  when String_Value =>
+                     Declarations.Append
+                       (Buffer_Overlay (Object_Name, String_Type));
+                  when Storage_Value =>
+                     Declarations.Append
+                       (Buffer_Overlay (Object_Name, Storage_Type));
+                  when Unknown =>
+                     raise Program_Error;
+               end case;
+               Arguments.Append (Argument);
             end;
          end loop;
 
-         if Subprogram.Is_Function then
+         if Returns_String then
+            Declarations.Append
+              (F.New_Object
+                 ("Last", F.New_Name ("Natural"), Literal (0)));
+            Declarations.Append (Buffer_Overlay ("Result", String_Type));
+            Arguments.Append (F.New_Name ("Result"));
+            Arguments.Append (F.New_Name ("Last"));
+         end if;
+
+         if Subprogram.Is_Function and then not Returns_String then
             Declarations.Append
               (F.New_Object
                  ("Result",
-                  F.New_Name
-                    (if Kind (Subprogram.Result) = Word_Type
-                     then Word_Name else Capability_Name),
+                  F.New_Name (Server_Type_Of (Result)),
                   F.New_Call (Local (Subprogram), Arguments.To_Array),
                   Is_Constant => True));
          else
@@ -372,15 +478,38 @@ package body Idle.Targets.Kernel.Server is
 
          Statements.Append
            (Call (System_Calls & "Initialize_Reply",
-                  [F.New_Name ("Parameters"),
-                   F.New_Name ("Parameters.Reply_Cap")]));
+                  [Parameters, F.New_Name ("Parameters.Reply_Cap")]));
+
+         for Parameter of Subprogram.Parameters loop
+            if Parameter.Mode /= Idle.Syntax.In_Mode then
+               declare
+                  Info : constant Types.Type_Info :=
+                    Types.Resolve (Member.Owner, Parameter.Of_Type);
+               begin
+                  if not Types.Is_Buffer (Info) then
+                     Statements.Append
+                       (Types.Send (F, Info, "Parameters", Name (Parameter)));
+                  end if;
+               end;
+            end if;
+         end loop;
 
          if Subprogram.Is_Function then
-            Statements.Append
-              (Call (System_Calls
-                     & (if Kind (Subprogram.Result) = Word_Type
-                        then "Send_Word" else "Send_Cap"),
-                     [F.New_Name ("Parameters"), F.New_Name ("Result")]));
+            case Result.Category is
+               when Word_Value | Double_Word_Value =>
+                  Statements.Append
+                    (Types.Send (F, Result, "Parameters", "Result"));
+               when Capability_Value | Interface_Value =>
+                  Statements.Append
+                    (Call (System_Calls & "Send_Cap",
+                           [Parameters, F.New_Name ("Result")]));
+               when String_Value =>
+                  Statements.Append
+                    (Call (System_Calls & "Send_Word",
+                           [Parameters, F.New_Name ("Last")]));
+               when Capability_Array_Value | Storage_Value | Unknown =>
+                  raise Program_Error;
+            end case;
          end if;
 
          Bodies.Add
@@ -395,36 +524,62 @@ package body Idle.Targets.Kernel.Server is
       -- Add_Handler_Type --
       ----------------------
 
-      procedure Add_Handler_Type (Subprogram : Idle.Syntax.Subprogram) is
-         Parameters : constant Syn.Node_Array :=
-           [F.New_Parameter
-              ("Id", F.New_Name ("Rose.Objects.Capability_Identifier"))]
-           & [for Parameter of Subprogram.Parameters =>
-                F.New_Parameter
-                  (Name (Parameter),
-                   F.New_Name (Ada_Type (Parameter.Of_Type)))];
+      procedure Add_Handler_Type (Member : Idle.Hierarchy.Member) is
+         Subprogram     : Idle.Syntax.Subprogram renames Member.Subprogram;
+         Result         : constant Types.Type_Info :=
+           (if Subprogram.Is_Function
+            then Types.Resolve (Member.Owner, Subprogram.Result)
+            else (others => <>));
+         Returns_String : constant Boolean :=
+           Subprogram.Is_Function
+           and then Result.Category in Types.String_Value;
+
+         function Mode
+           (Parameter : Idle.Syntax.Parameter)
+            return Syn.Parameter_Mode
+         is (case Parameter.Mode is
+                when Idle.Syntax.In_Mode     => Syn.In_Mode,
+                when Idle.Syntax.Out_Mode    => Syn.Out_Mode,
+                when Idle.Syntax.In_Out_Mode => Syn.In_Out_Mode);
+
+         Parameters : Node_List;
       begin
+         Parameters.Append
+           (F.New_Parameter
+              ("Id", F.New_Name ("Rose.Objects.Capability_Identifier")));
          for Parameter of Subprogram.Parameters loop
-            if Kind (Parameter.Of_Type) = Word_Type then
-               Spec_Context.Add ("Rose.Words");
-            end if;
+            declare
+               Info : constant Types.Type_Info :=
+                 Types.Resolve (Member.Owner, Parameter.Of_Type);
+            begin
+               Use_Type (Info);
+               Parameters.Append
+                 (F.New_Parameter
+                    (Name (Parameter), F.New_Name (Server_Type_Of (Info)),
+                     Mode (Parameter)));
+            end;
          end loop;
 
-         if Subprogram.Is_Function then
-            if Kind (Subprogram.Result) = Word_Type then
-               Spec_Context.Add ("Rose.Words");
-            end if;
+         if Returns_String then
+            Parameters.Append
+              (F.New_Parameter
+                 ("Result", F.New_Name ("String"), Syn.Out_Mode));
+            Parameters.Append
+              (F.New_Parameter
+                 ("Last", F.New_Name ("Natural"), Syn.Out_Mode));
+         end if;
+
+         if Subprogram.Is_Function and then not Returns_String then
+            Use_Type (Result);
             Public_Part.Append
               (F.New_Access_Function_Type
                  (Handler_Type (Subprogram),
-                  F.New_Name
-                    (if Kind (Subprogram.Result) = Word_Type
-                     then Word_Name else Capability_Name),
-                  Parameters));
+                  F.New_Name (Server_Type_Of (Result)),
+                  Parameters.To_Array));
          else
             Public_Part.Append
               (F.New_Access_Procedure_Type
-                 (Handler_Type (Subprogram), Parameters));
+                 (Handler_Type (Subprogram), Parameters.To_Array));
          end if;
 
          Objects.Append
@@ -477,8 +632,7 @@ package body Idle.Targets.Kernel.Server is
                                    [F.New_Name (Interface_Id)]))]
                  & Registrations
                  & [Call (Server & "Publish_Interface",
-                          [F.New_Integer_Literal (1),
-                           F.New_Name ("Published_Cap")])]));
+                          [F.New_Name ("Published_Cap")])]));
       end Add_Publish;
 
       ----------
@@ -549,6 +703,24 @@ package body Idle.Targets.Kernel.Server is
                 Register (Endpoint_Name (Subprogram), Handle (Subprogram))];
       end Registrations;
 
+      --------------
+      -- Use_Type --
+      --------------
+
+      procedure Use_Type (Info : Types.Type_Info) is
+         Unit : constant String :=
+           (if Info.Category in Types.Interface_Value
+            then "Rose.Capabilities"
+            else To_String (Info.Unit));
+      begin
+         if Unit /= "" and then Unit /= "Rose.Interfaces." & Ada_Name then
+            Spec_Context.Add (Unit);
+         end if;
+         if Types.Uses_Words_Unit (Info) then
+            Uses_Words := True;
+         end if;
+      end Use_Type;
+
    begin
       Spec_Context.Add ("Rose.Capabilities");
       Spec_Context.Add ("Rose.Server");
@@ -557,8 +729,8 @@ package body Idle.Targets.Kernel.Server is
         (F.New_Object
            ("Server_Instance", F.New_Name ("Rose.Server.Server_Instance")));
 
-      for Subprogram of Subprograms loop
-         Add_Handler_Type (Subprogram);
+      for Member of Idle.Hierarchy.Members (Item) loop
+         Add_Handler_Type (Member);
       end loop;
       Add_Attach;
       Add_Publish;
@@ -567,9 +739,15 @@ package body Idle.Targets.Kernel.Server is
       for For_Interface of Interfaces loop
          Add_Get_Interface (For_Interface);
       end loop;
-      for Subprogram of Subprograms loop
-         Add_Handler (Subprogram);
+      for Member of Idle.Hierarchy.Members (Item) loop
+         Add_Handler (Member);
       end loop;
+
+      Body_Context.Add ("Rose.Invocation");
+      Body_Context.Add ("Rose.System_Calls");
+      if Uses_Words and then not Spec_Context.Contains ("Rose.Words") then
+         Body_Context.Add ("Rose.Words");
+      end if;
 
       Syn.Units.Write
         (F.New_Compilation_Unit
@@ -582,9 +760,7 @@ package body Idle.Targets.Kernel.Server is
 
       Syn.Units.Write
         (F.New_Compilation_Unit
-           (Context =>
-              [F.New_With ("Rose.Invocation"),
-               F.New_With ("Rose.System_Calls")],
+           (Context => Body_Context.To_Array (F),
             Item    =>
               F.New_Package_Body
                 (Name         => Package_Name,

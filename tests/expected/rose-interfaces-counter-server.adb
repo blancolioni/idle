@@ -310,7 +310,7 @@ package body Rose.Interfaces.Counter.Server is
         (Server_Context,
          Value_Endpoint,
          Handle_Value'Access);
-      Rose.Server.Publish_Interface (1, Published_Cap);
+      Rose.Server.Publish_Interface (Published_Cap);
    end Publish_Interface;
 
 end Rose.Interfaces.Counter.Server;

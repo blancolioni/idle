@@ -1,6 +1,15 @@
 with Rose.Objects;
+with Rose.Words;
 
 package Rose.Interfaces.Named is
+
+   Max_Badges       : constant := 16;
+
+   type Badge_Count is range 0 .. 16;
+
+   type Badge_Serial is new Rose.Words.Word_64;
+
+   type Badge_Colour is (Red, Green, Blue);
 
    Named_Interface  : constant Rose.Objects.Endpoint_Id := 16#1111_0000_0001#;
 

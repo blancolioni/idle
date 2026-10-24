@@ -20,6 +20,8 @@ package Idle.Hierarchy is
       --  The name of the interface that declares Subprogram.
       File_Name   : Unbounded_String;
       --  The file that declares it.
+      Owner       : Idle.Syntax.Interface_Declaration;
+      --  The interface that declares it, whose types it can name.
       Subprogram  : Idle.Syntax.Subprogram;
    end record;
 

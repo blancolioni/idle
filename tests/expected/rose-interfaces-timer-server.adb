@@ -139,7 +139,7 @@ package body Rose.Interfaces.Timer.Server is
         (Server_Context,
          Set_Timer_Endpoint,
          Handle_Set_Timer'Access);
-      Rose.Server.Publish_Interface (1, Published_Cap);
+      Rose.Server.Publish_Interface (Published_Cap);
    end Publish_Interface;
 
 end Rose.Interfaces.Timer.Server;
