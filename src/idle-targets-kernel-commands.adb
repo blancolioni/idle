@@ -65,6 +65,7 @@ package body Idle.Targets.Kernel.Commands is
       use all type Idle.Commands.Argument_Type;
       use all type Idle.Commands.Place_Kind;
       use all type Idle.Commands.Stream;
+      use all type Idle.Commands.System_Cap;
 
       F             : Syn.Factory.Factory;
       Name          : constant String := To_String (Item.Name);
@@ -74,10 +75,14 @@ package body Idle.Targets.Kernel.Commands is
         Idle.Commands.Signature (Item);
 
       Parameters    : Node_List;
+      Declarations  : Node_List;
       Statements    : Node_List;
       Arguments     : Node_List;
+      Results       : Node_List;
+      System_Args   : Node_List;
+      Spec_Context  : Context_List;
+      Main_Context  : Context_List;
       Lines         : Unbounded_String;
-      Uses_Lists    : Boolean := False;
 
       function Call_Node return not null Syn.Node_Access
       is (F.New_Name ("Call"));
@@ -102,11 +107,163 @@ package body Idle.Targets.Kernel.Commands is
           (Item.Aspects, "Name",
            Idle.Names.Key (Idle.Commands.Simple_Name (Name)));
 
+      procedure Add_Value (Placed : Idle.Commands.Placed_Argument);
+      --  Pass the scalar, string or list argument Placed to the command,
+      --  and, if it is out or in out, send its value back as a result.
+
       function Fill (Text : String) return String;
       --  Text, with {command} replaced by the registered name.
 
       procedure Line (Key, Value : String);
       --  Add a line to the metadata, unless Value is empty.
+
+      ---------------
+      -- Add_Value --
+      ---------------
+
+      procedure Add_Value (Placed : Idle.Commands.Placed_Argument) is
+         use all type Idle.Syntax.Parameter_Mode;
+         Argument      : Idle.Syntax.Argument renames Placed.Argument;
+         Argument_Name : constant String := To_String (Argument.Name);
+         Last_Name     : constant String := Argument_Name & "_Last";
+         Where         : Idle.Commands.Place renames Placed.Where;
+         Answer        : Idle.Commands.Place renames Placed.Result;
+         Kind          : constant Idle.Commands.Argument_Type := Placed.Kind;
+         Ada_Type      : constant String :=
+           (case Kind is
+               when Boolean_Argument     => "Boolean",
+               when Natural_Argument     => "Natural",
+               when Positive_Argument    => "Positive",
+               when String_Argument      => "String",
+               when String_List_Argument => "Rose.Command_Line.String_List",
+               when Interface_Argument | Other_Argument => "");
+         Mode          : constant Syn.Parameter_Mode :=
+           (case Argument.Mode is
+               when In_Mode     => Syn.In_Mode,
+               when Out_Mode    => Syn.Out_Mode,
+               when In_Out_Mode => Syn.In_Out_Mode);
+         Value         : Syn.Node_Access := null;
+
+         function Text return not null Syn.Node_Access
+         is (F.New_Call
+               (Argument_Name,
+                [F.New_Binary (Literal (1), "..", F.New_Name (Last_Name))]));
+         --  The text of a string result.
+
+      begin
+         if Where.Kind /= No_Place then
+            case Kind is
+               when Boolean_Argument =>
+                  Value := F.New_Call
+                    (Launch & "Boolean_Argument",
+                     [Call_Node, Literal (Where.Index)]);
+               when Natural_Argument =>
+                  Value := F.New_Call
+                    (Launch & "Natural_Argument",
+                     [Call_Node, Literal (Where.Index)]);
+               when Positive_Argument =>
+                  Value := F.New_Call
+                    ("Positive",
+                     [F.New_Call
+                        (Launch & "Natural_Argument",
+                         [Call_Node, Literal (Where.Index)])]);
+               when String_Argument =>
+                  Value := F.New_Call
+                    (Launch & "String_Argument",
+                     [Call_Node, Literal (Where.Index)]);
+               when String_List_Argument =>
+                  Value := F.New_Call
+                    (Launch & "String_List_Argument",
+                     [Call_Node, Literal (Where.Index),
+                      Literal (Where.Count)]);
+                  Spec_Context.Add ("Rose.Command_Line");
+               when Interface_Argument | Other_Argument =>
+                  raise Program_Error;
+            end case;
+         end if;
+
+         --  Ada allows a default only for an in parameter; the shell
+         --  supplies the default of an in out argument.
+
+         Parameters.Append
+           (F.New_Parameter
+              (Argument_Name, F.New_Name (Ada_Type), Mode,
+               Default =>
+                 (if Argument.Mode /= In_Mode or else not Argument.Has_Default
+                  then null
+                  elsif Kind = String_Argument
+                  then F.New_String_Literal
+                         (To_String (Argument.Default.Text))
+                  else F.New_Name (To_String (Argument.Default.Text)))));
+
+         if Argument.Mode = In_Mode then
+            Arguments.Append (F.New_Named (Argument_Name, Value));
+            return;
+         end if;
+
+         --  An out or in out value is a local of the main, passed to the
+         --  command and then sent back in the reply. An in out value is set
+         --  after the launch invocation is received, so not in the
+         --  local's declaration.
+
+         if Kind = String_Argument then
+            Parameters.Append
+              (F.New_Parameter
+                 (Last_Name, F.New_Name ("Natural"), Syn.Out_Mode));
+            Declarations.Append
+              (F.New_Object
+                 (Argument_Name,
+                  F.New_Call
+                    ("String",
+                     [F.New_Binary
+                        (Literal (1), "..",
+                         F.New_Name (Launch & "Max_Result_Length"))])));
+            Declarations.Append
+              (F.New_Object (Last_Name, F.New_Name ("Natural")));
+            if Argument.Mode = In_Out_Mode then
+               Statements.Append
+                 (F.New_Block
+                    (Declarations =>
+                       [F.New_Object
+                          (Argument_Name & "_Value", F.New_Name ("String"),
+                           Value, Is_Constant => True)],
+                     Statements   =>
+                       [F.New_Assignment
+                          (F.New_Name (Last_Name),
+                           F.New_Attribute
+                             (F.New_Name (Argument_Name & "_Value"),
+                              "Length")),
+                        F.New_Assignment
+                          (Text, F.New_Name (Argument_Name & "_Value"))]));
+            end if;
+            Arguments.Append
+              (F.New_Named (Argument_Name, F.New_Name (Argument_Name)));
+            Arguments.Append
+              (F.New_Named (Last_Name, F.New_Name (Last_Name)));
+            Results.Append
+              (F.New_Call_Statement
+                 (F.New_Call
+                    (Launch & "String_Result",
+                     [Call_Node, Literal (Answer.Index), Text])));
+         else
+            Declarations.Append
+              (F.New_Object (Argument_Name, F.New_Name (Ada_Type)));
+            if Argument.Mode = In_Out_Mode then
+               Statements.Append
+                 (F.New_Assignment (F.New_Name (Argument_Name), Value));
+            end if;
+            Arguments.Append
+              (F.New_Named (Argument_Name, F.New_Name (Argument_Name)));
+            Results.Append
+              (F.New_Call_Statement
+                 (F.New_Call
+                    (Launch
+                     & (if Kind = Boolean_Argument then "Boolean_Result"
+                        else "Natural_Result"),
+                     [Call_Node, Literal (Answer.Index),
+                      F.New_Name (Argument_Name)])));
+         end if;
+      end Add_Value;
 
       ----------
       -- Fill --
@@ -167,9 +324,52 @@ package body Idle.Targets.Kernel.Commands is
 
       for Placed of Signature loop
          declare
-            Argument : Idle.Syntax.Argument renames Placed.Argument;
+            use all type Idle.Syntax.Parameter_Mode;
+            Argument      : Idle.Syntax.Argument renames Placed.Argument;
             Argument_Name : constant String := To_String (Argument.Name);
-            Where    : Idle.Commands.Place renames Placed.Where;
+            Where         : Idle.Commands.Place renames Placed.Where;
+            Answer        : Idle.Commands.Place renames Placed.Result;
+            Type_Name     : constant String :=
+              To_String (Argument.Of_Type.Name);
+
+            function Client_Unit return String
+            is ("Rose.Interfaces." & Idle.Names.Ada_Name (Type_Name)
+                & ".Client");
+
+            function Client_Type return String
+            is (Client_Unit & "." & Idle.Names.Ada_Name (Type_Name)
+                & "_Client");
+
+            function Cap_Argument return not null Syn.Node_Access
+            is (F.New_Call
+                  (Launch & "Cap_Argument",
+                   [Call_Node, Literal (Where.Index)]));
+
+            procedure Use_Client;
+            --  Pass the cap of the argument to the command as a client of
+            --  its interface.
+
+            ----------------
+            -- Use_Client --
+            ----------------
+
+            procedure Use_Client is
+            begin
+               Spec_Context.Add (Client_Unit);
+               Main_Context.Add (Client_Unit);
+               Declarations.Append
+                 (F.New_Object (Argument_Name, F.New_Name (Client_Type)));
+               Statements.Append
+                 (F.New_Call_Statement
+                    (F.New_Call
+                       (Client_Unit & ".Open",
+                        [F.New_Name (Argument_Name), Cap_Argument])));
+               Arguments.Append
+                 (F.New_Named (Argument_Name, F.New_Name (Argument_Name)));
+               Parameters.Append
+                 (F.New_Parameter (Argument_Name, F.New_Name (Client_Type)));
+            end Use_Client;
+
          begin
             if Placed.Stream /= No_Stream then
                Line ("stream",
@@ -189,19 +389,59 @@ package body Idle.Targets.Kernel.Commands is
                               when Error_Stream  => "Standard_Error",
                               when No_Stream     => ""),
                         [Call_Node, Literal (Where.Index)])));
+
+            elsif Placed.System /= No_System_Cap then
+               Line ("system",
+                     (case Placed.System is
+                         when Create_Endpoint_Cap => "create-endpoint",
+                         when Delete_Cap          => "delete-cap",
+                         when Rescind_Cap         => "rescind-cap",
+                         when No_System_Cap       => "")
+                     & Natural'Image (Where.Index));
+               System_Args.Append
+                 (F.New_Named
+                    ((case Placed.System is
+                         when Create_Endpoint_Cap => "Create_Endpoint",
+                         when Delete_Cap          => "Delete_Cap",
+                         when Rescind_Cap         => "Rescind_Cap",
+                         when No_System_Cap       => ""),
+                     Cap_Argument));
+
+            elsif Placed.Role /= Null_Unbounded_String then
+               Line ("cap",
+                     Argument_Name & " " & Type_Name
+                     & Natural'Image (Where.Index));
+               Use_Client;
+
             else
                Line ("argument", Argument_Name);
-               Line ("type", To_String (Argument.Of_Type.Name));
-               Line ("place",
-                     (case Where.Kind is
-                         when Word_Place => "word",
-                         when Cap_Place  => "cap",
-                         when Item_Place => "item",
-                         when List_Place => "list")
-                     & Natural'Image (Where.Index)
-                     & (if Where.Kind = List_Place
-                        then " word" & Natural'Image (Where.Count)
-                        else ""));
+               Line ("type",
+                     (if Placed.Kind = Interface_Argument
+                      then "interface " & Type_Name
+                      else Type_Name));
+               if Argument.Mode /= In_Mode then
+                  Line ("mode",
+                        (if Argument.Mode = Out_Mode then "out"
+                         else "in out"));
+               end if;
+               if Where.Kind /= No_Place then
+                  Line ("place",
+                        (case Where.Kind is
+                            when Word_Place => "word",
+                            when Cap_Place  => "cap",
+                            when Item_Place => "item",
+                            when List_Place => "list",
+                            when No_Place   => "")
+                        & Natural'Image (Where.Index)
+                        & (if Where.Kind = List_Place
+                           then " word" & Natural'Image (Where.Count)
+                           else ""));
+               end if;
+               if Answer.Kind /= No_Place then
+                  Line ("result",
+                        (if Answer.Kind = Word_Place then "word" else "item")
+                        & Natural'Image (Answer.Index));
+               end if;
                if Argument.Has_Default then
                   Line ("default", To_String (Argument.Default.Text));
                end if;
@@ -221,79 +461,33 @@ package body Idle.Targets.Kernel.Commands is
                        (Argument.Aspects, "Help",
                         Argument_Name & " (no help)"));
 
-               declare
-                  Kind  : constant Idle.Commands.Argument_Type :=
-                    Idle.Commands.Type_Of (Argument);
-                  Value : Syn.Node_Access;
-                  Ada_Type : constant String :=
-                    (case Kind is
-                        when Boolean_Argument     => "Boolean",
-                        when Natural_Argument     => "Natural",
-                        when Positive_Argument    => "Positive",
-                        when String_Argument      => "String",
-                        when String_List_Argument =>
-                          "Rose.Command_Line.String_List",
-                        when Other_Argument       => "");
-               begin
-                  case Kind is
-                     when Boolean_Argument =>
-                        Value := F.New_Call
-                          (Launch & "Boolean_Argument",
-                           [Call_Node, Literal (Where.Index)]);
-                     when Natural_Argument =>
-                        Value := F.New_Call
-                          (Launch & "Natural_Argument",
-                           [Call_Node, Literal (Where.Index)]);
-                     when Positive_Argument =>
-                        Value := F.New_Call
-                          ("Positive",
-                           [F.New_Call
-                              (Launch & "Natural_Argument",
-                               [Call_Node, Literal (Where.Index)])]);
-                     when String_Argument =>
-                        Value := F.New_Call
-                          (Launch & "String_Argument",
-                           [Call_Node, Literal (Where.Index)]);
-                     when String_List_Argument =>
-                        Value := F.New_Call
-                          (Launch & "String_List_Argument",
-                           [Call_Node, Literal (Where.Index),
-                            Literal (Where.Count)]);
-                        Uses_Lists := True;
-                     when Other_Argument =>
-                        raise Program_Error;
-                  end case;
-                  Arguments.Append (F.New_Named (Argument_Name, Value));
-
-                  Parameters.Append
-                    (F.New_Parameter
-                       (Argument_Name, F.New_Name (Ada_Type),
-                        Default =>
-                          (if not Argument.Has_Default then null
-                           elsif Kind = String_Argument
-                           then F.New_String_Literal
-                                  (To_String (Argument.Default.Text))
-                           else F.New_Name
-                                  (To_String (Argument.Default.Text)))));
-               end;
+               if Placed.Kind = Interface_Argument then
+                  --  The mode is the right that the shell grants to the
+                  --  cap, so the command takes the client as in.
+                  Use_Client;
+               else
+                  Add_Value (Placed);
+               end if;
             end if;
          end;
       end loop;
 
+      if System_Args.To_Array'Length > 0 then
+         Main_Context.Add ("Rose.System_Calls");
+         Statements.Append
+           (F.New_Call_Statement
+              (F.New_Call
+                 ("Rose.System_Calls.Use_Capabilities",
+                  System_Args.To_Array)));
+      end if;
+
       --  The procedure spec.
 
-      declare
-         Context : Context_List;
-      begin
-         if Uses_Lists then
-            Context.Add ("Rose.Command_Line");
-         end if;
-         Syn.Units.Write
-           (F.New_Compilation_Unit
-              (Context => Context.To_Array (F),
-               Item    => F.New_Procedure (Name, Parameters.To_Array)),
-            Output_Directory);
-      end;
+      Syn.Units.Write
+        (F.New_Compilation_Unit
+           (Context => Spec_Context.To_Array (F),
+            Item    => F.New_Procedure (Name, Parameters.To_Array)),
+         Output_Directory);
 
       --  The metadata.
 
@@ -317,23 +511,28 @@ package body Idle.Targets.Kernel.Commands is
       end;
 
       --  The main: receive the launch invocation, give the standard
-      --  streams to the run-time system, call the command, and complete.
-      --  It withs the metadata only to link it into the executable.
+      --  streams and system caps to the run-time system, open the
+      --  interface arguments, call the command, and complete with its
+      --  results. It withs the metadata only to link it into the
+      --  executable.
+
+      Main_Context.Add ("Rose.Command_Line.Launch");
+      Main_Context.Add (Name);
+      Main_Context.Add (Metadata_Name);
 
       Syn.Units.Write
         (F.New_Compilation_Unit
            (Context =>
-              [F.New_With ("Rose.Command_Line.Launch"),
-               F.New_With (Name),
-               F.New_With (Metadata_Name),
-               F.New_Raw ("pragma Unreferenced (" & Metadata_Name & ");")],
+              Main_Context.To_Array (F)
+              & [F.New_Raw ("pragma Unreferenced (" & Metadata_Name & ");")],
             Item    =>
               F.New_Subprogram_Body
                 (Specification => F.New_Procedure (Main_Name),
                  Declarations  =>
                    [F.New_Object
                       ("Call",
-                       F.New_Name (Launch & "Launch_Call"))],
+                       F.New_Name (Launch & "Launch_Call"))]
+                   & Declarations.To_Array,
                  Statements    =>
                    [F.New_Call_Statement
                       (F.New_Call
@@ -342,8 +541,9 @@ package body Idle.Targets.Kernel.Commands is
                    & [F.New_Call_Statement
                         (if Arguments.To_Array'Length = 0
                          then F.New_Name (Name)
-                         else F.New_Call (Name, Arguments.To_Array)),
-                      F.New_Call_Statement
+                         else F.New_Call (Name, Arguments.To_Array))]
+                   & Results.To_Array
+                   & [F.New_Call_Statement
                         (F.New_Call (Launch & "Complete", [Call_Node]))])),
          Output_Directory);
    end Generate_Command;

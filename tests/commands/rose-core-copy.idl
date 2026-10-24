@@ -1,0 +1,22 @@
+--  Interface arguments, out and in out arguments, and roles whose members
+--  are not standard streams (idle#27).
+
+command Rose.Core.Copy : Standard_Error, Logging, Create_Endpoint, Delete_Cap
+  with Summary => "Copy a file."
+is
+   Source : in File
+     with Help => "the file to copy";
+   Target : out File
+     with Help => "the new file";
+   Root : in out Directory
+     with Help => "where the new file goes";
+   Count : out Natural
+     with Help => "the number of bytes copied";
+   Verbose : in out Boolean := False
+     with Short_Name => 'v',
+          Help       => "report progress";
+   Report : out String
+     with Help => "a summary of the copy";
+   Note : in out String := "none"
+     with Help => "a note, which the copy may change";
+end Rose.Core.Copy;

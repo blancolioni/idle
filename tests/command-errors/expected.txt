@@ -2,7 +2,6 @@ command-errors/rose-core-bad.idl:1:1: error: Stream_Writer is not a role, so it 
 command-errors/rose-core-bad.idl:2:19: error: the value of Summary is a string
 command-errors/rose-core-bad.idl:3:8: error: unknown aspect Colour of a command
 command-errors/rose-core-bad.idl:5:4: error: Help is reserved: the shell handles --help and --version itself
-command-errors/rose-core-bad.idl:6:4: error: out and in out arguments are not yet supported
 command-errors/rose-core-bad.idl:7:4: error: a String_List argument takes the remaining positional words, so it has no short name
 command-errors/rose-core-bad.idl:9:4: error: only one argument can be a String_List
 command-errors/rose-core-bad.idl:9:26: error: a String_List argument has no default
@@ -14,7 +13,7 @@ command-errors/rose-core-bad.idl:14:4: error: a positional argument cannot follo
 command-errors/rose-core-bad.idl:14:23: error: the default of a Positive argument is an integer literal in its range
 command-errors/rose-core-bad.idl:15:4: error: a positional argument cannot follow the String_List argument, which takes the remaining words
 command-errors/rose-core-bad.idl:15:22: error: the default of a String argument is a string
-command-errors/rose-core-bad.idl:16:4: error: arguments of type Rectangle are not yet supported
+command-errors/rose-core-bad.idl:16:4: error: unknown type Rectangle: an argument is a Boolean, Natural, Positive, String, String_List or interface
 command-errors/rose-core-bad.idl:17:4: error: there is more than one argument called Twice
 command-errors/rose-core-bad.idl:19:4: error: there is more than one argument called twice
 command-errors/rose-core-bad.idl:20:25: error: another argument has the short name 'n'
@@ -26,6 +25,8 @@ command-errors/nowhere-thing.idl:1:1: error: package Nowhere not found: no comma
 command-errors/bad_role.idl:1:1: error: Stream_Writer is not a role, so it cannot be inherited by a role
 command-errors/bad_role.idl:3:4: error: there is more than one member called log
 command-errors/bad_role.idl:4:4: error: unknown interface Nonesuch
-command-errors/rose-core-logger.idl:1:1: error: the member Logging of the role Logging is not yet supported: only the standard streams are
+command-errors/rose-core-modes.idl:2:27: error: an out argument has no default
+command-errors/rose-core-modes.idl:3:4: error: a String_List argument is always in
+command-errors/rose-core-modes.idl:4:20: error: an interface argument has no default
 command-errors/rose-core.idl:2:19: error: the value of Version is a string
 command-errors/rose-core.idl:3:8: error: unknown aspect Colour of a package
