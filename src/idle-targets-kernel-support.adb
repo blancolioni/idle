@@ -8,6 +8,14 @@ package body Idle.Targets.Kernel.Support is
 
    use Ada.Strings.Unbounded;
 
+   procedure Find_Standard
+     (Name     : String;
+      Ada_Name : out Unbounded_String;
+      Unit     : out Unbounded_String);
+   --  The Ada type of the predefined IDL type Name and the unit that
+   --  declares it, or "" for both if there is no such type. Unit is "" for
+   --  a type declared in Standard.
+
    --------------
    -- Ada_Type --
    --------------
@@ -70,6 +78,45 @@ package body Idle.Targets.Kernel.Support is
       return Name (Item) & "_Endpoint";
    end Endpoint_Name;
 
+   -------------------
+   -- Find_Standard --
+   -------------------
+
+   procedure Find_Standard
+     (Name     : String;
+      Ada_Name : out Unbounded_String;
+      Unit     : out Unbounded_String)
+   is
+      Key : constant String := Idle.Names.Key (Name);
+
+      procedure Set (Type_Name, Unit_Name : String);
+
+      ---------
+      -- Set --
+      ---------
+
+      procedure Set (Type_Name, Unit_Name : String) is
+      begin
+         Ada_Name := To_Unbounded_String (Type_Name);
+         Unit := To_Unbounded_String (Unit_Name);
+      end Set;
+
+   begin
+      Set ("", "");
+      if Key in "word" | "word_8" | "word_16" | "word_32" | "word_64" then
+         Set ("Rose.Words." & Idle.Names.Ada_Name (Name), "Rose.Words");
+      elsif Key in "natural" | "positive" | "boolean" then
+         Set (Idle.Names.Ada_Name (Name), "");
+      elsif Key = "object_id" then
+         Set ("Rose.Objects.Object_Id", "Rose.Objects");
+      elsif Key = "capability" then
+         Set ("Rose.Capabilities.Capability", "Rose.Capabilities");
+      elsif Key in "storage_count" | "storage_offset" then
+         Set ("System.Storage_Elements." & Idle.Names.Ada_Name (Name),
+              "System.Storage_Elements");
+      end if;
+   end Find_Standard;
+
    ----------------
    -- Index_Name --
    ----------------
@@ -125,6 +172,28 @@ package body Idle.Targets.Kernel.Support is
    begin
       return Idle.Names.Ada_Name (To_String (Item.Name));
    end Name;
+
+   ----------------------
+   -- Standard_Package --
+   ----------------------
+
+   function Standard_Package (Name : String) return String is
+      Ada_Name, Unit : Unbounded_String;
+   begin
+      Find_Standard (Name, Ada_Name, Unit);
+      return To_String (Unit);
+   end Standard_Package;
+
+   -------------------
+   -- Standard_Type --
+   -------------------
+
+   function Standard_Type (Name : String) return String is
+      Ada_Name, Unit : Unbounded_String;
+   begin
+      Find_Standard (Name, Ada_Name, Unit);
+      return To_String (Ada_Name);
+   end Standard_Type;
 
    -----------------
    -- Subprograms --

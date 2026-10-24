@@ -24,6 +24,14 @@ private package Idle.Targets.Kernel.Support is
    Word_Name       : constant String := "Rose.Words.Word";
    Record_Name     : constant String := "Rose.Invocation.Invocation_Record";
 
+   function Standard_Type (Name : String) return String;
+   --  The Ada type of the predefined IDL type Name, or "" if there is no
+   --  such type.
+
+   function Standard_Package (Name : String) return String;
+   --  The unit that declares the Ada type of the predefined IDL type
+   --  Name, or "" if it is declared in Standard.
+
    function Ada_Type (Item : Idle.Syntax.Type_Reference) return String
      with Pre => Kind (Item) in Word_Type | Capability_Type;
    --  The Ada type of a word or a capability.
