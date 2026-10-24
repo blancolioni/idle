@@ -1,0 +1,20 @@
+16#9CD5_1A6E_BB6A_A8CE#  interface rose.interfaces.named
+16#BAD6_E000_0000_0001#  rose.interfaces.named.badge return capability
+16#441F_05D0_E4EE_DB9E#  interface rose.interfaces.counter
+16#79BA_20DD_DB05_2CAB#  rose.interfaces.counter.increment(in word)
+16#6741_CC61_B9B9_CBB7#  rose.interfaces.counter.value return word
+16#0BF4_E8D8_2E3F_6917#  interface rose.interfaces.block_device
+16#4431_2F67_3CD7_F8A0#  rose.interfaces.block_device.get_parameters(out rose.interfaces.block_device.block_address_type; out rose.interfaces.block_device.block_size_type)
+16#9B9A_57E4_0082_DE86#  rose.interfaces.block_device.read_blocks(in rose.interfaces.block_device.block_address_type; in natural; out storage_array)
+16#3918_D336_1295_3AA5#  rose.interfaces.block_device.write_blocks(in rose.interfaces.block_device.block_address_type; in natural; in storage_array)
+16#01C5_FBB7_19DE_112A#  interface rose.interfaces.directory
+16#ADDF_FA0F_D647_4D75#  rose.interfaces.directory.directory_entry_count return natural
+16#DB37_1B14_7C74_740F#  rose.interfaces.directory.directory_entry_name(in positive) return string
+16#DE96_8891_CE34_5B4F#  rose.interfaces.directory.directory_entry_kind(in positive) return rose.interfaces.directory.file_kind
+16#05FA_DAEB_F56E_5038#  rose.interfaces.directory.directory_entry_size(in positive) return storage_count
+16#ECDE_34C4_3D46_477B#  rose.interfaces.directory.find_entry(in string) return natural
+16#20D5_30E6_B1E4_F50A#  rose.interfaces.directory.get_ordinary_file(in positive) return interface rose.interfaces.file
+16#1A5A_45A6_6CB5_6E1D#  rose.interfaces.directory.get_directory(in positive) return interface rose.interfaces.directory
+16#EB8A_CB9A_A7B9_FD83#  rose.interfaces.directory.read_file(in positive) return interface rose.interfaces.stream_reader
+16#A869_05E0_FF03_B268#  rose.interfaces.directory.create_directory(in string) return interface rose.interfaces.directory
+16#3451_684E_97FB_9A2A#  rose.interfaces.directory.create_file(in string) return interface rose.interfaces.file

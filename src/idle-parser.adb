@@ -1,6 +1,7 @@
 with Ada.Characters.Handling;
 with Ada.Strings.Unbounded;
 
+with Idle.Literals;
 with Idle.Lexical; use Idle.Lexical;
 with Idle.Tokens;  use Idle.Tokens;
 
@@ -25,12 +26,62 @@ package body Idle.Parser is
    procedure Parse_Constant (Item : in out Interface_Declaration);
    procedure Parse_Declarations (Item : in out Interface_Declaration);
    procedure Parse_Parameters (Into : in out Subprogram);
+   procedure Parse_Aspects (Pinned_Id : in out Long_Long_Long_Integer);
+   --  An aspect specification, if there is one: "with" and a list of
+   --  aspects. Endpoint_Id, an integer literal, is the only aspect, and
+   --  sets Pinned_Id.
+
    procedure Parse_Subprogram (Item : in out Interface_Declaration);
    procedure Parse_Type_Declaration (Item : in out Interface_Declaration);
 
    function Same_Name (Left, Right : String) return Boolean
    is (Ada.Characters.Handling.To_Lower (Left)
        = Ada.Characters.Handling.To_Lower (Right));
+
+   -------------------
+   -- Parse_Aspects --
+   -------------------
+
+   procedure Parse_Aspects (Pinned_Id : in out Long_Long_Long_Integer) is
+   begin
+      if Tok /= Tok_With then
+         return;
+      end if;
+
+      Scan;
+      loop
+         declare
+            Name  : constant String := To_String (Parse_Name ("aspect name"));
+            Value : Long_Long_Long_Integer;
+         begin
+            Expect (Tok_Arrow, [Tok_Comma, Tok_Semicolon, Tok_Is]);
+            if not Same_Name (Name, "Endpoint_Id") then
+               Error ("unknown aspect " & Name
+                      & "; the only aspect is Endpoint_Id");
+               if Tok in Tok_Integer_Literal | Tok_Identifier then
+                  Scan;
+               end if;
+            elsif Tok /= Tok_Integer_Literal then
+               Error ("missing endpoint id (an integer literal)");
+               if Tok = Tok_Identifier then
+                  Scan;
+               end if;
+            else
+               if Idle.Literals.Value (Tok_Text, Value, 2 ** 64 - 1)
+                 and then Value /= 0
+               then
+                  Pinned_Id := Value;
+               else
+                  Error ("an endpoint id must be a non-zero integer that"
+                         & " fits in 64 bits");
+               end if;
+               Scan;
+            end if;
+         end;
+         exit when Tok /= Tok_Comma;
+         Scan;
+      end loop;
+   end Parse_Aspects;
 
    --------------------
    -- Parse_Constant --
@@ -107,6 +158,7 @@ package body Idle.Parser is
          end loop;
       end if;
 
+      Parse_Aspects (Result.Pinned_Id);
       Expect (Tok_Is, Declaration_Start);
       Parse_Declarations (Result);
       Expect (Tok_End, [Tok_Semicolon]);
@@ -211,6 +263,7 @@ package body Idle.Parser is
          Error ("missing 'return' and result type");
       end if;
 
+      Parse_Aspects (Result.Pinned_Id);
       Expect (Tok_Semicolon, Declaration_Start);
       Item.Subprograms.Append (Result);
    end Parse_Subprogram;

@@ -1,0 +1,8 @@
+--  Reset is pinned to its own hash, so the pin is not needed.
+
+interface Pinned is
+
+   procedure Reset
+     with Endpoint_Id => 16#C06B_4902_8ABB_394E#;
+
+end Pinned;

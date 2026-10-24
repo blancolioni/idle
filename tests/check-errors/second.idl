@@ -1,7 +1,8 @@
---  Second.Start has the same endpoint id as First.Run.
+--  Second.Start is pinned to the same endpoint id as First.Run.
 
 interface Second is
 
-   procedure Start;
+   procedure Start
+     with Endpoint_Id => 16#1234#;
 
 end Second;

@@ -5,6 +5,7 @@ with Ada.Directories;
 with Ada.Strings.Unbounded;
 
 with Idle.Diagnostics;
+with Idle.Endpoints;
 with Idle.Names;
 with Idle.Syntax;
 
@@ -27,9 +28,7 @@ package body Idle.Check is
    -- Check_All --
    ---------------
 
-   procedure Check_All
-     (Items     : Idle.Hierarchy.Interface_Vectors.Vector;
-      Endpoints : Idle.Endpoints.Endpoint_Table)
+   procedure Check_All (Items : Idle.Hierarchy.Interface_Vectors.Vector)
    is
       Checked     : Name_Sets.Set;
       --  The full names of the files checked.
@@ -65,10 +64,18 @@ package body Idle.Check is
 
       procedure Use_Interface_Id
         (Declaration : Idle.Syntax.Interface_Declaration);
-      --  Look up the endpoint id of the interface Declaration.
+      --  Record the endpoint id of the interface Declaration.
 
       procedure Use_Method_Id (Member : Idle.Hierarchy.Member);
-      --  Look up the endpoint id of the subprogram of Member.
+      --  Record the endpoint id of the subprogram of Member.
+
+      procedure Warn_Redundant_Pin
+        (Label     : String;
+         Pinned_Id : Long_Long_Long_Integer;
+         Form      : String;
+         File_Name : Unbounded_String;
+         Position  : Idle.Syntax.Source_Position);
+      --  Warn if Label is pinned to the hash of its canonical form Form.
 
       procedure Warn_Unchecked (Directory : String);
       --  Warn about each .idl file in Directory that is not checked.
@@ -136,22 +143,20 @@ package body Idle.Check is
       procedure Use_Interface_Id
         (Declaration : Idle.Syntax.Interface_Declaration)
       is
-         Name  : constant String := To_String (Declaration.Name);
          Label : constant String :=
-           "interface " & Idle.Names.Ada_Name (Name);
+           "interface " & Idle.Names.Ada_Name (To_String (Declaration.Name));
       begin
          if Seen.Contains (Label) then
             return;
          end if;
          Seen.Insert (Label);
 
-         if Endpoints.Has_Interface_Id (Name) then
-            Record_Id (Label, Endpoints.Interface_Id (Name),
-                       Declaration.File_Name, Declaration.Position);
-         else
-            Error (Declaration.File_Name, Declaration.Position,
-                   "no endpoint id for " & Label & " in the endpoint table");
-         end if;
+         Warn_Redundant_Pin
+           (Label, Declaration.Pinned_Id,
+            Idle.Endpoints.Interface_Form (Declaration),
+            Declaration.File_Name, Declaration.Position);
+         Record_Id (Label, Idle.Endpoints.Interface_Id (Declaration),
+                    Declaration.File_Name, Declaration.Position);
       end Use_Interface_Id;
 
       -------------------
@@ -169,14 +174,36 @@ package body Idle.Check is
          end if;
          Seen.Insert (Label);
 
-         if Endpoints.Has_Method_Id (Owner, Name) then
-            Record_Id (Label, Endpoints.Method_Id (Owner, Name),
-                       Member.File_Name, Member.Subprogram.Position);
-         else
-            Error (Member.File_Name, Member.Subprogram.Position,
-                   "no endpoint id for " & Label & " in the endpoint table");
-         end if;
+         Warn_Redundant_Pin
+           (Label, Member.Subprogram.Pinned_Id,
+            Idle.Endpoints.Subprogram_Form (Member.Owner, Member.Subprogram),
+            Member.File_Name, Member.Subprogram.Position);
+         Record_Id
+           (Label,
+            Idle.Endpoints.Subprogram_Id (Member.Owner, Member.Subprogram),
+            Member.File_Name, Member.Subprogram.Position);
       end Use_Method_Id;
+
+      ------------------------
+      -- Warn_Redundant_Pin --
+      ------------------------
+
+      procedure Warn_Redundant_Pin
+        (Label     : String;
+         Pinned_Id : Long_Long_Long_Integer;
+         Form      : String;
+         File_Name : Unbounded_String;
+         Position  : Idle.Syntax.Source_Position)
+      is
+      begin
+         if Pinned_Id /= 0 and then Pinned_Id = Idle.Endpoints.Hash (Form)
+         then
+            Idle.Diagnostics.Warning
+              (To_String (File_Name), Position.Line, Position.Column,
+               "the endpoint id of " & Label
+               & " is pinned to its own hash, so the pin is not needed");
+         end if;
+      end Warn_Redundant_Pin;
 
       --------------------
       -- Warn_Unchecked --

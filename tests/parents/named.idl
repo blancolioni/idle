@@ -6,6 +6,8 @@ interface Named is
    type Badge_Serial is new Word_64;
    type Badge_Colour is (Red, Green, Blue);
 
-   function Badge return Capability;
+   --  Pinned, so the generated package shows the pinned id.
+   function Badge return Capability
+     with Endpoint_Id => 16#BAD6_E000_0000_0001#;
 
 end Named;

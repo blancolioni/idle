@@ -1,11 +1,9 @@
-with Idle.Endpoints;
 with Idle.Syntax;
 
 package Idle.Targets.Kernel is
 
    procedure Generate
      (Item             : Idle.Syntax.Interface_Declaration;
-      Endpoints        : Idle.Endpoints.Endpoint_Table;
       Output_Directory : String);
    --  Write the packages that implement the interface Item to
    --  Output_Directory:

@@ -12,16 +12,16 @@ package Rose.Interfaces.Block_Device is
    type Device_Size_Type is new Rose.Words.Word_64;
 
    Block_Device_Interface  : constant Rose.Objects.Endpoint_Id :=
-     16#241_4E1D_921C#;
+     16#BF4_E8D8_2E3F_6917#;
 
    Get_Parameters_Endpoint : constant Rose.Objects.Endpoint_Id :=
-     16#964A_D0FE_10CD#;
+     16#4431_2F67_3CD7_F8A0#;
 
    Read_Blocks_Endpoint    : constant Rose.Objects.Endpoint_Id :=
-     16#565F_A8C8_AA82#;
+     16#9B9A_57E4_0082_DE86#;
 
    Write_Blocks_Endpoint   : constant Rose.Objects.Endpoint_Id :=
-     16#8314_5AC2_2803#;
+     16#3918_D336_1295_3AA5#;
 
    Get_Parameters_Index    : constant := 0;
 

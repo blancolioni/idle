@@ -1,57 +1,55 @@
-private with Ada.Containers.Indefinite_Hashed_Maps;
-private with Ada.Strings.Hash;
+with Idle.Syntax;
 
 package Idle.Endpoints is
 
-   --  Endpoint ids, read from an existing interfaces.txt table such as
-   --  Rose's. idle never adds to the table or writes it: a missing id is
-   --  an error. Ids derived from the source (idle#3) will replace this.
+   --  Endpoint ids, derived from the IDL source (idle#3). Each id is the
+   --  hash of a canonical description of the interface or subprogram,
+   --  unless its declaration pins it with an Endpoint_Id aspect (idle#4).
+   --
+   --  The canonical form is all lower case, with single spaces:
+   --
+   --    interface rose.interfaces.directory
+   --    rose.interfaces.directory.find_entry(in string) return natural
+   --    rose.interfaces.cap.destroy
+   --
+   --  A subprogram is named in the interface that declares it, so an
+   --  inherited subprogram has its parent's id. Parameter names are not
+   --  part of it. A type is its IDL name if it is predefined, is qualified
+   --  by its interface if declared in one, and is "interface <name>" for
+   --  an interface type.
+   --
+   --  The hash is SHA-256, of which the first eight bytes, big-endian,
+   --  are the id. A hash of zero, which is not a valid id, becomes one.
 
    subtype Endpoint_Id is Long_Long_Long_Integer range 0 .. 2 ** 64 - 1;
 
-   type Endpoint_Table is tagged private;
+   function Interface_Form
+     (Item : Idle.Syntax.Interface_Declaration)
+      return String;
+   --  The canonical form of the interface Item.
 
-   procedure Load (Table : in out Endpoint_Table; Path : String);
-   --  Add the entries in Path, lines of the form
-   --  "Interface.Method = 16#XXXX_XXXX_XXXX#". Errors are reported
-   --  through Idle.Diagnostics.
+   function Subprogram_Form
+     (Owner : Idle.Syntax.Interface_Declaration;
+      Item  : Idle.Syntax.Subprogram)
+      return String;
+   --  The canonical form of the subprogram Item, declared by Owner.
 
-   function Has_Interface_Id
-     (Table          : Endpoint_Table;
-      Interface_Name : String)
-      return Boolean;
+   function Hash (Form : String) return Endpoint_Id;
+   --  The id derived from the canonical form Form.
 
    function Interface_Id
-     (Table          : Endpoint_Table;
-      Interface_Name : String)
-      return Endpoint_Id
-     with Pre => Table.Has_Interface_Id (Interface_Name);
+     (Item : Idle.Syntax.Interface_Declaration)
+      return Endpoint_Id;
+   --  The id of the interface Item: its pinned id, or its hash.
 
-   function Has_Method_Id
-     (Table          : Endpoint_Table;
-      Interface_Name : String;
-      Method_Name    : String)
-      return Boolean;
+   function Subprogram_Id
+     (Owner : Idle.Syntax.Interface_Declaration;
+      Item  : Idle.Syntax.Subprogram)
+      return Endpoint_Id;
+   --  The id of the subprogram Item, declared by Owner: its pinned id, or
+   --  its hash.
 
-   function Method_Id
-     (Table          : Endpoint_Table;
-      Interface_Name : String;
-      Method_Name    : String)
-      return Endpoint_Id
-     with Pre => Table.Has_Method_Id (Interface_Name, Method_Name);
-
-private
-
-   package Id_Maps is
-     new Ada.Containers.Indefinite_Hashed_Maps
-       (Key_Type        => String,
-        Element_Type    => Endpoint_Id,
-        Hash            => Ada.Strings.Hash,
-        Equivalent_Keys => "=");
-
-   type Endpoint_Table is tagged record
-      Ids : Id_Maps.Map;
-      --  Keyed by the table's key in lower case.
-   end record;
+   function Image (Id : Endpoint_Id) return String;
+   --  Id as an Ada literal: 16#XXXX_XXXX_XXXX_XXXX#.
 
 end Idle.Endpoints;

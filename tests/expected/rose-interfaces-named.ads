@@ -11,9 +11,11 @@ package Rose.Interfaces.Named is
 
    type Badge_Colour is (Red, Green, Blue);
 
-   Named_Interface  : constant Rose.Objects.Endpoint_Id := 16#1111_0000_0001#;
+   Named_Interface  : constant Rose.Objects.Endpoint_Id :=
+     16#9CD5_1A6E_BB6A_A8CE#;
 
-   Badge_Endpoint   : constant Rose.Objects.Endpoint_Id := 16#2222_0000_0001#;
+   Badge_Endpoint   : constant Rose.Objects.Endpoint_Id :=
+     16#BAD6_E000_0000_0001#;
 
    Badge_Index      : constant := 0;
 

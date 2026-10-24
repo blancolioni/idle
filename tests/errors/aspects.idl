@@ -1,0 +1,14 @@
+interface Aspects
+  with Colour => Blue
+is
+
+   procedure Zero
+     with Endpoint_Id => 0;
+
+   procedure Too_Large
+     with Endpoint_Id => 16#1_0000_0000_0000_0000#;
+
+   procedure Missing
+     with Endpoint_Id => Somewhere;
+
+end Aspects;

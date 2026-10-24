@@ -42,6 +42,8 @@ package Idle.Syntax is
       Parameters  : Parameter_Vectors.Vector;
       Result      : Type_Reference;
       --  The result type of a function.
+      Pinned_Id   : Long_Long_Long_Integer := 0;
+      --  The id given by an Endpoint_Id aspect, or zero if it has none.
       Position    : Source_Position;
    end record;
 
@@ -84,6 +86,8 @@ package Idle.Syntax is
       Constants   : Constant_Vectors.Vector;
       Types       : Type_Vectors.Vector;
       Subprograms : Subprogram_Vectors.Vector;
+      Pinned_Id   : Long_Long_Long_Integer := 0;
+      --  The id given by an Endpoint_Id aspect, or zero if it has none.
       Position    : Source_Position;
    end record;
    --  Constants, types and subprograms are each in the order they are
