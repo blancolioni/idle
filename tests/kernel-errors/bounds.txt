@@ -1,0 +1,4 @@
+kernel-errors/bounds.idl:3:4: error: unknown constant Elsewhere
+kernel-errors/bounds.idl:5:4: error: unknown constant Later
+kernel-errors/bounds.idl:6:4: error: unknown constant Nowhere
+kernel-errors/bounds.idl:7:4: error: Limit is not an integer constant

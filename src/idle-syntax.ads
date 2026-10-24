@@ -65,7 +65,8 @@ package Idle.Syntax is
       Kind     : Type_Kind := Range_Type;
       Low      : Unbounded_String;
       High     : Unbounded_String;
-      --  The bounds of a range type, as written.
+      --  The bounds of a range type, as written: integer literals or
+      --  names of constants.
       Parent   : Type_Reference;
       --  The parent of a derived type.
       Literals : String_Vectors.Vector;

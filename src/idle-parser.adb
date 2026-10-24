@@ -231,18 +231,18 @@ package body Idle.Parser is
          when Tok_Range =>
             Scan;
             Result.Kind := Range_Type;
-            if Tok = Tok_Integer_Literal then
+            if Tok in Tok_Integer_Literal | Tok_Identifier then
                Result.Low := To_Unbounded_String (Tok_Text);
                Scan;
             else
-               Error ("missing lower bound");
+               Error ("missing lower bound (an integer literal or a name)");
             end if;
             Expect (Tok_Dot_Dot, Declaration_Start);
-            if Tok = Tok_Integer_Literal then
+            if Tok in Tok_Integer_Literal | Tok_Identifier then
                Result.High := To_Unbounded_String (Tok_Text);
                Scan;
             else
-               Error ("missing upper bound");
+               Error ("missing upper bound (an integer literal or a name)");
             end if;
 
          when Tok_New =>

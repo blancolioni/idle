@@ -1,5 +1,8 @@
 interface Counter : Named is
 
+   --  Max_Badges is inherited from Named.
+   type Badge_Number is range 1 .. Max_Badges;
+
    procedure Increment (By : Word);
    function Value return Word;
 

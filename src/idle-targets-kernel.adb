@@ -27,12 +27,49 @@ package body Idle.Targets.Kernel is
    --  Report anything in Item that the kernel target does not support, or
    --  that has no endpoint id. True if there was nothing to report.
 
+   function Constant_Reference
+     (Item  : Idle.Syntax.Interface_Declaration;
+      Owner : Idle.Syntax.Interface_Declaration;
+      Name  : String)
+      return String;
+   --  How the interface package of Item names the constant Name declared
+   --  by Owner: by its own name if Owner is Item, and qualified with
+   --  Owner's interface package if Owner is an ancestor, since a child's
+   --  package does not repeat its parents' constants.
+
+   function Earlier
+     (Left, Right : Idle.Syntax.Source_Position)
+      return Boolean;
+   --  True if Left comes before Right in a file.
+
+   function Find_Constant
+     (Item   : Idle.Syntax.Interface_Declaration;
+      Name   : String;
+      Before : Idle.Syntax.Source_Position;
+      Owner  : out Idle.Syntax.Interface_Declaration;
+      Found  : out Idle.Syntax.Constant_Declaration)
+      return Boolean;
+   --  Find the constant Name that a declaration of Item at Before can
+   --  name: one declared earlier in Item, or one declared by an ancestor
+   --  of Item. Owner is the interface that declares it.
+
    procedure Generate_Interface_Package
      (Item             : Idle.Syntax.Interface_Declaration;
       Endpoints        : Idle.Endpoints.Endpoint_Table;
       Output_Directory : String);
    --  Write the package Rose.Interfaces.<Name>, which holds the endpoint
    --  ids of the interface and of each of its subprograms.
+
+   function Is_Integer_Constant
+     (Owner : Idle.Syntax.Interface_Declaration;
+      Item  : Idle.Syntax.Constant_Declaration)
+      return Boolean;
+   --  True if the value of the constant Item of Owner is an integer
+   --  literal, or names a constant whose value is one.
+
+   function Is_Name (Text : String) return Boolean
+   is (Text'Length > 0 and then Text (Text'First) not in '0' .. '9');
+   --  True if Text, a value as written, is a name and not a literal.
 
    -----------
    -- Check --
@@ -73,7 +110,37 @@ package body Idle.Targets.Kernel is
       is
          Name : constant String := To_String (Declaration.Name);
 
+         procedure Check_Reference
+           (Text     : Unbounded_String;
+            Position : Idle.Syntax.Source_Position);
+         --  Report Text, a value or bound written at Position, if it is a
+         --  name that does not name an integer constant visible there.
+
          procedure Unsupported (What : String);
+
+         ---------------------
+         -- Check_Reference --
+         ---------------------
+
+         procedure Check_Reference
+           (Text     : Unbounded_String;
+            Position : Idle.Syntax.Source_Position)
+         is
+            Name  : constant String := To_String (Text);
+            Owner : Idle.Syntax.Interface_Declaration;
+            Found : Idle.Syntax.Constant_Declaration;
+         begin
+            if Is_Name (Name) then
+               if not Find_Constant (Declaration, Name, Position, Owner, Found)
+               then
+                  Error (Declaration.File_Name, Position,
+                         "unknown constant " & Name);
+               elsif not Is_Integer_Constant (Owner, Found) then
+                  Error (Declaration.File_Name, Position,
+                         Name & " is not an integer constant");
+               end if;
+            end if;
+         end Check_Reference;
 
          -----------------
          -- Unsupported --
@@ -89,7 +156,17 @@ package body Idle.Targets.Kernel is
          --  The keys of the types declared so far.
 
       begin
+         for Declared_Constant of Declaration.Constants loop
+            Check_Reference
+              (Declared_Constant.Value, Declared_Constant.Position);
+         end loop;
+
          for Declared_Type of Declaration.Types loop
+            if Declared_Type.Kind in Idle.Syntax.Range_Type then
+               Check_Reference (Declared_Type.Low, Declared_Type.Position);
+               Check_Reference (Declared_Type.High, Declared_Type.Position);
+            end if;
+
             if Declared_Type.Kind in Idle.Syntax.Derived_Type then
                declare
                   Parent : constant String :=
@@ -259,6 +336,81 @@ package body Idle.Targets.Kernel is
       return OK and then Idle.Diagnostics.Error_Count = Errors_Before;
    end Check;
 
+   ------------------------
+   -- Constant_Reference --
+   ------------------------
+
+   function Constant_Reference
+     (Item  : Idle.Syntax.Interface_Declaration;
+      Owner : Idle.Syntax.Interface_Declaration;
+      Name  : String)
+      return String
+   is
+      Owner_Name : constant String := To_String (Owner.Name);
+   begin
+      if Idle.Names.Key (Owner_Name) = Idle.Names.Key (To_String (Item.Name))
+      then
+         return Idle.Names.Ada_Name (Name);
+      else
+         return "Rose.Interfaces." & Idle.Names.Ada_Name (Owner_Name)
+           & "." & Idle.Names.Ada_Name (Name);
+      end if;
+   end Constant_Reference;
+
+   -------------
+   -- Earlier --
+   -------------
+
+   function Earlier
+     (Left, Right : Idle.Syntax.Source_Position)
+      return Boolean
+   is
+   begin
+      return Left.Line < Right.Line
+        or else (Left.Line = Right.Line and then Left.Column < Right.Column);
+   end Earlier;
+
+   -------------------
+   -- Find_Constant --
+   -------------------
+
+   function Find_Constant
+     (Item   : Idle.Syntax.Interface_Declaration;
+      Name   : String;
+      Before : Idle.Syntax.Source_Position;
+      Owner  : out Idle.Syntax.Interface_Declaration;
+      Found  : out Idle.Syntax.Constant_Declaration)
+      return Boolean
+   is
+      Key : constant String := Idle.Names.Key (Name);
+
+      function Matches (Item : Idle.Syntax.Constant_Declaration) return Boolean
+      is (Idle.Names.Key (To_String (Item.Name)) = Key);
+
+   begin
+      for Declared of Item.Constants loop
+         if Earlier (Declared.Position, Before)
+           and then Matches (Declared)
+         then
+            Owner := Item;
+            Found := Declared;
+            return True;
+         end if;
+      end loop;
+
+      for Ancestor of Idle.Hierarchy.Ancestors (Item) loop
+         for Declared of Ancestor.Constants loop
+            if Matches (Declared) then
+               Owner := Ancestor;
+               Found := Declared;
+               return True;
+            end if;
+         end loop;
+      end loop;
+
+      return False;
+   end Find_Constant;
+
    --------------
    -- Generate --
    --------------
@@ -325,17 +477,19 @@ package body Idle.Targets.Kernel is
       function Types_And_Constants return Syn.Node_Array is
          use Idle.Syntax;
 
-         function Before (Left, Right : Source_Position) return Boolean
-         is (Left.Line < Right.Line
-             or else (Left.Line = Right.Line
-                      and then Left.Column < Right.Column));
+         function Value_Node
+           (Text     : Unbounded_String;
+            Position : Source_Position)
+            return not null Syn.Node_Access;
+         --  Text, a value or bound written at Position: an integer literal
+         --  as written, or a reference to a constant.
 
          function Constant_Node
            (Item : Constant_Declaration)
             return not null Syn.Node_Access
          is (F.New_Object
                (Name          => Idle.Names.Ada_Name (To_String (Item.Name)),
-                Initial_Value => F.New_Name (To_String (Item.Value)),
+                Initial_Value => Value_Node (Item.Value, Item.Position),
                 Is_Constant   => True));
 
          function Type_Node
@@ -357,8 +511,8 @@ package body Idle.Targets.Kernel is
                when Range_Type =>
                   return F.New_Range_Type
                     (Type_Name,
-                     F.New_Name (To_String (Item.Low)),
-                     F.New_Name (To_String (Item.High)));
+                     Value_Node (Item.Low, Item.Position),
+                     Value_Node (Item.High, Item.Position));
                when Derived_Type =>
                   declare
                      Parent : constant String := To_String (Item.Parent.Name);
@@ -383,6 +537,39 @@ package body Idle.Targets.Kernel is
             end case;
          end Type_Node;
 
+         ----------------
+         -- Value_Node --
+         ----------------
+
+         function Value_Node
+           (Text     : Unbounded_String;
+            Position : Source_Position)
+            return not null Syn.Node_Access
+         is
+            Interface_Item : Interface_Declaration
+              renames Generate_Interface_Package.Item;
+            Name           : constant String := To_String (Text);
+            Owner          : Interface_Declaration;
+            Found          : Constant_Declaration;
+         begin
+            if Is_Name (Name)
+              and then Find_Constant
+                         (Interface_Item, Name, Position, Owner, Found)
+            then
+               if Idle.Names.Key (To_String (Owner.Name))
+                 /= Idle.Names.Key (To_String (Interface_Item.Name))
+               then
+                  Context.Add
+                    ("Rose.Interfaces."
+                     & Idle.Names.Ada_Name (To_String (Owner.Name)));
+               end if;
+               return F.New_Name
+                 (Constant_Reference (Interface_Item, Owner, Name));
+            else
+               return F.New_Name (Name);
+            end if;
+         end Value_Node;
+
          Result        : Node_List;
          Next_Constant : Positive := 1;
          Next_Type     : Positive := 1;
@@ -393,7 +580,7 @@ package body Idle.Targets.Kernel is
          loop
             if Next_Type > Item.Types.Last_Index
               or else (Next_Constant <= Item.Constants.Last_Index
-                       and then Before
+                       and then Earlier
                                   (Item.Constants (Next_Constant).Position,
                                    Item.Types (Next_Type).Position))
             then
@@ -452,5 +639,26 @@ package body Idle.Targets.Kernel is
                  Public_Part => Declarations)),
          Output_Directory);
    end Generate_Interface_Package;
+
+   -------------------------
+   -- Is_Integer_Constant --
+   -------------------------
+
+   function Is_Integer_Constant
+     (Owner : Idle.Syntax.Interface_Declaration;
+      Item  : Idle.Syntax.Constant_Declaration)
+      return Boolean
+   is
+      Value      : constant String := To_String (Item.Value);
+      Next_Owner : Idle.Syntax.Interface_Declaration;
+      Next       : Idle.Syntax.Constant_Declaration;
+   begin
+      --  A name must refer to an earlier constant, or to an ancestor's,
+      --  so following the chain always ends.
+      return not Is_Name (Value)
+        or else
+          (Find_Constant (Owner, Value, Item.Position, Next_Owner, Next)
+           and then Is_Integer_Constant (Next_Owner, Next));
+   end Is_Integer_Constant;
 
 end Idle.Targets.Kernel;
