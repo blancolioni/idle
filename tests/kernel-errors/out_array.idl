@@ -1,0 +1,7 @@
+--  Out and in out capability arrays are not yet supported.
+
+interface Out_Array is
+
+   procedure Collect (Caps : out Capability_Array);
+
+end Out_Array;

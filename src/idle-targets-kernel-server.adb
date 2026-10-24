@@ -412,13 +412,22 @@ package body Idle.Targets.Kernel.Server is
                         Next_Word := Next_Word + Types.Words (Info);
                      end if;
                   when Capability_Value | Interface_Value =>
-                     Declarations.Append
-                       (F.New_Object
-                          (Object_Name, Object_Type,
-                           F.New_Call
-                             ("Parameters.Caps", [Literal (Next_Cap)]),
-                           Is_Constant => True));
-                     Next_Cap := Next_Cap + 1;
+                     if Parameter.Mode = Idle.Syntax.Out_Mode then
+                        Declarations.Append
+                          (F.New_Object
+                             (Object_Name, Object_Type,
+                              F.New_Name
+                                ("Rose.Capabilities.Null_Capability")));
+                     else
+                        Declarations.Append
+                          (F.New_Object
+                             (Object_Name, Object_Type,
+                              F.New_Call
+                                ("Parameters.Caps", [Literal (Next_Cap)]),
+                              Is_Constant =>
+                                Parameter.Mode = Idle.Syntax.In_Mode));
+                        Next_Cap := Next_Cap + 1;
+                     end if;
                   when Capability_Array_Value =>
                      Declarations.Append
                        (F.New_Object
@@ -446,6 +455,12 @@ package body Idle.Targets.Kernel.Server is
                   when String_Value =>
                      Declarations.Append
                        (Buffer_Overlay (Object_Name, String_Type));
+                     if Parameter.Mode /= Idle.Syntax.In_Mode then
+                        Declarations.Append
+                          (F.New_Object
+                             (Object_Name & "_Last", F.New_Name ("Natural"),
+                              Literal (0)));
+                     end if;
                   when Storage_Value =>
                      Declarations.Append
                        (Buffer_Overlay (Object_Name, Storage_Type));
@@ -453,6 +468,11 @@ package body Idle.Targets.Kernel.Server is
                      raise Program_Error;
                end case;
                Arguments.Append (Argument);
+               if Info.Category = String_Value
+                 and then Parameter.Mode /= Idle.Syntax.In_Mode
+               then
+                  Arguments.Append (F.New_Name (Object_Name & "_Last"));
+               end if;
             end;
          end loop;
 
@@ -487,10 +507,25 @@ package body Idle.Targets.Kernel.Server is
                   Info : constant Types.Type_Info :=
                     Types.Resolve (Member.Owner, Parameter.Of_Type);
                begin
-                  if not Types.Is_Buffer (Info) then
-                     Statements.Append
-                       (Types.Send (F, Info, "Parameters", Name (Parameter)));
-                  end if;
+                  case Info.Category is
+                     when Word_Value | Double_Word_Value =>
+                        Statements.Append
+                          (Types.Send
+                             (F, Info, "Parameters", Name (Parameter)));
+                     when Capability_Value | Interface_Value =>
+                        Statements.Append
+                          (Call (System_Calls & "Send_Cap",
+                                 [Parameters, F.New_Name (Name (Parameter))]));
+                     when String_Value =>
+                        Statements.Append
+                          (Call (System_Calls & "Send_Word",
+                                 [Parameters,
+                                  F.New_Name (Name (Parameter) & "_Last")]));
+                     when Storage_Value =>
+                        null;
+                     when Capability_Array_Value | Unknown =>
+                        raise Program_Error;
+                  end case;
                end;
             end if;
          end loop;
@@ -558,6 +593,14 @@ package body Idle.Targets.Kernel.Server is
                  (F.New_Parameter
                     (Name (Parameter), F.New_Name (Server_Type_Of (Info)),
                      Mode (Parameter)));
+               if Info.Category in Types.String_Value
+                 and then Parameter.Mode not in Idle.Syntax.In_Mode
+               then
+                  Parameters.Append
+                    (F.New_Parameter
+                       (Name (Parameter) & "_Last", F.New_Name ("Natural"),
+                        Syn.Out_Mode));
+               end if;
             end;
          end loop;
 

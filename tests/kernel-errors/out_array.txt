@@ -1,0 +1,1 @@
+kernel-errors/out_array.idl:5:23: error: out and in out parameters of type Capability_Array are not yet supported by the kernel target

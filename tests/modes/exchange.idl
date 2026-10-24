@@ -1,0 +1,26 @@
+--  Out and in out parameters that are caps, interfaces and strings
+--  (idle#19).
+
+interface Exchange is
+
+   --  Two out caps, as creating an endpoint returns.
+   procedure Create_Endpoint
+     (Id      : Word_64;
+      Receive : out Capability;
+      Send    : out Capability);
+
+   --  An out cap and a cap result: the result follows the out caps.
+   function Split (Whole : Capability; Part : out Capability)
+     return Capability;
+
+   --  An in out cap, and an in out string.
+   procedure Rename (Cap : in out Capability; Name : in out String);
+
+   --  An out interface, and an out string.
+   procedure Partner (Other : out interface Exchange; Label : out String);
+
+   --  An out cap after a capability array, which is allowed, because the
+   --  out cap is not sent.
+   procedure Gather (Caps : Capability_Array; First : out Capability);
+
+end Exchange;
