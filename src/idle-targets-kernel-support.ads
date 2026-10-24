@@ -41,6 +41,20 @@ private package Idle.Targets.Kernel.Support is
    function Endpoint_Name (Item : Idle.Syntax.Subprogram) return String;
    --  The name of the endpoint id constant of Item.
 
+   function Index_Name (Item : Idle.Syntax.Subprogram) return String;
+   --  The name of the constant that gives the position of the cap of Item
+   --  in the reply to the interface cap.
+
+   Count_Name : constant String := "Subprogram_Count";
+   --  The name of the constant that gives the number of caps in the
+   --  reply to the interface cap.
+
+   function Subprograms
+     (Item : Idle.Syntax.Interface_Declaration)
+      return Idle.Syntax.Subprogram_Vectors.Vector;
+   --  The subprograms of Item, including those it inherits, in the order
+   --  of their caps (see Idle.Hierarchy.Members).
+
    type Node_List is tagged private;
    --  Declarations or statements, in the order they are added.
 

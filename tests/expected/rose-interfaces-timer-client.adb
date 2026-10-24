@@ -62,9 +62,9 @@ package body Rose.Interfaces.Timer.Client is
       Client.Is_Open := False;
       Client.Interface_Cap := Interface_Cap;
       Rose.System_Calls.Initialize_Send (Params, Interface_Cap);
-      Rose.System_Calls.Receive_Caps (Params, 1);
+      Rose.System_Calls.Receive_Caps (Params, Subprogram_Count);
       Rose.System_Calls.Invoke_Capability (Params);
-      Client.Set_Timer := Params.Caps (0);
+      Client.Set_Timer := Params.Caps (Set_Timer_Index);
       Client.Is_Open := True;
    end Open;
 

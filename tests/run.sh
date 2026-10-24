@@ -3,9 +3,13 @@
 #
 #  1. Parse every interface in rose/, a snapshot of Rose's interfaces/.
 #  2. Generate the kernel-target packages for each interface in
-#     generated.txt, and compare them with expected/
+#     generated.txt, and compare them with expected/. Each line names
+#     DIRECTORY/INTERFACE, whose endpoint ids are in
+#     DIRECTORY/interfaces.txt: rose/ for Rose's interfaces, parents/ for
+#     a small hierarchy.
 #  3. Run idle on each file in errors/ and compare its diagnostics with
-#     the .txt file of the same name.
+#     the .txt file of the same name; and the same for the kernel target
+#     with the cases in kernel-errors/.
 #  4. Compile every expected Ada file with GNAT's style checks, as strict
 #     as Rose's build.
 
@@ -27,11 +31,13 @@ fi
 # 2. Generated packages
 
 rm -rf output && mkdir output
-while read -r name; do
-  [ -n "$name" ] || continue
-  if ! $idle --target kernel --endpoints rose/interfaces.txt -o output \
-         "rose/$name.idl"; then
-    fail "kernel target for $name"
+while read -r entry; do
+  [ -n "$entry" ] || continue
+  dir=${entry%/*}
+  name=${entry#*/}
+  if ! $idle --target kernel --endpoints "$dir/interfaces.txt" -o output \
+         "$entry.idl"; then
+    fail "kernel target for $entry"
     continue
   fi
   for file in "rose-interfaces-$name.ads" \
@@ -66,6 +72,20 @@ for file in errors/*.idl; do
   if $idle --syntax-only "$file" 2> output/diagnostics.txt; then
     fail "$file (expected errors)"
   elif diff -u "$expected" output/diagnostics.txt; then
+    pass "$file"
+  else
+    fail "$file"
+  fi
+done
+
+# Interfaces that the kernel target rejects. The other files in
+# kernel-errors/ are their parents.
+
+for name in orphan loop_a twice; do
+  file="kernel-errors/$name.idl"
+  if $idle --target kernel --endpoints kernel-errors/interfaces.txt        -o output "$file" 2> output/diagnostics.txt; then
+    fail "$file (expected errors)"
+  elif diff -u "kernel-errors/$name.txt" output/diagnostics.txt; then
     pass "$file"
   else
     fail "$file"

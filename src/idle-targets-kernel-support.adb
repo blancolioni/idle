@@ -1,6 +1,7 @@
 with Ada.Characters.Handling;
 with Ada.Strings.Unbounded;
 
+with Idle.Hierarchy;
 with Idle.Names;
 
 package body Idle.Targets.Kernel.Support is
@@ -69,6 +70,15 @@ package body Idle.Targets.Kernel.Support is
       return Name (Item) & "_Endpoint";
    end Endpoint_Name;
 
+   ----------------
+   -- Index_Name --
+   ----------------
+
+   function Index_Name (Item : Idle.Syntax.Subprogram) return String is
+   begin
+      return Name (Item) & "_Index";
+   end Index_Name;
+
    --------------------
    -- Interface_Name --
    --------------------
@@ -115,6 +125,22 @@ package body Idle.Targets.Kernel.Support is
    begin
       return Idle.Names.Ada_Name (To_String (Item.Name));
    end Name;
+
+   -----------------
+   -- Subprograms --
+   -----------------
+
+   function Subprograms
+     (Item : Idle.Syntax.Interface_Declaration)
+      return Idle.Syntax.Subprogram_Vectors.Vector
+   is
+   begin
+      return Result : Idle.Syntax.Subprogram_Vectors.Vector do
+         for Member of Idle.Hierarchy.Members (Item) loop
+            Result.Append (Member.Subprogram);
+         end loop;
+      end return;
+   end Subprograms;
 
    --------------
    -- To_Array --

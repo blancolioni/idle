@@ -8,4 +8,8 @@ package Rose.Interfaces.Timer is
    Set_Timer_Endpoint : constant Rose.Objects.Endpoint_Id :=
      16#D25E_5101_0B66#;
 
+   Set_Timer_Index    : constant := 0;
+
+   Subprogram_Count   : constant := 1;
+
 end Rose.Interfaces.Timer;

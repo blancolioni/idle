@@ -1,0 +1,5 @@
+interface Named is
+
+   function Badge return Capability;
+
+end Named;

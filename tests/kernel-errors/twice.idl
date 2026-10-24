@@ -1,0 +1,5 @@
+interface Twice : Named is
+
+   function Badge return Capability;
+
+end Twice;

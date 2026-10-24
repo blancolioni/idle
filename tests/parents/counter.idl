@@ -1,0 +1,6 @@
+interface Counter : Named is
+
+   procedure Increment (By : Word);
+   function Value return Word;
+
+end Counter;

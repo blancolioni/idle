@@ -1,0 +1,8 @@
+--  Named is an ancestor twice over, through Counter and directly; its
+--  subprograms are inherited once.
+
+interface Meter : Counter, Named is
+
+   procedure Reset;
+
+end Meter;

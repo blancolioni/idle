@@ -28,6 +28,8 @@ package body Idle.Targets.Kernel.Client is
       Package_Name : constant String :=
         "Rose.Interfaces." & Ada_Name & ".Client";
       Client_Type  : constant String := Ada_Name & "_Client";
+      Subprograms  : constant Idle.Syntax.Subprogram_Vectors.Vector :=
+        Support.Subprograms (Item);
 
       F            : Syn.Factory.Factory;
       Spec_Context : Context_List;
@@ -84,7 +86,7 @@ package body Idle.Targets.Kernel.Client is
                Statements    =>
                  [F.New_Assignment
                     (F.New_Name ("Client.Is_Open"), F.New_Name ("False"))]
-                 & [for Subprogram of Item.Subprograms =>
+                 & [for Subprogram of Subprograms =>
                       Call (System_Calls & "Delete_Cap",
                             [F.New_Name ("Client." & Name (Subprogram))])]
                  & [Call (System_Calls & "Delete_Cap",
@@ -143,7 +145,7 @@ package body Idle.Targets.Kernel.Client is
 
       begin
          Add_Getter ("Get_Interface_Cap", "Interface_Cap");
-         for Subprogram of Item.Subprograms loop
+         for Subprogram of Subprograms loop
             Add_Getter (Cap_Getter (Name (Subprogram)), Name (Subprogram));
          end loop;
       end Add_Getters;
@@ -152,8 +154,9 @@ package body Idle.Targets.Kernel.Client is
       -- Add_Open --
       --------------
 
-      --  Invoking the interface cap returns a cap for each subprogram,
-      --  in the order they are declared.
+      --  Invoking the interface cap returns a cap for each subprogram, at
+      --  the position given by its index constant in the interface
+      --  package.
 
       procedure Add_Open is
          Specification : constant not null Syn.Node_Access :=
@@ -163,13 +166,11 @@ package body Idle.Targets.Kernel.Client is
                F.New_Parameter ("Interface_Cap",
                                 F.New_Name (Capability_Name))]);
          Caps : constant Syn.Node_Array :=
-           [for Index in 1 .. Natural (Item.Subprograms.Length) =>
+           [for Subprogram of Subprograms =>
               F.New_Assignment
-                (F.New_Name ("Client." & Name (Item.Subprograms (Index))),
+                (F.New_Name ("Client." & Name (Subprogram)),
                  F.New_Call
-                   ("Params.Caps",
-                    [F.New_Integer_Literal
-                       (Long_Long_Long_Integer (Index - 1))]))];
+                   ("Params.Caps", [F.New_Name (Index_Name (Subprogram))]))];
       begin
          Public_Part.Append (Specification);
          Bodies.Add
@@ -190,10 +191,7 @@ package body Idle.Targets.Kernel.Client is
                         [F.New_Name ("Params"),
                          F.New_Name ("Interface_Cap")]),
                   Call (System_Calls & "Receive_Caps",
-                        [F.New_Name ("Params"),
-                         F.New_Integer_Literal
-                           (Long_Long_Long_Integer
-                              (Item.Subprograms.Length))]),
+                        [F.New_Name ("Params"), F.New_Name (Count_Name)]),
                   Call (System_Calls & "Invoke_Capability",
                         [F.New_Name ("Params")])]
                  & Caps
@@ -214,7 +212,7 @@ package body Idle.Targets.Kernel.Client is
            F.New_Procedure
              ("Open_Cap_Set",
               [Client_Parameter (Syn.Out_Mode)]
-              & [for Subprogram of Item.Subprograms =>
+              & [for Subprogram of Subprograms =>
                    F.New_Parameter
                      (Name (Subprogram), F.New_Name (Capability_Name))]);
       begin
@@ -224,7 +222,7 @@ package body Idle.Targets.Kernel.Client is
             F.New_Subprogram_Body
               (Specification => Specification,
                Statements    =>
-                 [for Subprogram of Item.Subprograms =>
+                 [for Subprogram of Subprograms =>
                     F.New_Assignment
                       (F.New_Name ("Client." & Name (Subprogram)),
                        F.New_Name (Name (Subprogram)))]
@@ -466,7 +464,7 @@ package body Idle.Targets.Kernel.Client is
       Add_Open_Cap_Set;
       Add_Open;
       Add_Close;
-      for Subprogram of Item.Subprograms loop
+      for Subprogram of Subprograms loop
          Add_Subprogram (Subprogram);
       end loop;
       Add_Getters;

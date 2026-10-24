@@ -1,0 +1,1 @@
+kernel-errors/loop_b.idl:1:1: error: interface Loop_A is its own ancestor

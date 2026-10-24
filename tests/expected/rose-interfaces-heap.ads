@@ -11,4 +11,10 @@ package Rose.Interfaces.Heap is
    Request_New_Bound_Endpoint : constant Rose.Objects.Endpoint_Id :=
      16#22D2_9EEE_A6A1#;
 
+   Current_Bound_Index        : constant := 0;
+
+   Request_New_Bound_Index    : constant := 1;
+
+   Subprogram_Count           : constant := 2;
+
 end Rose.Interfaces.Heap;
