@@ -1,0 +1,3 @@
+rose/data_source.idl: warning: not compiled by this build
+rose/named.idl: warning: not compiled by this build, but it is a parent of Kernel_Process
+rose/rose_interface.idl: warning: not compiled by this build

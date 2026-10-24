@@ -207,6 +207,31 @@ package body Idle.Targets.Kernel is
          function Unsupported_Text (What : String) return String
          is (What & " are not yet supported by the kernel target");
 
+         procedure Check_Interface
+           (Info      : Types.Type_Info;
+            Type_Name : String;
+            Position  : Idle.Syntax.Source_Position);
+         --  Report Type_Name if it is an interface that does not exist.
+
+         ---------------------
+         -- Check_Interface --
+         ---------------------
+
+         procedure Check_Interface
+           (Info      : Types.Type_Info;
+            Type_Name : String;
+            Position  : Idle.Syntax.Source_Position)
+         is
+            Found : Idle.Syntax.Interface_Declaration;
+         begin
+            if Info.Category = Interface_Value
+              and then not Idle.Hierarchy.Find (Member.Owner, Type_Name, Found)
+            then
+               Error (Member.File_Name, Position,
+                      "unknown interface " & Type_Name);
+            end if;
+         end Check_Interface;
+
       begin
          if not Endpoints.Has_Method_Id
            (To_String (Member.Declared_In), To_String (Subprogram.Name))
@@ -229,6 +254,8 @@ package body Idle.Targets.Kernel is
                   Error (Member.File_Name, Parameter.Position,
                          "unknown type " & Type_Name);
                else
+                  Check_Interface (Info, Type_Name, Parameter.Position);
+
                   if Cap_Array_Seen
                     and then Info.Category in
                       Capability_Value | Interface_Value
@@ -278,7 +305,7 @@ package body Idle.Targets.Kernel is
                   when String_Value =>
                      Buffers := Buffers + 1;
                   when others =>
-                     null;
+                     Check_Interface (Info, Type_Name, Subprogram.Position);
                end case;
             end;
          end if;
@@ -311,24 +338,10 @@ package body Idle.Targets.Kernel is
       end loop;
       Check_Declarations (Item);
 
-      for Index in 1 .. Members.Last_Index loop
-         Check_Member (Members (Index));
-
-         --  The names of the subprograms are the names of the client's
-         --  operations and of the server's handlers, so they must differ.
-
-         for Earlier in 1 .. Index - 1 loop
-            if Idle.Names.Key (To_String (Members (Earlier).Subprogram.Name))
-              = Idle.Names.Key (To_String (Members (Index).Subprogram.Name))
-            then
-               Error (Item.File_Name, Item.Position,
-                      Name (Members (Index).Subprogram)
-                      & " is declared by both "
-                      & To_String (Members (Earlier).Declared_In) & " and "
-                      & To_String (Members (Index).Declared_In));
-            end if;
-         end loop;
+      for Member of Members loop
+         Check_Member (Member);
       end loop;
+      Idle.Hierarchy.Check_Members (Item);
 
       --  Errors in finding or reading the ancestors were reported by
       --  Idle.Hierarchy.

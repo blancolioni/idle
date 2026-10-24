@@ -3,16 +3,21 @@ with Ada.Containers.Indefinite_Vectors;
 with Ada.Strings.Unbounded;
 with Ada.Text_IO;
 
+with Idle.Check;
 with Idle.Diagnostics;
 with Idle.Endpoints;
+with Idle.Hierarchy;
 with Idle.Parser;
 with Idle.Syntax;
 with Idle.Targets.Kernel;
 
 procedure Idle.Main is
 
-   --  idle [--syntax-only] [--target TARGET] [--endpoints FILE]
+   --  idle [--syntax-only | --check] [--target TARGET] [--endpoints FILE]
    --       [-o DIRECTORY] FILE.idl...
+   --
+   --  --check checks the files together, as the interfaces a build
+   --  compiles, and generates nothing (see Idle.Check).
 
    use Ada.Strings.Unbounded;
 
@@ -26,6 +31,7 @@ procedure Idle.Main is
    Output_Directory : Unbounded_String := To_Unbounded_String (".");
    Target           : Idle.Targets.Target := Idle.Targets.Default_Target;
    Syntax_Only      : Boolean := False;
+   Check_Only       : Boolean := False;
    Arguments_OK     : Boolean := True;
    Index            : Positive := 1;
 
@@ -37,8 +43,8 @@ procedure Idle.Main is
    begin
       Ada.Text_IO.Put_Line
         (Ada.Text_IO.Standard_Error,
-         "usage: idle [--syntax-only] [--target TARGET] [--endpoints FILE]"
-         & " [-o DIRECTORY] FILE.idl...");
+         "usage: idle [--syntax-only | --check] [--target TARGET]"
+         & " [--endpoints FILE] [-o DIRECTORY] FILE.idl...");
       Ada.Text_IO.Put_Line
         (Ada.Text_IO.Standard_Error,
          "targets: " & Idle.Targets.Names
@@ -53,6 +59,8 @@ begin
       begin
          if Argument = "--syntax-only" then
             Syntax_Only := True;
+         elsif Argument = "--check" then
+            Check_Only := True;
          elsif Argument = "--endpoints" or else Argument = "-o"
            or else Argument = "--target"
          then
@@ -95,6 +103,7 @@ begin
    end loop;
 
    if Files.Is_Empty
+     or else (Syntax_Only and then Check_Only)
      or else (not Syntax_Only and then Endpoint_File = Null_Unbounded_String)
    then
       Arguments_OK := False;
@@ -107,7 +116,9 @@ begin
    end if;
 
    declare
-      Endpoints : Idle.Endpoints.Endpoint_Table;
+      Endpoints    : Idle.Endpoints.Endpoint_Table;
+      Items        : Idle.Hierarchy.Interface_Vectors.Vector;
+      Parse_Errors : Natural;
    begin
       if not Syntax_Only then
          Endpoints.Load (To_String (Endpoint_File));
@@ -120,7 +131,8 @@ begin
             Item          : constant Idle.Syntax.Interface_Declaration :=
                               Idle.Parser.Parse_File (File);
          begin
-            if not Syntax_Only
+            Items.Append (Item);
+            if not Syntax_Only and then not Check_Only
               and then Idle.Diagnostics.Error_Count = Errors_Before
             then
                case Target is
@@ -131,6 +143,11 @@ begin
             end if;
          end;
       end loop;
+
+      Parse_Errors := Idle.Diagnostics.Error_Count;
+      if Check_Only and then Parse_Errors = 0 then
+         Idle.Check.Check_All (Items, Endpoints);
+      end if;
    end;
 
    if Idle.Diagnostics.Error_Count > 0 then

@@ -9,7 +9,8 @@
 #     a small hierarchy.
 #  3. Run idle on each file in errors/ and compare its diagnostics with
 #     the .txt file of the same name; and the same for the kernel target
-#     with the cases in kernel-errors/.
+#     with the cases in kernel-errors/, and for --check with Rose's build
+#     list (rose-build.txt) and the cases in check-errors/.
 #  4. Compile every expected Ada file with GNAT's style checks, as strict
 #     as Rose's build.
 
@@ -81,7 +82,7 @@ done
 # Interfaces that the kernel target rejects. The other files in
 # kernel-errors/ are their parents.
 
-for name in orphan loop_a twice bounds; do
+for name in orphan loop_a twice bounds typo; do
   file="kernel-errors/$name.idl"
   if $idle --target kernel --endpoints kernel-errors/interfaces.txt        -o output "$file" 2> output/diagnostics.txt; then
     fail "$file (expected errors)"
@@ -91,6 +92,24 @@ for name in orphan loop_a twice bounds; do
     fail "$file"
   fi
 done
+
+# Checking interfaces together. Rose's build gives only warnings, for the
+# files it does not compile. Each case in check-errors/ but extra.idl has
+# an error.
+
+if $idle --check --endpoints rose/interfaces.txt      $(sed 's|^|rose/|; s|$|.idl|' rose-build.txt) 2> output/check.txt    && diff -u rose-build.expected output/check.txt; then
+  pass "check of Rose's build"
+else
+  fail "check of Rose's build"
+fi
+
+if $idle --check --endpoints check-errors/interfaces.txt      check-errors/misnamed.idl check-errors/typo.idl check-errors/first.idl      check-errors/second.idl check-errors/both.idl check-errors/no_id.idl      2> output/check.txt; then
+  fail "check errors (expected errors)"
+elif diff -u check-errors/expected.txt output/check.txt; then
+  pass "check errors"
+else
+  fail "check errors"
+fi
 
 # 4. Style of expected output
 

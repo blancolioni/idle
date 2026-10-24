@@ -10,3 +10,5 @@ Named.Badge = 16#4444_0000_0004#
 Twice.Badge = 16#4444_0000_0005#
 interface.Bounds_Interface = 16#3333_0000_0006#
 Bounds.Reset = 16#4444_0000_0006#
+interface.Typo_Interface = 16#3333_0000_0007#
+Typo.Open = 16#4444_0000_0007#

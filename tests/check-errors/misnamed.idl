@@ -1,0 +1,5 @@
+interface Other_Name is
+
+   procedure Reset;
+
+end Other_Name;

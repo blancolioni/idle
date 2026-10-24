@@ -1,0 +1,7 @@
+--  Second.Start has the same endpoint id as First.Run.
+
+interface Second is
+
+   procedure Start;
+
+end Second;
