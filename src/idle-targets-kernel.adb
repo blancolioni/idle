@@ -92,6 +92,10 @@ package body Idle.Targets.Kernel is
       --  Report what the kernel target does not support in the
       --  subprogram of Member, and a subprogram without an id.
 
+      procedure Check_Generated_Names;
+      --  Report a constant, type or enumeration literal of Item whose name
+      --  is one that its interface package generates.
+
       procedure Error
         (File_Name : Unbounded_String;
          Position  : Idle.Syntax.Source_Position;
@@ -179,6 +183,98 @@ package body Idle.Targets.Kernel is
             Declared.Append (Idle.Names.Key (To_String (Declared_Type.Name)));
          end loop;
       end Check_Declarations;
+
+      ---------------------------
+      -- Check_Generated_Names --
+      ---------------------------
+
+      procedure Check_Generated_Names is
+
+         Generated    : Idle.Syntax.String_Vectors.Vector;
+         --  The key of each generated name.
+         Descriptions : Idle.Syntax.String_Vectors.Vector;
+         --  What generates it.
+
+         procedure Add (Name, Description : String);
+
+         procedure Check
+           (Name     : String;
+            What     : String;
+            Position : Idle.Syntax.Source_Position);
+         --  Report Name, of the declaration What at Position, if it is a
+         --  generated name.
+
+         ---------
+         -- Add --
+         ---------
+
+         procedure Add (Name, Description : String) is
+         begin
+            Generated.Append (Idle.Names.Key (Name));
+            Descriptions.Append (Description);
+         end Add;
+
+         -----------
+         -- Check --
+         -----------
+
+         procedure Check
+           (Name     : String;
+            What     : String;
+            Position : Idle.Syntax.Source_Position)
+         is
+            Index : constant Natural :=
+              Generated.Find_Index (Idle.Names.Key (Name));
+         begin
+            if Index /= 0 then
+               Error (Item.File_Name, Position,
+                      What & " " & Name & " has the same name as "
+                      & Descriptions (Index)
+                      & ", which the interface package declares");
+            end if;
+         end Check;
+
+      begin
+         for Declaration of Ancestors loop
+            Add (Interface_Name (Declaration),
+                 "the id of interface "
+                 & Idle.Names.Ada_Name (To_String (Declaration.Name)));
+         end loop;
+         Add (Interface_Name (Item),
+              "the id of interface "
+              & Idle.Names.Ada_Name (To_String (Item.Name)));
+
+         for Member of Members loop
+            declare
+               Subprogram : constant String :=
+                 To_String (Member.Declared_In) & "."
+                 & Name (Member.Subprogram);
+            begin
+               Add (Endpoint_Name (Member.Subprogram),
+                    "the endpoint id of " & Subprogram);
+               Add (Index_Name (Member.Subprogram),
+                    "the cap index of " & Subprogram);
+            end;
+         end loop;
+
+         Add (Count_Name, "the number of subprograms");
+
+         for Declared_Constant of Item.Constants loop
+            Check (To_String (Declared_Constant.Name), "constant",
+                   Declared_Constant.Position);
+         end loop;
+
+         for Declared_Type of Item.Types loop
+            Check (To_String (Declared_Type.Name), "type",
+                   Declared_Type.Position);
+            if Declared_Type.Kind in Idle.Syntax.Enumeration_Type then
+               for Literal of Declared_Type.Literals loop
+                  Check (Literal, "enumeration literal",
+                         Declared_Type.Position);
+               end loop;
+            end if;
+         end loop;
+      end Check_Generated_Names;
 
       ------------------
       -- Check_Member --
@@ -316,6 +412,7 @@ package body Idle.Targets.Kernel is
          Check_Declarations (Ancestor);
       end loop;
       Check_Declarations (Item);
+      Check_Generated_Names;
 
       for Member of Members loop
          Check_Member (Member);

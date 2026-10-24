@@ -1,0 +1,12 @@
+interface Clash : Named is
+
+   Clash_Interface  : constant := 1;
+   subprogram_count : constant := 2;
+
+   type Badge_Index is range 0 .. 10;
+   type Start_Endpoint is range 0 .. 10;
+   type Mode is (Off, Named_Interface);
+
+   procedure Start;
+
+end Clash;
