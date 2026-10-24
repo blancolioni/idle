@@ -15,10 +15,12 @@ package Idle.Targets.Kernel is
    --    Rose.Interfaces.<Name>.Client  calls through the interface
    --    Rose.Interfaces.<Name>.Server  handles calls through it
    --
-   --  Not yet supported: interfaces with parents, types or constants;
-   --  parameters that are not in mode, or whose type is not Word or
-   --  Capability; and results that are not Word, Capability or an
-   --  interface. These are reported as errors through Idle.Diagnostics,
-   --  and nothing is written.
+   --  The packages use the encoding of the original IDL compiler (see
+   --  Idle.Targets.Kernel.Types), and interoperate with code it generated
+   --  and with the kernel. Not yet supported: out and in out parameters
+   --  that are caps, interfaces, capability arrays or strings; results
+   --  that are capability arrays or storage arrays; and more than one
+   --  string or array in a subprogram. These, and unknown types, are
+   --  reported as errors through Idle.Diagnostics, and nothing is written.
 
 end Idle.Targets.Kernel;

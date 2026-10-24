@@ -189,6 +189,7 @@ package body Idle.Hierarchy is
               (Member'
                  (Declared_In => From.Name,
                   File_Name   => From.File_Name,
+                  Owner       => From,
                   Subprogram  => Subprogram));
          end loop;
       end Add;

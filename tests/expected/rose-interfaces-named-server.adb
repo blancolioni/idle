@@ -133,7 +133,7 @@ package body Rose.Interfaces.Named.Server is
         (Server_Context,
          Badge_Endpoint,
          Handle_Badge'Access);
-      Rose.Server.Publish_Interface (1, Published_Cap);
+      Rose.Server.Publish_Interface (Published_Cap);
    end Publish_Interface;
 
 end Rose.Interfaces.Named.Server;

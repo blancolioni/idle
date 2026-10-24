@@ -9,16 +9,9 @@ with Idle.Syntax;
 
 private package Idle.Targets.Kernel.Support is
 
-   --  What the kernel client and server generators share: how IDL types
-   --  map to Ada and to the invocation record, the names of the
-   --  generated entities, and lists of declarations and context clauses.
-
-   type Type_Kind is (Word_Type, Capability_Type, Interface_Type, Other_Type);
-   --  Word_Type and Capability_Type are passed in data words and cap
-   --  slots respectively; Interface_Type is an interface value, passed as
-   --  the single cap that opens it.
-
-   function Kind (Item : Idle.Syntax.Type_Reference) return Type_Kind;
+   --  What the kernel client and server generators share: the names of
+   --  the generated entities, and lists of declarations, bodies and
+   --  context clauses. Idle.Targets.Kernel.Types maps IDL types to Ada.
 
    Capability_Name : constant String := "Rose.Capabilities.Capability";
    Word_Name       : constant String := "Rose.Words.Word";
@@ -32,9 +25,9 @@ private package Idle.Targets.Kernel.Support is
    --  The unit that declares the Ada type of the predefined IDL type
    --  Name, or "" if it is declared in Standard.
 
-   function Ada_Type (Item : Idle.Syntax.Type_Reference) return String
-     with Pre => Kind (Item) in Word_Type | Capability_Type;
-   --  The Ada type of a word or a capability.
+   function Qualified (Prefix, Name : String) return String
+   is (if Prefix = "" then Name else Prefix & "." & Name);
+   --  Name, qualified by Prefix if it is not "".
 
    function Name (Item : Idle.Syntax.Subprogram) return String;
    --  The Ada name of Item.
@@ -91,6 +84,11 @@ private package Idle.Targets.Kernel.Support is
      (List      : in out Context_List;
       Unit_Name : String);
 
+   function Contains
+     (List      : Context_List;
+      Unit_Name : String)
+      return Boolean;
+
    function To_Array
      (List    : Context_List;
       Factory : in out Syn.Factory.Factory)
@@ -116,7 +114,8 @@ private
    type Body_List is tagged record
       Items : Node_Maps.Map;
    end record;
-   --  Keyed by the name of each body in upper case.
+   --  Keyed by the name of each body in lower case, which is how GNAT
+   --  compares them.
 
    type Context_List is tagged record
       Units : Name_Sets.Set;

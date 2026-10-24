@@ -10,6 +10,7 @@ with Idle.Names;
 with Idle.Targets.Kernel.Client;
 with Idle.Targets.Kernel.Server;
 with Idle.Targets.Kernel.Support;
+with Idle.Targets.Kernel.Types;
 
 package body Idle.Targets.Kernel is
 
@@ -119,7 +120,16 @@ package body Idle.Targets.Kernel is
       ------------------
 
       procedure Check_Member (Member : Idle.Hierarchy.Member) is
-         Subprogram : Idle.Syntax.Subprogram renames Member.Subprogram;
+         use all type Types.Category;
+         use type Idle.Syntax.Parameter_Mode;
+
+         Subprogram     : Idle.Syntax.Subprogram renames Member.Subprogram;
+         Buffers        : Natural := 0;
+         Cap_Array_Seen : Boolean := False;
+
+         function Unsupported_Text (What : String) return String
+         is (What & " are not yet supported by the kernel target");
+
       begin
          if not Endpoints.Has_Method_Id
            (To_String (Member.Declared_In), To_String (Subprogram.Name))
@@ -132,27 +142,74 @@ package body Idle.Targets.Kernel is
          end if;
 
          for Parameter of Subprogram.Parameters loop
-            if Parameter.Mode not in Idle.Syntax.In_Mode then
-               Error (Member.File_Name, Parameter.Position,
-                      "out and in out parameters are not yet supported "
-                      & "by the kernel target");
-            elsif Kind (Parameter.Of_Type) not in Word_Type | Capability_Type
-            then
-               Error (Member.File_Name, Parameter.Position,
-                      (if Parameter.Of_Type.Is_Interface
-                       then "interface parameters"
-                       else "parameters of type "
-                            & To_String (Parameter.Of_Type.Name))
-                      & " are not yet supported by the kernel target");
-            end if;
+            declare
+               Info      : constant Types.Type_Info :=
+                 Types.Resolve (Member.Owner, Parameter.Of_Type);
+               Type_Name : constant String :=
+                 To_String (Parameter.Of_Type.Name);
+            begin
+               if Info.Category = Unknown then
+                  Error (Member.File_Name, Parameter.Position,
+                         "unknown type " & Type_Name);
+               else
+                  if Cap_Array_Seen
+                    and then Info.Category in
+                      Capability_Value | Interface_Value
+                      | Capability_Array_Value
+                  then
+                     Error (Member.File_Name, Parameter.Position,
+                            "a capability array must be the last "
+                            & "capability parameter");
+                  end if;
+
+                  if Info.Category = Capability_Array_Value then
+                     Cap_Array_Seen := True;
+                  end if;
+
+                  if Types.Is_Buffer (Info) then
+                     Buffers := Buffers + 1;
+                  end if;
+
+                  if Parameter.Mode /= Idle.Syntax.In_Mode
+                    and then Info.Category in
+                      Capability_Value | Interface_Value
+                      | Capability_Array_Value | String_Value
+                  then
+                     Error (Member.File_Name, Parameter.Position,
+                            Unsupported_Text
+                              ("out and in out parameters of type "
+                               & Type_Name));
+                  end if;
+               end if;
+            end;
          end loop;
 
-         if Subprogram.Is_Function
-           and then Kind (Subprogram.Result) = Other_Type
-         then
+         if Subprogram.Is_Function then
+            declare
+               Info      : constant Types.Type_Info :=
+                 Types.Resolve (Member.Owner, Subprogram.Result);
+               Type_Name : constant String :=
+                 To_String (Subprogram.Result.Name);
+            begin
+               case Info.Category is
+                  when Unknown =>
+                     Error (Member.File_Name, Subprogram.Position,
+                            "unknown type " & Type_Name);
+                  when Capability_Array_Value | Storage_Value =>
+                     Error (Member.File_Name, Subprogram.Position,
+                            Unsupported_Text ("results of type " & Type_Name));
+                  when String_Value =>
+                     Buffers := Buffers + 1;
+                  when others =>
+                     null;
+               end case;
+            end;
+         end if;
+
+         if Buffers > 1 then
             Error (Member.File_Name, Subprogram.Position,
-                   "results of type " & To_String (Subprogram.Result.Name)
-                   & " are not yet supported by the kernel target");
+                   "only one string or array can be passed in an "
+                   & "invocation");
          end if;
       end Check_Member;
 

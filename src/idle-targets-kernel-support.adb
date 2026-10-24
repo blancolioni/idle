@@ -16,22 +16,6 @@ package body Idle.Targets.Kernel.Support is
    --  declares it, or "" for both if there is no such type. Unit is "" for
    --  a type declared in Standard.
 
-   --------------
-   -- Ada_Type --
-   --------------
-
-   function Ada_Type (Item : Idle.Syntax.Type_Reference) return String is
-   begin
-      case Kind (Item) is
-         when Word_Type =>
-            return Word_Name;
-         when Capability_Type =>
-            return Capability_Name;
-         when Interface_Type | Other_Type =>
-            raise Program_Error;
-      end case;
-   end Ada_Type;
-
    ---------
    -- Add --
    ---------
@@ -42,7 +26,7 @@ package body Idle.Targets.Kernel.Support is
       Item : not null Syn.Node_Access)
    is
    begin
-      List.Items.Insert (Ada.Characters.Handling.To_Upper (Name), Item);
+      List.Items.Insert (Ada.Characters.Handling.To_Lower (Name), Item);
    end Add;
 
    ---------
@@ -68,6 +52,19 @@ package body Idle.Targets.Kernel.Support is
    begin
       List.Items.Append (Item);
    end Append;
+
+   --------------
+   -- Contains --
+   --------------
+
+   function Contains
+     (List      : Context_List;
+      Unit_Name : String)
+      return Boolean
+   is
+   begin
+      return List.Units.Contains (Unit_Name);
+   end Contains;
 
    -------------------
    -- Endpoint_Name --
@@ -136,24 +133,6 @@ package body Idle.Targets.Kernel.Support is
    begin
       return Idle.Names.Ada_Name (To_String (Item.Name)) & "_Interface";
    end Interface_Name;
-
-   ----------
-   -- Kind --
-   ----------
-
-   function Kind (Item : Idle.Syntax.Type_Reference) return Type_Kind is
-      Key : constant String := Idle.Names.Key (To_String (Item.Name));
-   begin
-      if Item.Is_Interface then
-         return Interface_Type;
-      elsif Key = "word" then
-         return Word_Type;
-      elsif Key = "capability" then
-         return Capability_Type;
-      else
-         return Other_Type;
-      end if;
-   end Kind;
 
    ----------
    -- Name --

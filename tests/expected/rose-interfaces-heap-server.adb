@@ -213,7 +213,7 @@ package body Rose.Interfaces.Heap.Server is
         (Server_Context,
          Request_New_Bound_Endpoint,
          Handle_Request_New_Bound'Access);
-      Rose.Server.Publish_Interface (1, Published_Cap);
+      Rose.Server.Publish_Interface (Published_Cap);
    end Publish_Interface;
 
 end Rose.Interfaces.Heap.Server;

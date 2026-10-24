@@ -1,5 +1,12 @@
 rose/heap
 rose/timer
+rose/block_device
+rose/cap_set
+rose/directory
+rose/exec
+rose/memory
+rose/process
+rose/stream_reader
 parents/named
 parents/counter
 parents/meter
