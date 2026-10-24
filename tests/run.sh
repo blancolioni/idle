@@ -5,11 +5,13 @@
 #  2. Generate the kernel-target packages for each interface in
 #     generated.txt, and compare them with expected/. Each line names
 #     DIRECTORY/INTERFACE: rose/ for Rose's interfaces, parents/ for a
-#     small hierarchy. Also list the endpoint ids of some interfaces.
+#     small hierarchy. Also list the endpoint ids of some interfaces,
+#     and generate the units for the commands and packages in commands/.
 #  3. Run idle on each file in errors/ and compare its diagnostics with
 #     the .txt file of the same name; and the same for the kernel target
 #     with the cases in kernel-errors/, and for --check with Rose's build
-#     list (rose-build.txt) and the cases in check-errors/.
+#     list (rose-build.txt) and the cases in check-errors/, and for
+#     commands with the cases in command-errors/.
 #  4. Compile every expected Ada file with GNAT's style checks, as strict
 #     as Rose's build.
 
@@ -74,6 +76,31 @@ else
   fail "unknown target (message)"
 fi
 
+# Commands and IDL packages, with the roles the commands inherit, which
+# find the interfaces they name in rose/.
+
+commands="rose-core.ads rose-core-echo.ads rose-core-echo_main.adb
+rose-core-echo_metadata.ads rose-core-head.ads rose-core-head_main.adb
+rose-core-head_metadata.ads"
+rm -rf output/commands && mkdir output/commands
+if $idle --target kernel -I rose -o output/commands commands/*.idl; then
+  for file in $commands; do
+    if diff -u "expected/$file" "output/commands/$file"; then
+      pass "$file"
+    else
+      fail "$file"
+    fi
+  done
+  if [ "$(ls output/commands)" = "$(printf '%s
+' $commands | sort)" ]; then
+    pass "files generated for commands"
+  else
+    fail "files generated for commands"
+  fi
+else
+  fail "kernel target for commands"
+fi
+
 # 3. Diagnostics
 
 for file in errors/*.idl; do
@@ -123,6 +150,17 @@ elif diff -u check-errors/expected.txt output/check.txt; then
   pass "check errors"
 else
   fail "check errors"
+fi
+
+# Commands, packages and roles that break the rules. Each command finds
+# its package beside it, in command-errors/, and its roles in commands/.
+
+if $idle --target kernel -I commands -I rose -o output      command-errors/rose-core-bad.idl command-errors/nowhere-thing.idl      command-errors/bad_role.idl command-errors/rose-core-logger.idl      command-errors/rose-core.idl 2> output/diagnostics.txt; then
+  fail "command errors (expected errors)"
+elif diff -u command-errors/expected.txt output/diagnostics.txt; then
+  pass "command errors"
+else
+  fail "command errors"
 fi
 
 # 4. Style of expected output

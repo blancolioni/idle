@@ -8,9 +8,9 @@ package Idle.Tokens is
 
       --  Keywords
 
-      Tok_Constant, Tok_End, Tok_Function, Tok_In, Tok_Interface, Tok_Is,
-      Tok_New, Tok_Out, Tok_Procedure, Tok_Range, Tok_Record, Tok_Return,
-      Tok_Type, Tok_With,
+      Tok_Command, Tok_Constant, Tok_End, Tok_Function, Tok_In,
+      Tok_Interface, Tok_Is, Tok_New, Tok_Out, Tok_Package, Tok_Procedure,
+      Tok_Range, Tok_Record, Tok_Return, Tok_Role, Tok_Type, Tok_With,
 
       --  Symbols
 
@@ -18,7 +18,7 @@ package Idle.Tokens is
       Tok_Dot, Tok_Dot_Dot, Tok_Arrow, Tok_Becomes, Tok_Apostrophe,
       Tok_Ampersand);
 
-   subtype Keyword_Token is Token range Tok_Constant .. Tok_With;
+   subtype Keyword_Token is Token range Tok_Command .. Tok_With;
 
    function Keyword_Text (Item : Keyword_Token) return String;
    --  The keyword as it is written, in lower case: "interface" for

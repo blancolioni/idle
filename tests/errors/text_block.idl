@@ -1,0 +1,7 @@
+package Text_Block
+  with Summary => """ Not on its own line
+          The text.
+          """,
+       License => """
+          Never closed.
+end Text_Block;

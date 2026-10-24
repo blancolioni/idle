@@ -4,11 +4,13 @@ with Syn;
 with Syn.Factory;
 with Syn.Units;
 
+with Idle.Commands;
 with Idle.Diagnostics;
 with Idle.Endpoints;
 with Idle.Hierarchy;
 with Idle.Names;
 with Idle.Targets.Kernel.Client;
+with Idle.Targets.Kernel.Commands;
 with Idle.Targets.Kernel.Server;
 with Idle.Targets.Kernel.Support;
 with Idle.Targets.Kernel.Types;
@@ -410,11 +412,27 @@ package body Idle.Targets.Kernel is
       Output_Directory : String)
    is
    begin
-      if Check (Item) then
-         Generate_Interface_Package (Item, Output_Directory);
-         Client.Generate (Item, Output_Directory);
-         Server.Generate (Item, Output_Directory);
-      end if;
+      case Item.Kind is
+         when Idle.Syntax.Interface_Unit =>
+            if Check (Item) then
+               Generate_Interface_Package (Item, Output_Directory);
+               Client.Generate (Item, Output_Directory);
+               Server.Generate (Item, Output_Directory);
+            end if;
+         when Idle.Syntax.Command_Unit =>
+            if Idle.Commands.Check (Item) then
+               Commands.Generate_Command (Item, Output_Directory);
+            end if;
+         when Idle.Syntax.Package_Unit =>
+            if Idle.Commands.Check (Item) then
+               Commands.Generate_Package (Item, Output_Directory);
+            end if;
+         when Idle.Syntax.Role_Unit =>
+            --  A role is only part of the commands that play it.
+            if Idle.Commands.Check (Item) then
+               null;
+            end if;
+      end case;
    end Generate;
 
    --------------------------------

@@ -14,7 +14,10 @@ with Idle.Targets.Kernel;
 procedure Idle.Main is
 
    --  idle [--syntax-only | --check | --list-endpoints] [--target TARGET]
-   --       [-o DIRECTORY] FILE.idl...
+   --       [-I DIRECTORY]... [-o DIRECTORY] FILE.idl...
+   --
+   --  -I adds a directory to search for the declarations that a file
+   --  names, after the file's own directory.
    --
    --  --check checks the files together, as the interfaces a build
    --  compiles, and generates nothing (see Idle.Check). --list-endpoints
@@ -50,7 +53,8 @@ procedure Idle.Main is
       Ada.Text_IO.Put_Line
         (Ada.Text_IO.Standard_Error,
          "usage: idle [--syntax-only | --check | --list-endpoints]"
-         & " [--target TARGET] [-o DIRECTORY] FILE.idl...");
+         & " [--target TARGET] [-I DIRECTORY]... [-o DIRECTORY]"
+         & " FILE.idl...");
       Ada.Text_IO.Put_Line
         (Ada.Text_IO.Standard_Error,
          "targets: " & Idle.Targets.Names
@@ -70,7 +74,7 @@ begin
          elsif Argument = "--list-endpoints" then
             List_Only := True;
          elsif Argument = "--endpoints" or else Argument = "-o"
-           or else Argument = "--target"
+           or else Argument = "--target" or else Argument = "-I"
          then
             if Index = Ada.Command_Line.Argument_Count then
                Ada.Text_IO.Put_Line
@@ -84,6 +88,8 @@ begin
                begin
                   if Argument = "-o" then
                      Output_Directory := To_Unbounded_String (Value);
+                  elsif Argument = "-I" then
+                     Idle.Hierarchy.Add_Search_Directory (Value);
                   elsif Argument = "--target" then
                      if not Idle.Targets.Find (Value, Target) then
                         Ada.Text_IO.Put_Line
@@ -169,9 +175,13 @@ begin
          begin
             Items.Append (Item);
             if Idle.Diagnostics.Error_Count = Errors_Before then
-               if List_Only then
-                  List (Item);
-               elsif not Syntax_Only and then not Check_Only then
+               if Syntax_Only or else Check_Only then
+                  null;
+               elsif List_Only then
+                  if Item.Kind in Idle.Syntax.Interface_Unit then
+                     List (Item);
+                  end if;
+               else
                   case Target is
                      when Idle.Targets.Kernel_Target =>
                         Idle.Targets.Kernel.Generate

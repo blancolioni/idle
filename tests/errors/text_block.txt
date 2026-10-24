@@ -1,0 +1,6 @@
+errors/text_block.idl:2:23: error: a text block starts on the line after its opening quotes
+errors/text_block.idl:5:19: error: unterminated text block
+errors/text_block.idl:8:1: error: missing 'is'
+errors/text_block.idl:8:1: error: missing 'end'
+errors/text_block.idl:8:1: error: missing Text_Block after 'end'
+errors/text_block.idl:8:1: error: missing ';'

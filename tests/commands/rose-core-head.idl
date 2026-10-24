@@ -1,0 +1,20 @@
+command Rose.Core.Head : Standard_IO
+  with Summary => "Copy the first lines of standard input.",
+       Name    => "first",
+       Authors => "Someone Else"
+is
+   Lines : Positive := 10
+     with Short_Name => 'n',
+          Help       => "the number of lines to copy";
+   Skip : Natural := 0
+     with Help => "the number of lines to skip first";
+   Quiet : Boolean := False
+     with Short_Name => 'q',
+          Help       => "never write headers";
+   Header : String := "==> ""input"" <=="
+     with Help => "the header to write before the lines";
+   Prefix : String
+     with Help => "a prefix for each line";
+   Names : String_List
+     with Help => "names for the input";
+end Rose.Core.Head;

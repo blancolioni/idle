@@ -25,6 +25,21 @@ package body Idle.Names is
       return Result;
    end Ada_Name;
 
+   --------------
+   -- File_Key --
+   --------------
+
+   function File_Key (Name : String) return String is
+      Result : String := Key (Name);
+   begin
+      for Ch of Result loop
+         if Ch = '.' then
+            Ch := '-';
+         end if;
+      end loop;
+      return Result;
+   end File_Key;
+
    ---------
    -- Key --
    ---------

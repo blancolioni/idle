@@ -1,4 +1,5 @@
 with Ada.Containers.Indefinite_Hashed_Maps;
+with Ada.Containers.Indefinite_Vectors;
 with Ada.Directories;
 with Ada.Strings.Hash;
 
@@ -15,6 +16,11 @@ package body Idle.Hierarchy is
         Hash            => Ada.Strings.Hash,
         Equivalent_Keys => "=",
         "="             => Idle.Syntax."=");
+
+   package Directory_Vectors is
+     new Ada.Containers.Indefinite_Vectors (Positive, String);
+
+   Search_Directories : Directory_Vectors.Vector;
 
    Loaded : Declaration_Maps.Map;
    --  Files read so far, keyed by file name, so that each file is parsed
@@ -87,6 +93,15 @@ package body Idle.Hierarchy is
       end loop;
       Visiting.Delete_Last;
    end Add_Ancestors;
+
+   --------------------------
+   -- Add_Search_Directory --
+   --------------------------
+
+   procedure Add_Search_Directory (Directory : String) is
+   begin
+      Search_Directories.Append (Directory);
+   end Add_Search_Directory;
 
    ---------------
    -- Ancestors --
@@ -163,10 +178,26 @@ package body Idle.Hierarchy is
       Name : String)
       return String
    is
+      Simple : constant String := Idle.Names.File_Key (Name) & ".idl";
+      Beside : constant String :=
+        Ada.Directories.Compose
+          (Ada.Directories.Containing_Directory (To_String (Near.File_Name)),
+           Simple);
    begin
-      return Ada.Directories.Compose
-        (Ada.Directories.Containing_Directory (To_String (Near.File_Name)),
-         Idle.Names.Key (Name), "idl");
+      if Ada.Directories.Exists (Beside) then
+         return Beside;
+      end if;
+      for Directory of Search_Directories loop
+         declare
+            Path : constant String :=
+              Ada.Directories.Compose (Directory, Simple);
+         begin
+            if Ada.Directories.Exists (Path) then
+               return Path;
+            end if;
+         end;
+      end loop;
+      return Beside;
    end Declaration_File;
 
    ----------

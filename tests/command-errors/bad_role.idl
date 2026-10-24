@@ -1,0 +1,5 @@
+role Bad_Role : Standard_Output, Stream_Writer is
+   Log  : Stream_Writer;
+   log  : Stream_Reader;
+   Thing : Nonesuch;
+end Bad_Role;

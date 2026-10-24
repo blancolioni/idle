@@ -5,8 +5,9 @@ package Idle.Targets.Kernel is
    procedure Generate
      (Item             : Idle.Syntax.Interface_Declaration;
       Output_Directory : String);
-   --  Write the packages that implement the interface Item to
-   --  Output_Directory:
+   --  Write the units for Item to Output_Directory. For a command or an
+   --  IDL package, see Idle.Targets.Kernel.Commands; a role has none. For
+   --  an interface, they are the packages that implement it:
    --
    --    Rose.Interfaces.<Name>         the endpoint ids of the interface
    --                                   and of each of its subprograms
