@@ -94,4 +94,6 @@ package Rose.Interfaces.Process.Server is
 
    function Get_Publish_Interface_Cap return Rose.Capabilities.Capability;
 
+   procedure Remove_Instance (Identifier : Rose.Objects.Capability_Identifier);
+
 end Rose.Interfaces.Process.Server;

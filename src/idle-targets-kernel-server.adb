@@ -87,6 +87,8 @@ package body Idle.Targets.Kernel.Server is
       procedure Add_Getters;
       procedure Add_Handler (Member : Idle.Hierarchy.Member);
       procedure Add_Handler_Type (Member : Idle.Hierarchy.Member);
+      procedure Add_Publish;
+      procedure Add_Remove_Instance;
 
       function Server_Type_Of (Info : Types.Type_Info) return String
       is (if Info.Category in Types.Interface_Value
@@ -96,7 +98,6 @@ package body Idle.Targets.Kernel.Server is
 
       procedure Use_Type (Info : Types.Type_Info);
       --  Add what the server needs to name values of type Info.
-      procedure Add_Publish;
 
       function Handler_Parameters return Syn.Node_Array;
       --  A parameter for the handler of each subprogram.
@@ -635,6 +636,33 @@ package body Idle.Targets.Kernel.Server is
                           [F.New_Name ("Published_Cap")])]));
       end Add_Publish;
 
+      ------------------------
+      -- Add_Remove_Instance --
+      ------------------------
+
+      --  An instanced server makes caps for each object that a client
+      --  asks for; Remove_Instance deletes them, when the object is gone.
+
+      procedure Add_Remove_Instance is
+         Specification : constant not null Syn.Node_Access :=
+           F.New_Procedure
+             ("Remove_Instance",
+              [F.New_Parameter
+                 ("Identifier",
+                  F.New_Name ("Rose.Objects.Capability_Identifier"))]);
+      begin
+         Spec_Context.Add ("Rose.Objects");
+         Public_Part.Append (Specification);
+         Bodies.Add
+           ("Remove_Instance",
+            F.New_Subprogram_Body
+              (Specification => Specification,
+               Statements    =>
+                 [Call (Server & "Remove_Instance",
+                        [F.New_Name ("Server_Instance"),
+                         F.New_Name ("Identifier")])]));
+      end Add_Remove_Instance;
+
       ----------
       -- Call --
       ----------
@@ -735,6 +763,7 @@ package body Idle.Targets.Kernel.Server is
       Add_Attach;
       Add_Publish;
       Add_Getters;
+      Add_Remove_Instance;
 
       for For_Interface of Interfaces loop
          Add_Get_Interface (For_Interface);

@@ -1,4 +1,5 @@
 with Rose.Capabilities;
+with Rose.Objects;
 with Rose.Server;
 with System.Storage_Elements;
 
@@ -114,5 +115,7 @@ package Rose.Interfaces.Directory.Server is
    function Get_Create_Directory_Cap return Rose.Capabilities.Capability;
 
    function Get_Create_File_Cap return Rose.Capabilities.Capability;
+
+   procedure Remove_Instance (Identifier : Rose.Objects.Capability_Identifier);
 
 end Rose.Interfaces.Directory.Server;

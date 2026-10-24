@@ -313,4 +313,15 @@ package body Rose.Interfaces.Counter.Server is
       Rose.Server.Publish_Interface (Published_Cap);
    end Publish_Interface;
 
+   ---------------------
+   -- Remove_Instance --
+   ---------------------
+
+   procedure Remove_Instance
+     (Identifier : Rose.Objects.Capability_Identifier)
+   is
+   begin
+      Rose.Server.Remove_Instance (Server_Instance, Identifier);
+   end Remove_Instance;
+
 end Rose.Interfaces.Counter.Server;

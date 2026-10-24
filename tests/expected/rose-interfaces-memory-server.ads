@@ -77,4 +77,6 @@ package Rose.Interfaces.Memory.Server is
 
    function Get_Checkpoint_Cap return Rose.Capabilities.Capability;
 
+   procedure Remove_Instance (Identifier : Rose.Objects.Capability_Identifier);
+
 end Rose.Interfaces.Memory.Server;

@@ -1,4 +1,5 @@
 with Rose.Capabilities;
+with Rose.Objects;
 with Rose.Server;
 with System.Storage_Elements;
 
@@ -37,5 +38,7 @@ package Rose.Interfaces.Exec.Server is
    function Get_Launch_Cap return Rose.Capabilities.Capability;
 
    function Get_Install_Cap return Rose.Capabilities.Capability;
+
+   procedure Remove_Instance (Identifier : Rose.Objects.Capability_Identifier);
 
 end Rose.Interfaces.Exec.Server;
