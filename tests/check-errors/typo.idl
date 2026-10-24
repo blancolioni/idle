@@ -1,0 +1,5 @@
+interface Typo is
+
+   function Open return interface Nowhere;
+
+end Typo;

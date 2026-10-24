@@ -1,0 +1,5 @@
+interface First is
+
+   procedure Run;
+
+end First;

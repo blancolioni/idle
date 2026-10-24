@@ -17,8 +17,8 @@ package body Idle.Hierarchy is
         "="             => Idle.Syntax."=");
 
    Loaded : Declaration_Maps.Map;
-   --  Parents read so far, keyed by file name, so that each file is
-   --  parsed once.
+   --  Files read so far, keyed by file name, so that each file is parsed
+   --  once.
 
    package Ancestor_Maps is
      new Ada.Containers.Indefinite_Hashed_Maps
@@ -53,6 +53,9 @@ package body Idle.Hierarchy is
       return Boolean;
    --  Read the parent Parent of Child, reporting an error if it is not
    --  there or declares some other interface.
+
+   function Read (Path : String) return Idle.Syntax.Interface_Declaration;
+   --  The interface declared in Path, which exists.
 
    -------------------
    -- Add_Ancestors --
@@ -104,6 +107,33 @@ package body Idle.Hierarchy is
       return Known_Ancestors.Element (Key);
    end Ancestors;
 
+   -------------------
+   -- Check_Members --
+   -------------------
+
+   procedure Check_Members (Item : Idle.Syntax.Interface_Declaration) is
+      All_Members : constant Member_Vectors.Vector := Members (Item);
+   begin
+      for Index in 1 .. All_Members.Last_Index loop
+         for Previous in 1 .. Index - 1 loop
+            if Idle.Names.Key
+                 (To_String (All_Members (Previous).Subprogram.Name))
+              = Idle.Names.Key
+                  (To_String (All_Members (Index).Subprogram.Name))
+            then
+               Idle.Diagnostics.Error
+                 (To_String (Item.File_Name),
+                  Item.Position.Line, Item.Position.Column,
+                  Idle.Names.Ada_Name
+                    (To_String (All_Members (Index).Subprogram.Name))
+                  & " is declared by both "
+                  & To_String (All_Members (Previous).Declared_In) & " and "
+                  & To_String (All_Members (Index).Declared_In));
+            end if;
+         end loop;
+      end loop;
+   end Check_Members;
+
    --------------
    -- Contains --
    --------------
@@ -124,6 +154,40 @@ package body Idle.Hierarchy is
       return False;
    end Contains;
 
+   ----------------------
+   -- Declaration_File --
+   ----------------------
+
+   function Declaration_File
+     (Near : Idle.Syntax.Interface_Declaration;
+      Name : String)
+      return String
+   is
+   begin
+      return Ada.Directories.Compose
+        (Ada.Directories.Containing_Directory (To_String (Near.File_Name)),
+         Idle.Names.Key (Name), "idl");
+   end Declaration_File;
+
+   ----------
+   -- Find --
+   ----------
+
+   function Find
+     (Near  : Idle.Syntax.Interface_Declaration;
+      Name  : String;
+      Found : out Idle.Syntax.Interface_Declaration)
+      return Boolean
+   is
+      Path : constant String := Declaration_File (Near, Name);
+   begin
+      if not Ada.Directories.Exists (Path) then
+         return False;
+      end if;
+      Found := Read (Path);
+      return Idle.Names.Key (To_String (Found.Name)) = Idle.Names.Key (Name);
+   end Find;
+
    -----------------
    -- Find_Parent --
    -----------------
@@ -135,16 +199,8 @@ package body Idle.Hierarchy is
       return Boolean
    is
       Child_File : constant String := To_String (Child.File_Name);
-      Path       : constant String :=
-        Ada.Directories.Compose
-          (Ada.Directories.Containing_Directory (Child_File),
-           Idle.Names.Key (Parent), "idl");
+      Path       : constant String := Declaration_File (Child, Parent);
    begin
-      if Loaded.Contains (Path) then
-         Found := Loaded.Element (Path);
-         return True;
-      end if;
-
       if not Ada.Directories.Exists (Path) then
          Idle.Diagnostics.Error
            (Child_File, Child.Position.Line, Child.Position.Column,
@@ -152,7 +208,7 @@ package body Idle.Hierarchy is
          return False;
       end if;
 
-      Found := Idle.Parser.Parse_File (Path);
+      Found := Read (Path);
       if Idle.Names.Key (To_String (Found.Name)) /= Idle.Names.Key (Parent)
       then
          Idle.Diagnostics.Error
@@ -162,7 +218,6 @@ package body Idle.Hierarchy is
          return False;
       end if;
 
-      Loaded.Insert (Path, Found);
       return True;
    end Find_Parent;
 
@@ -201,5 +256,17 @@ package body Idle.Hierarchy is
       Add (Item);
       return Result;
    end Members;
+
+   ----------
+   -- Read --
+   ----------
+
+   function Read (Path : String) return Idle.Syntax.Interface_Declaration is
+   begin
+      if not Loaded.Contains (Path) then
+         Loaded.Insert (Path, Idle.Parser.Parse_File (Path));
+      end if;
+      return Loaded.Element (Path);
+   end Read;
 
 end Idle.Hierarchy;

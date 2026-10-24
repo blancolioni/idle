@@ -1,0 +1,7 @@
+--  Run is inherited from First, and declared again.
+
+interface Both : First is
+
+   procedure Run;
+
+end Both;

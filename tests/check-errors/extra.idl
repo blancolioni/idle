@@ -1,0 +1,7 @@
+--  Not checked, so --check warns about it.
+
+interface Extra is
+
+   procedure Reset;
+
+end Extra;

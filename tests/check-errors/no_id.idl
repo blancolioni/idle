@@ -1,0 +1,5 @@
+interface No_Id is
+
+   procedure Reset;
+
+end No_Id;

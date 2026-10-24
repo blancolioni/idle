@@ -47,4 +47,26 @@ package Idle.Hierarchy is
    --  ancestor, is reported as an error through Idle.Diagnostics, and is
    --  left out.
 
+   procedure Check_Members (Item : Idle.Syntax.Interface_Declaration);
+   --  Report each subprogram name that Item and its ancestors declare
+   --  more than once. The names of the subprograms are the names of the
+   --  client's operations and of the server's handlers, so they must
+   --  differ.
+
+   function Declaration_File
+     (Near : Idle.Syntax.Interface_Declaration;
+      Name : String)
+      return String;
+   --  The file that declares the interface Name, for an interface named
+   --  in a declaration beside Near: name.idl, in Near's directory.
+
+   function Find
+     (Near  : Idle.Syntax.Interface_Declaration;
+      Name  : String;
+      Found : out Idle.Syntax.Interface_Declaration)
+      return Boolean;
+   --  Read the interface Name from Declaration_File (Near, Name). False if
+   --  there is no such file, or if it declares another interface; only
+   --  errors in parsing the file are reported.
+
 end Idle.Hierarchy;
