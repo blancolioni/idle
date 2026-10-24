@@ -1,0 +1,13 @@
+interface Bounds is
+
+   Limit : constant := Elsewhere;
+
+   type Before_Limit is range 0 .. Later;
+   type No_Limit is range 0 .. Nowhere;
+   type Limited is range 0 .. Limit;
+
+   Later : constant := 4;
+
+   procedure Reset;
+
+end Bounds;

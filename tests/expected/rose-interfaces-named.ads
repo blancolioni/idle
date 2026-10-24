@@ -5,7 +5,7 @@ package Rose.Interfaces.Named is
 
    Max_Badges       : constant := 16;
 
-   type Badge_Count is range 0 .. 16;
+   type Badge_Count is range 0 .. Max_Badges;
 
    type Badge_Serial is new Rose.Words.Word_64;
 

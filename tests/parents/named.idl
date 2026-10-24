@@ -2,7 +2,7 @@ interface Named is
 
    Max_Badges : constant := 16;
 
-   type Badge_Count is range 0 .. 16;
+   type Badge_Count is range 0 .. Max_Badges;
    type Badge_Serial is new Word_64;
    type Badge_Colour is (Red, Green, Blue);
 

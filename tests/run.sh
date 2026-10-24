@@ -81,7 +81,7 @@ done
 # Interfaces that the kernel target rejects. The other files in
 # kernel-errors/ are their parents.
 
-for name in orphan loop_a twice; do
+for name in orphan loop_a twice bounds; do
   file="kernel-errors/$name.idl"
   if $idle --target kernel --endpoints kernel-errors/interfaces.txt        -o output "$file" 2> output/diagnostics.txt; then
     fail "$file (expected errors)"

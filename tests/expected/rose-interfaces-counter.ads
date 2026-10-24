@@ -1,6 +1,9 @@
+with Rose.Interfaces.Named;
 with Rose.Objects;
 
 package Rose.Interfaces.Counter is
+
+   type Badge_Number is range 1 .. Rose.Interfaces.Named.Max_Badges;
 
    Named_Interface    : constant Rose.Objects.Endpoint_Id :=
      16#1111_0000_0001#;
