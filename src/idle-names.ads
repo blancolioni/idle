@@ -10,4 +10,9 @@ package Idle.Names is
    --  Name in lower case, for comparing names, which IDL does without
    --  regard to case.
 
+   function File_Key (Name : String) return String;
+   --  The base name of the file that declares Name, as GNAT names Ada
+   --  units: Name in lower case with each "." replaced by "-", so
+   --  Rose.Core.Echo is in rose-core-echo.idl.
+
 end Idle.Names;

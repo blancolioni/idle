@@ -1,0 +1,5 @@
+errors/role.idl:2:13: error: a role member has no mode
+errors/role.idl:3:13: error: a role member's type is always an interface, so it is written without 'interface'
+errors/role.idl:4:27: error: a role member has no default or aspects
+errors/role.idl:5:27: error: a role member has no default or aspects
+errors/role.idl:6:5: error: end name should be Members

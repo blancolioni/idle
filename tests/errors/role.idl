@@ -1,0 +1,6 @@
+role Members is
+   Input  : in Stream_Reader;
+   Output : interface Stream_Writer;
+   Error  : Stream_Writer := Nothing;
+   Log    : Stream_Writer with Help => "the log";
+end Roles;

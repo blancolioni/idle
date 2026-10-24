@@ -1,0 +1,5 @@
+package Rose.Core
+  with Version => 1,
+       Colour  => "red"
+is
+end Rose.Core;

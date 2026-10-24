@@ -1,4 +1,5 @@
 with Ada.Characters.Handling;
+with Ada.Containers.Indefinite_Vectors;
 with Ada.Characters.Latin_1;
 
 package body Idle.Lexer is
@@ -60,6 +61,15 @@ package body Idle.Lexer is
          Line_Start   : Positive;
          Column_Start : Positive);
 
+      procedure Scan_Text_Block
+        (Line_Start   : Positive;
+         Column_Start : Positive);
+      --  A text block: the opening quotes, a line break, any number of
+      --  lines, and the closing quotes, first on their line, where other
+      --  tokens can follow them. Its value is the lines, with the
+      --  indentation common to every non-blank line removed, joined by
+      --  line breaks.
+
       ---------
       -- Add --
       ---------
@@ -109,6 +119,114 @@ package body Idle.Lexer is
            (Problem'(Line_Start, Column_Start,
                      To_Unbounded_String (Message)));
       end Report;
+
+      ---------------------
+      -- Scan_Text_Block --
+      ---------------------
+
+      procedure Scan_Text_Block
+        (Line_Start   : Positive;
+         Column_Start : Positive)
+      is
+         package Line_Vectors is
+           new Ada.Containers.Indefinite_Vectors (Positive, String);
+
+         Lines      : Line_Vectors.Vector;
+         Terminated : Boolean := False;
+         Common     : Natural := Natural'Last;
+         Result     : Unbounded_String;
+
+         function Is_Blank (Text : String) return Boolean
+         is (for all Ch of Text => Ch = ' ');
+
+         function Indent (Text : String) return Natural;
+         --  The number of spaces at the start of Text.
+
+         ------------
+         -- Indent --
+         ------------
+
+         function Indent (Text : String) return Natural is
+            Count : Natural := 0;
+         begin
+            for Ch of Text loop
+               exit when Ch /= ' ';
+               Count := Count + 1;
+            end loop;
+            return Count;
+         end Indent;
+
+      begin
+         Advance (3);
+         while not At_End and then Peek = ' ' loop
+            Advance;
+         end loop;
+         if Peek = Ada.Characters.Latin_1.CR then
+            Advance;
+         end if;
+         if Peek = Ada.Characters.Latin_1.LF then
+            Advance;
+         elsif not At_End then
+            Report ("a text block starts on the line after its opening"
+                    & " quotes", Line, Column);
+         end if;
+
+         while not At_End loop
+            declare
+               First : constant Positive := Index;
+               Last  : Natural;
+            begin
+               while Peek = ' ' loop
+                  Advance;
+               end loop;
+               if Peek = '"' and then Peek (1) = '"' and then Peek (2) = '"'
+               then
+                  Advance (3);
+                  Terminated := True;
+                  exit;
+               end if;
+               while not At_End
+                 and then Peek /= Ada.Characters.Latin_1.LF
+               loop
+                  Advance;
+               end loop;
+               Last := Index - 1;
+               if Last >= First
+                 and then Source (Last) = Ada.Characters.Latin_1.CR
+               then
+                  Last := Last - 1;
+               end if;
+               Lines.Append (Source (First .. Last));
+               Advance;
+            end;
+         end loop;
+
+         if not Terminated then
+            Report ("unterminated text block", Line_Start, Column_Start);
+         end if;
+
+         for Text of Lines loop
+            if not Is_Blank (Text) then
+               Common := Natural'Min (Common, Indent (Text));
+            end if;
+         end loop;
+
+         for Index in 1 .. Lines.Last_Index loop
+            declare
+               Text : constant String := Lines (Index);
+            begin
+               if Index > 1 then
+                  Append (Result, Ada.Characters.Latin_1.LF);
+               end if;
+               if not Is_Blank (Text) then
+                  Append (Result, Text (Text'First + Common .. Text'Last));
+               end if;
+            end;
+         end loop;
+
+         Add (Tok_String_Literal, To_String (Result),
+              Line_Start, Column_Start);
+      end Scan_Text_Block;
 
    begin
       Tokens.Clear;
@@ -170,6 +288,10 @@ package body Idle.Lexer is
                end if;
                Add (Tok_Integer_Literal, Source (Start .. Index - 1),
                     Start_Line, Start_Column);
+
+            elsif Ch = '"' and then Peek (1) = '"' and then Peek (2) = '"'
+            then
+               Scan_Text_Block (Start_Line, Start_Column);
 
             elsif Ch = '"' then
                declare

@@ -1,0 +1,25 @@
+command Rose.Core.Bad : Standard_Output, Stream_Writer
+  with Summary => Something,
+       Colour  => "red"
+is
+   Help : Boolean;
+   Count : out Natural;
+   Files : String_List
+     with Short_Name => 'f';
+   More : String_List := "x";
+   Late : Natural;
+   Flag : Boolean := Yes
+     with Short_Name  => '-',
+          Short_Value => Maybe;
+   Size : Positive := 0;
+   Title : String := Fred;
+   Shape : Rectangle;
+   Twice : Boolean
+     with Short_Name => 'n';
+   twice : Boolean
+     with Short_Name => 'n';
+   Lonely : Natural
+     with Short_Value => True;
+   Quiet : Boolean
+     with Short_Value => True;
+end Rose.Core.Bad;

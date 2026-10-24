@@ -53,12 +53,19 @@ package Idle.Hierarchy is
    --  client's operations and of the server's handlers, so they must
    --  differ.
 
+   procedure Add_Search_Directory (Directory : String);
+   --  Look for declarations in Directory as well, after the directory of
+   --  the declaration that names them, and in the order the directories
+   --  are added.
+
    function Declaration_File
      (Near : Idle.Syntax.Interface_Declaration;
       Name : String)
       return String;
-   --  The file that declares the interface Name, for an interface named
-   --  in a declaration beside Near: name.idl, in Near's directory.
+   --  The file that declares Name, named in a declaration beside Near:
+   --  the first file called File_Key (Name) & ".idl" in Near's directory
+   --  or a search directory, or the one in Near's directory if there is
+   --  none.
 
    function Find
      (Near  : Idle.Syntax.Interface_Declaration;

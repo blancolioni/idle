@@ -1,0 +1,2 @@
+command Rose.Core.Logger : Logging is
+end Rose.Core.Logger;

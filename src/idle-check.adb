@@ -4,6 +4,7 @@ with Ada.Containers.Ordered_Maps;
 with Ada.Directories;
 with Ada.Strings.Unbounded;
 
+with Idle.Commands;
 with Idle.Diagnostics;
 with Idle.Endpoints;
 with Idle.Names;
@@ -53,6 +54,14 @@ package body Idle.Check is
         (File_Name : Unbounded_String;
          Position  : Idle.Syntax.Source_Position;
          Message   : String);
+
+      function Unit_Name (Item : Idle.Syntax.Interface_Declaration)
+        return String
+      is (case Item.Kind is
+             when Idle.Syntax.Interface_Unit => "interface",
+             when Idle.Syntax.Command_Unit   => "command",
+             when Idle.Syntax.Package_Unit   => "package",
+             when Idle.Syntax.Role_Unit      => "role");
 
       procedure Record_Id
         (Label     : String;
@@ -254,37 +263,42 @@ package body Idle.Check is
               (Ada.Directories.Containing_Directory (File_Name));
 
             if Ada.Directories.Simple_Name (File_Name)
-              /= Idle.Names.Key (Name) & ".idl"
+              /= Idle.Names.File_Key (Name) & ".idl"
             then
                Error (Item.File_Name, Item.Position,
-                      "interface " & Idle.Names.Ada_Name (Name)
+                      Unit_Name (Item) & " " & Name
                       & " should be declared in "
-                      & Idle.Names.Key (Name) & ".idl");
+                      & Idle.Names.File_Key (Name) & ".idl");
             end if;
 
-            for Ancestor of Idle.Hierarchy.Ancestors (Item) loop
-               Parent_Of.Include
-                 (Ada.Directories.Full_Name (To_String (Ancestor.File_Name)),
-                  Idle.Names.Ada_Name (Name));
-               Use_Interface_Id (Ancestor);
-            end loop;
-            Use_Interface_Id (Item);
-
-            Idle.Hierarchy.Check_Members (Item);
-            for Member of Idle.Hierarchy.Members (Item) loop
-               Use_Method_Id (Member);
-            end loop;
-
-            for Subprogram of Item.Subprograms loop
-               for Parameter of Subprogram.Parameters loop
-                  Check_Interface_Type
-                    (Item, Parameter.Of_Type, Parameter.Position);
+            if Item.Kind in Idle.Syntax.Interface_Unit then
+               for Ancestor of Idle.Hierarchy.Ancestors (Item) loop
+                  Parent_Of.Include
+                    (Ada.Directories.Full_Name
+                       (To_String (Ancestor.File_Name)),
+                     Idle.Names.Ada_Name (Name));
+                  Use_Interface_Id (Ancestor);
                end loop;
-               if Subprogram.Is_Function then
-                  Check_Interface_Type
-                    (Item, Subprogram.Result, Subprogram.Position);
-               end if;
-            end loop;
+               Use_Interface_Id (Item);
+
+               Idle.Hierarchy.Check_Members (Item);
+               for Member of Idle.Hierarchy.Members (Item) loop
+                  Use_Method_Id (Member);
+               end loop;
+
+               for Subprogram of Item.Subprograms loop
+                  for Parameter of Subprogram.Parameters loop
+                     Check_Interface_Type
+                       (Item, Parameter.Of_Type, Parameter.Position);
+                  end loop;
+                  if Subprogram.Is_Function then
+                     Check_Interface_Type
+                       (Item, Subprogram.Result, Subprogram.Position);
+                  end if;
+               end loop;
+            elsif not Idle.Commands.Check (Item) then
+               null;
+            end if;
          end;
       end loop;
 
