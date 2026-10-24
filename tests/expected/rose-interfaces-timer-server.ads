@@ -1,4 +1,5 @@
 with Rose.Capabilities;
+with Rose.Objects;
 with Rose.Server;
 with Rose.Words;
 
@@ -25,5 +26,7 @@ package Rose.Interfaces.Timer.Server is
       Set_Timer      : Set_Timer_Handler);
 
    function Get_Set_Timer_Cap return Rose.Capabilities.Capability;
+
+   procedure Remove_Instance (Identifier : Rose.Objects.Capability_Identifier);
 
 end Rose.Interfaces.Timer.Server;

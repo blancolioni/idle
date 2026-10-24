@@ -1,4 +1,5 @@
 with Rose.Capabilities;
+with Rose.Objects;
 with Rose.Server;
 with Rose.Words;
 
@@ -41,5 +42,7 @@ package Rose.Interfaces.Counter.Server is
    function Get_Increment_Cap return Rose.Capabilities.Capability;
 
    function Get_Value_Cap return Rose.Capabilities.Capability;
+
+   procedure Remove_Instance (Identifier : Rose.Objects.Capability_Identifier);
 
 end Rose.Interfaces.Counter.Server;

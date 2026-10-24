@@ -1,4 +1,5 @@
 with Rose.Capabilities;
+with Rose.Objects;
 with Rose.Server;
 with System.Storage_Elements;
 
@@ -24,5 +25,7 @@ package Rose.Interfaces.Stream_Reader.Server is
       Read           : Read_Handler);
 
    function Get_Read_Cap return Rose.Capabilities.Capability;
+
+   procedure Remove_Instance (Identifier : Rose.Objects.Capability_Identifier);
 
 end Rose.Interfaces.Stream_Reader.Server;
