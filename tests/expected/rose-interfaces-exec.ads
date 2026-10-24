@@ -2,13 +2,17 @@ with Rose.Objects;
 
 package Rose.Interfaces.Exec is
 
-   Launch_Interface : constant Rose.Objects.Endpoint_Id := 16#60A8_2B69_97DC#;
+   Launch_Interface : constant Rose.Objects.Endpoint_Id :=
+     16#8B8B_A324_FA51_3FD2#;
 
-   Exec_Interface   : constant Rose.Objects.Endpoint_Id := 16#AB32_3151_FC8F#;
+   Exec_Interface   : constant Rose.Objects.Endpoint_Id :=
+     16#4279_2F9D_69F2_5EA9#;
 
-   Launch_Endpoint  : constant Rose.Objects.Endpoint_Id := 16#377_796D_7E54#;
+   Launch_Endpoint  : constant Rose.Objects.Endpoint_Id :=
+     16#FC1_B77F_4AA3_E406#;
 
-   Install_Endpoint : constant Rose.Objects.Endpoint_Id := 16#F4E3_8AA2_B8DE#;
+   Install_Endpoint : constant Rose.Objects.Endpoint_Id :=
+     16#9B08_144B_8994_B97B#;
 
    Launch_Index     : constant := 0;
 

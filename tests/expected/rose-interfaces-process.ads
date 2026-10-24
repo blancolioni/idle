@@ -3,40 +3,40 @@ with Rose.Objects;
 package Rose.Interfaces.Process is
 
    Segment_Interface                  : constant Rose.Objects.Endpoint_Id :=
-     16#25CE_5F3A_F35C#;
+     16#E658_FB44_EA88_42D4#;
 
    Server_Interface                   : constant Rose.Objects.Endpoint_Id :=
-     16#682A_60F1_9C52#;
+     16#66F5_2E57_D81B_9C41#;
 
    Cap_Interface                      : constant Rose.Objects.Endpoint_Id :=
-     16#BF0F_45C4_4F4A#;
+     16#9D5B_B72B_43AC_320F#;
 
    Process_Interface                  : constant Rose.Objects.Endpoint_Id :=
-     16#5E43_3170_8583#;
+     16#F4F1_4934_3371_44AC#;
 
    Add_Segment_Endpoint               : constant Rose.Objects.Endpoint_Id :=
-     16#FFBB_6E9C_85B9#;
+     16#1CB8_EAFA_1105_77AB#;
 
    Add_Nonpersistent_Segment_Endpoint : constant Rose.Objects.Endpoint_Id :=
-     16#7C63_63AC_C85C#;
+     16#631A_4413_3C78_6014#;
 
    Published_Interface_Endpoint       : constant Rose.Objects.Endpoint_Id :=
-     16#8365_663A_FE52#;
+     16#48B0_AA25_A13A_1536#;
 
    Destroy_Endpoint                   : constant Rose.Objects.Endpoint_Id :=
-     16#B057_5569_CE0C#;
+     16#8F59_25F5_180F_80DA#;
 
    Get_Object_Id_Endpoint             : constant Rose.Objects.Endpoint_Id :=
-     16#955F_93DE_0601#;
+     16#E295_0B7C_E20F_9127#;
 
    Heap_Interface_Endpoint            : constant Rose.Objects.Endpoint_Id :=
-     16#4E60_08BB_1C02#;
+     16#84E9_2BC1_73C0_9EF0#;
 
    Exit_Process_Endpoint              : constant Rose.Objects.Endpoint_Id :=
-     16#53B7_D1CB_4ADB#;
+     16#AEEE_DB40_0E56_F441#;
 
    Publish_Interface_Endpoint         : constant Rose.Objects.Endpoint_Id :=
-     16#B34F_9AFA_D2C1#;
+     16#E48D_1336_1015_9C78#;
 
    Add_Segment_Index                  : constant := 0;
 

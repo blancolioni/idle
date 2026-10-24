@@ -3,13 +3,13 @@ with Rose.Objects;
 package Rose.Interfaces.Heap is
 
    Heap_Interface             : constant Rose.Objects.Endpoint_Id :=
-     16#6635_173D_F87C#;
+     16#C07B_A29D_620B_0DDF#;
 
    Current_Bound_Endpoint     : constant Rose.Objects.Endpoint_Id :=
-     16#6650_2508_7B88#;
+     16#2E09_4D28_8787_2F07#;
 
    Request_New_Bound_Endpoint : constant Rose.Objects.Endpoint_Id :=
-     16#22D2_9EEE_A6A1#;
+     16#EC61_210F_3FD7_A110#;
 
    Current_Bound_Index        : constant := 0;
 

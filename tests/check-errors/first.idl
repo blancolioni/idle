@@ -1,5 +1,6 @@
 interface First is
 
-   procedure Run;
+   procedure Run
+     with Endpoint_Id => 16#1234#;
 
 end First;

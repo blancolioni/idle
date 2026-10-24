@@ -1,176 +1,188 @@
-with Ada.Characters.Handling;
-with Ada.Strings.Fixed;
-with Ada.Text_IO;
+with Ada.Strings.Unbounded;
 
-with Idle.Diagnostics;
+with GNAT.SHA256;
+
+with Idle.Hierarchy;
+with Idle.Literals;
 with Idle.Names;
 
 package body Idle.Endpoints is
 
-   function Interface_Key (Interface_Name : String) return String
-   is (Idle.Names.Key
-         ("interface." & Idle.Names.Ada_Name (Interface_Name)
-          & "_Interface"));
+   use Ada.Strings.Unbounded;
 
-   function Method_Key
-     (Interface_Name : String;
-      Method_Name    : String)
+   Prefix : constant String := "rose.interfaces.";
+
+   function Type_Form
+     (Owner     : Idle.Syntax.Interface_Declaration;
+      Reference : Idle.Syntax.Type_Reference)
+      return String;
+   --  The canonical form of the type named by Reference in a subprogram
+   --  of Owner.
+
+   ----------
+   -- Hash --
+   ----------
+
+   function Hash (Form : String) return Endpoint_Id is
+      Digest : constant String := GNAT.SHA256.Digest (Form);
+      Result : Long_Long_Long_Integer;
+   begin
+      --  The digest is in hexadecimal, so its first sixteen characters
+      --  are its first eight bytes.
+      if not Idle.Literals.Value
+        ("16#" & Digest (Digest'First .. Digest'First + 15) & "#",
+         Result, Endpoint_Id'Last)
+      then
+         raise Program_Error;
+      end if;
+      return (if Result = 0 then 1 else Result);
+   end Hash;
+
+   -----------
+   -- Image --
+   -----------
+
+   function Image (Id : Endpoint_Id) return String is
+      Hex    : constant String := "0123456789ABCDEF";
+      Result : String (1 .. 19) := "XXXX_XXXX_XXXX_XXXX";
+      Rest   : Long_Long_Long_Integer := Id;
+   begin
+      for Index in reverse Result'Range loop
+         if Result (Index) /= '_' then
+            Result (Index) := Hex (Integer (Rest mod 16) + 1);
+            Rest := Rest / 16;
+         end if;
+      end loop;
+      return "16#" & Result & "#";
+   end Image;
+
+   --------------------
+   -- Interface_Form --
+   --------------------
+
+   function Interface_Form
+     (Item : Idle.Syntax.Interface_Declaration)
       return String
-   is (Idle.Names.Key
-         (Idle.Names.Ada_Name (Interface_Name) & "."
-          & Idle.Names.Ada_Name (Method_Name)));
-
-   function Parse_Value
-     (Text  : String;
-      Value : out Endpoint_Id)
-      return Boolean;
-   --  Parse Text, a based literal such as 16#D25E_5101_0B66#. False if it
-   --  is not one.
-
-   ----------------------
-   -- Has_Interface_Id --
-   ----------------------
-
-   function Has_Interface_Id
-     (Table          : Endpoint_Table;
-      Interface_Name : String)
-      return Boolean
-   is (Table.Ids.Contains (Interface_Key (Interface_Name)));
-
-   -------------------
-   -- Has_Method_Id --
-   -------------------
-
-   function Has_Method_Id
-     (Table          : Endpoint_Table;
-      Interface_Name : String;
-      Method_Name    : String)
-      return Boolean
-   is (Table.Ids.Contains (Method_Key (Interface_Name, Method_Name)));
+   is
+   begin
+      return "interface " & Prefix & Idle.Names.Key (To_String (Item.Name));
+   end Interface_Form;
 
    ------------------
    -- Interface_Id --
    ------------------
 
    function Interface_Id
-     (Table          : Endpoint_Table;
-      Interface_Name : String)
+     (Item : Idle.Syntax.Interface_Declaration)
       return Endpoint_Id
-   is (Table.Ids.Element (Interface_Key (Interface_Name)));
-
-   ----------
-   -- Load --
-   ----------
-
-   procedure Load (Table : in out Endpoint_Table; Path : String) is
-      use Ada.Text_IO;
-      File        : File_Type;
-      Line_Number : Natural := 0;
-   begin
-      begin
-         Open (File, In_File, Path);
-      exception
-         when Name_Error | Use_Error =>
-            Idle.Diagnostics.Error (Path, 0, 0, "cannot read endpoint table");
-            return;
-      end;
-
-      while not End_Of_File (File) loop
-         Line_Number := Line_Number + 1;
-         declare
-            Text   : constant String :=
-                       Ada.Strings.Fixed.Trim (Get_Line (File),
-                                               Ada.Strings.Both);
-            Equals : constant Natural := Ada.Strings.Fixed.Index (Text, "=");
-            Value  : Endpoint_Id;
-         begin
-            if Text = "" then
-               null;
-            elsif Equals = 0 then
-               Idle.Diagnostics.Error
-                 (Path, Line_Number, 0, "expected ""key = value""");
-            else
-               declare
-                  Key        : constant String :=
-                                 Ada.Strings.Fixed.Trim
-                                   (Text (Text'First .. Equals - 1),
-                                    Ada.Strings.Both);
-                  Value_Text : constant String :=
-                                 Ada.Strings.Fixed.Trim
-                                   (Text (Equals + 1 .. Text'Last),
-                                    Ada.Strings.Both);
-               begin
-                  if Parse_Value (Value_Text, Value) then
-                     Table.Ids.Include (Idle.Names.Key (Key), Value);
-                  else
-                     Idle.Diagnostics.Error
-                       (Path, Line_Number, 0,
-                        "bad endpoint id: " & Value_Text);
-                  end if;
-               end;
-            end if;
-         end;
-      end loop;
-
-      Close (File);
-   end Load;
-
-   ---------------
-   -- Method_Id --
-   ---------------
-
-   function Method_Id
-     (Table          : Endpoint_Table;
-      Interface_Name : String;
-      Method_Name    : String)
-      return Endpoint_Id
-   is (Table.Ids.Element (Method_Key (Interface_Name, Method_Name)));
-
-   -----------------
-   -- Parse_Value --
-   -----------------
-
-   function Parse_Value
-     (Text  : String;
-      Value : out Endpoint_Id)
-      return Boolean
    is
-      Prefix : constant String := "16#";
-      Result : Long_Long_Long_Integer := 0;
-      Digits_Seen : Natural := 0;
    begin
-      Value := 0;
-      if Text'Length < Prefix'Length + 2
-        or else Text (Text'First .. Text'First + Prefix'Length - 1) /= Prefix
-        or else Text (Text'Last) /= '#'
-      then
-         return False;
+      if Item.Pinned_Id /= 0 then
+         return Item.Pinned_Id;
+      else
+         return Hash (Interface_Form (Item));
+      end if;
+   end Interface_Id;
+
+   ---------------------
+   -- Subprogram_Form --
+   ---------------------
+
+   function Subprogram_Form
+     (Owner : Idle.Syntax.Interface_Declaration;
+      Item  : Idle.Syntax.Subprogram)
+      return String
+   is
+      use all type Idle.Syntax.Parameter_Mode;
+      Result : Unbounded_String :=
+        To_Unbounded_String
+          (Prefix & Idle.Names.Key (To_String (Owner.Name))
+           & "." & Idle.Names.Key (To_String (Item.Name)));
+   begin
+      if not Item.Parameters.Is_Empty then
+         Append (Result, "(");
+         for Index in 1 .. Item.Parameters.Last_Index loop
+            declare
+               Parameter : Idle.Syntax.Parameter renames
+                 Item.Parameters (Index);
+            begin
+               if Index > 1 then
+                  Append (Result, "; ");
+               end if;
+               Append (Result,
+                       (case Parameter.Mode is
+                           when In_Mode     => "in ",
+                           when Out_Mode    => "out ",
+                           when In_Out_Mode => "in out "));
+               Append (Result, Type_Form (Owner, Parameter.Of_Type));
+            end;
+         end loop;
+         Append (Result, ")");
       end if;
 
-      for Ch of Text (Text'First + Prefix'Length .. Text'Last - 1) loop
-         if Ch = '_' then
-            null;
-         elsif Ada.Characters.Handling.Is_Hexadecimal_Digit (Ch) then
-            Result := Result * 16
-              + (if Ada.Characters.Handling.Is_Digit (Ch)
-                 then Character'Pos (Ch) - Character'Pos ('0')
-                 else Character'Pos (Ada.Characters.Handling.To_Upper (Ch))
-                      - Character'Pos ('A') + 10);
-            Digits_Seen := Digits_Seen + 1;
-            if Result > Endpoint_Id'Last then
-               return False;
-            end if;
-         else
-            return False;
+      if Item.Is_Function then
+         Append (Result, " return " & Type_Form (Owner, Item.Result));
+      end if;
+
+      return To_String (Result);
+   end Subprogram_Form;
+
+   -------------------
+   -- Subprogram_Id --
+   -------------------
+
+   function Subprogram_Id
+     (Owner : Idle.Syntax.Interface_Declaration;
+      Item  : Idle.Syntax.Subprogram)
+      return Endpoint_Id
+   is
+   begin
+      if Item.Pinned_Id /= 0 then
+         return Item.Pinned_Id;
+      else
+         return Hash (Subprogram_Form (Owner, Item));
+      end if;
+   end Subprogram_Id;
+
+   ---------------
+   -- Type_Form --
+   ---------------
+
+   function Type_Form
+     (Owner     : Idle.Syntax.Interface_Declaration;
+      Reference : Idle.Syntax.Type_Reference)
+      return String
+   is
+      Key : constant String := Idle.Names.Key (To_String (Reference.Name));
+
+      function Declared_In
+        (Declaration : Idle.Syntax.Interface_Declaration)
+         return Boolean
+      is (for some Item of Declaration.Types =>
+            Idle.Names.Key (To_String (Item.Name)) = Key);
+
+      function Qualified
+        (Declaration : Idle.Syntax.Interface_Declaration)
+         return String
+      is (Prefix & Idle.Names.Key (To_String (Declaration.Name))
+          & "." & Key);
+
+   begin
+      if Reference.Is_Interface then
+         return "interface " & Prefix & Key;
+      elsif Declared_In (Owner) then
+         return Qualified (Owner);
+      end if;
+
+      for Ancestor of Idle.Hierarchy.Ancestors (Owner) loop
+         if Declared_In (Ancestor) then
+            return Qualified (Ancestor);
          end if;
       end loop;
 
-      if Digits_Seen = 0 then
-         return False;
-      end if;
-
-      Value := Result;
-      return True;
-   end Parse_Value;
+      --  A predefined type, or an unknown one, which is reported where
+      --  types are checked.
+      return Key;
+   end Type_Form;
 
 end Idle.Endpoints;

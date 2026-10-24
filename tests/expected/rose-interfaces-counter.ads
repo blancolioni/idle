@@ -6,19 +6,19 @@ package Rose.Interfaces.Counter is
    type Badge_Number is range 1 .. Rose.Interfaces.Named.Max_Badges;
 
    Named_Interface    : constant Rose.Objects.Endpoint_Id :=
-     16#1111_0000_0001#;
+     16#9CD5_1A6E_BB6A_A8CE#;
 
    Counter_Interface  : constant Rose.Objects.Endpoint_Id :=
-     16#1111_0000_0002#;
+     16#441F_05D0_E4EE_DB9E#;
 
    Badge_Endpoint     : constant Rose.Objects.Endpoint_Id :=
-     16#2222_0000_0001#;
+     16#BAD6_E000_0000_0001#;
 
    Increment_Endpoint : constant Rose.Objects.Endpoint_Id :=
-     16#2222_0000_0002#;
+     16#79BA_20DD_DB05_2CAB#;
 
    Value_Endpoint     : constant Rose.Objects.Endpoint_Id :=
-     16#2222_0000_0003#;
+     16#6741_CC61_B9B9_CBB7#;
 
    Badge_Index        : constant := 0;
 

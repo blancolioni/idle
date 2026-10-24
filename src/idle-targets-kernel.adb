@@ -5,6 +5,7 @@ with Syn.Factory;
 with Syn.Units;
 
 with Idle.Diagnostics;
+with Idle.Endpoints;
 with Idle.Hierarchy;
 with Idle.Names;
 with Idle.Targets.Kernel.Client;
@@ -20,12 +21,9 @@ package body Idle.Targets.Kernel is
 
    Endpoint_Type : constant String := "Rose.Objects.Endpoint_Id";
 
-   function Check
-     (Item      : Idle.Syntax.Interface_Declaration;
-      Endpoints : Idle.Endpoints.Endpoint_Table)
-      return Boolean;
-   --  Report anything in Item that the kernel target does not support, or
-   --  that has no endpoint id. True if there was nothing to report.
+   function Check (Item : Idle.Syntax.Interface_Declaration) return Boolean;
+   --  Report anything in Item that the kernel target does not support.
+   --  True if there was nothing to report.
 
    function Constant_Reference
      (Item  : Idle.Syntax.Interface_Declaration;
@@ -55,7 +53,6 @@ package body Idle.Targets.Kernel is
 
    procedure Generate_Interface_Package
      (Item             : Idle.Syntax.Interface_Declaration;
-      Endpoints        : Idle.Endpoints.Endpoint_Table;
       Output_Directory : String);
    --  Write the package Rose.Interfaces.<Name>, which holds the endpoint
    --  ids of the interface and of each of its subprograms.
@@ -75,10 +72,7 @@ package body Idle.Targets.Kernel is
    -- Check --
    -----------
 
-   function Check
-     (Item      : Idle.Syntax.Interface_Declaration;
-      Endpoints : Idle.Endpoints.Endpoint_Table)
-      return Boolean
+   function Check (Item : Idle.Syntax.Interface_Declaration) return Boolean
    is
       Errors_Before : constant Natural := Idle.Diagnostics.Error_Count;
       Ancestors     : constant Idle.Hierarchy.Interface_Vectors.Vector :=
@@ -108,8 +102,6 @@ package body Idle.Targets.Kernel is
       procedure Check_Declarations
         (Declaration : Idle.Syntax.Interface_Declaration)
       is
-         Name : constant String := To_String (Declaration.Name);
-
          procedure Check_Reference
            (Text     : Unbounded_String;
             Position : Idle.Syntax.Source_Position);
@@ -184,12 +176,6 @@ package body Idle.Targets.Kernel is
             end if;
             Declared.Append (Idle.Names.Key (To_String (Declared_Type.Name)));
          end loop;
-
-         if not Endpoints.Has_Interface_Id (Name) then
-            Error (Declaration.File_Name, Declaration.Position,
-                   "no endpoint id for interface "
-                   & Idle.Names.Ada_Name (Name) & " in the endpoint table");
-         end if;
       end Check_Declarations;
 
       ------------------
@@ -233,15 +219,6 @@ package body Idle.Targets.Kernel is
          end Check_Interface;
 
       begin
-         if not Endpoints.Has_Method_Id
-           (To_String (Member.Declared_In), To_String (Subprogram.Name))
-         then
-            Error (Member.File_Name, Subprogram.Position,
-                   "no endpoint id for "
-                   & Idle.Names.Ada_Name (To_String (Member.Declared_In))
-                   & "." & Support.Name (Subprogram)
-                   & " in the endpoint table");
-         end if;
 
          for Parameter of Subprogram.Parameters loop
             declare
@@ -430,12 +407,11 @@ package body Idle.Targets.Kernel is
 
    procedure Generate
      (Item             : Idle.Syntax.Interface_Declaration;
-      Endpoints        : Idle.Endpoints.Endpoint_Table;
       Output_Directory : String)
    is
    begin
-      if Check (Item, Endpoints) then
-         Generate_Interface_Package (Item, Endpoints, Output_Directory);
+      if Check (Item) then
+         Generate_Interface_Package (Item, Output_Directory);
          Client.Generate (Item, Output_Directory);
          Server.Generate (Item, Output_Directory);
       end if;
@@ -447,7 +423,6 @@ package body Idle.Targets.Kernel is
 
    procedure Generate_Interface_Package
      (Item             : Idle.Syntax.Interface_Declaration;
-      Endpoints        : Idle.Endpoints.Endpoint_Table;
       Output_Directory : String)
    is
       Name : constant String := To_String (Item.Name);
@@ -618,15 +593,14 @@ package body Idle.Targets.Kernel is
         & [for Ancestor of Idle.Hierarchy.Ancestors (Item) =>
            Endpoint_Constant
              (Interface_Name (Ancestor),
-              Endpoints.Interface_Id (To_String (Ancestor.Name)))]
+              Idle.Endpoints.Interface_Id (Ancestor))]
         & [Endpoint_Constant
-             (Interface_Name (Item), Endpoints.Interface_Id (Name))]
+             (Interface_Name (Item), Idle.Endpoints.Interface_Id (Item))]
         & [for Member of Members =>
              Endpoint_Constant
                (Endpoint_Name (Member.Subprogram),
-                Endpoints.Method_Id
-                  (To_String (Member.Declared_In),
-                   To_String (Member.Subprogram.Name)))]
+                Idle.Endpoints.Subprogram_Id
+                  (Member.Owner, Member.Subprogram))]
         & [for Index in 1 .. Members.Last_Index =>
              F.New_Object
                (Name          => Index_Name (Members (Index).Subprogram),

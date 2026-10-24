@@ -13,11 +13,17 @@ with Idle.Targets.Kernel;
 
 procedure Idle.Main is
 
-   --  idle [--syntax-only | --check] [--target TARGET] [--endpoints FILE]
+   --  idle [--syntax-only | --check | --list-endpoints] [--target TARGET]
    --       [-o DIRECTORY] FILE.idl...
    --
    --  --check checks the files together, as the interfaces a build
-   --  compiles, and generates nothing (see Idle.Check).
+   --  compiles, and generates nothing (see Idle.Check). --list-endpoints
+   --  writes the endpoint id and canonical form of each interface and
+   --  each subprogram it declares to standard output (see
+   --  Idle.Endpoints).
+   --
+   --  Endpoint ids come from the source, so --endpoints FILE, which named
+   --  a table of them, is accepted and ignored, with a warning.
 
    use Ada.Strings.Unbounded;
 
@@ -27,11 +33,11 @@ procedure Idle.Main is
    procedure Usage;
 
    Files            : String_Vectors.Vector;
-   Endpoint_File    : Unbounded_String;
    Output_Directory : Unbounded_String := To_Unbounded_String (".");
    Target           : Idle.Targets.Target := Idle.Targets.Default_Target;
    Syntax_Only      : Boolean := False;
    Check_Only       : Boolean := False;
+   List_Only        : Boolean := False;
    Arguments_OK     : Boolean := True;
    Index            : Positive := 1;
 
@@ -43,8 +49,8 @@ procedure Idle.Main is
    begin
       Ada.Text_IO.Put_Line
         (Ada.Text_IO.Standard_Error,
-         "usage: idle [--syntax-only | --check] [--target TARGET]"
-         & " [--endpoints FILE] [-o DIRECTORY] FILE.idl...");
+         "usage: idle [--syntax-only | --check | --list-endpoints]"
+         & " [--target TARGET] [-o DIRECTORY] FILE.idl...");
       Ada.Text_IO.Put_Line
         (Ada.Text_IO.Standard_Error,
          "targets: " & Idle.Targets.Names
@@ -61,6 +67,8 @@ begin
             Syntax_Only := True;
          elsif Argument = "--check" then
             Check_Only := True;
+         elsif Argument = "--list-endpoints" then
+            List_Only := True;
          elsif Argument = "--endpoints" or else Argument = "-o"
            or else Argument = "--target"
          then
@@ -85,7 +93,10 @@ begin
                         Arguments_OK := False;
                      end if;
                   else
-                     Endpoint_File := To_Unbounded_String (Value);
+                     Ada.Text_IO.Put_Line
+                       (Ada.Text_IO.Standard_Error,
+                        "idle: warning: --endpoints is no longer used;"
+                        & " endpoint ids come from the source");
                   end if;
                end;
             end if;
@@ -103,8 +114,8 @@ begin
    end loop;
 
    if Files.Is_Empty
-     or else (Syntax_Only and then Check_Only)
-     or else (not Syntax_Only and then Endpoint_File = Null_Unbounded_String)
+     or else Boolean'Pos (Syntax_Only) + Boolean'Pos (Check_Only)
+             + Boolean'Pos (List_Only) > 1
    then
       Arguments_OK := False;
    end if;
@@ -116,13 +127,38 @@ begin
    end if;
 
    declare
-      Endpoints    : Idle.Endpoints.Endpoint_Table;
       Items        : Idle.Hierarchy.Interface_Vectors.Vector;
       Parse_Errors : Natural;
+
+      procedure List (Item : Idle.Syntax.Interface_Declaration);
+      --  Write the id and canonical form of Item and its subprograms.
+
+      ----------
+      -- List --
+      ----------
+
+      procedure List (Item : Idle.Syntax.Interface_Declaration) is
+         procedure Put (Id : Idle.Endpoints.Endpoint_Id; Form : String);
+
+         ---------
+         -- Put --
+         ---------
+
+         procedure Put (Id : Idle.Endpoints.Endpoint_Id; Form : String) is
+         begin
+            Ada.Text_IO.Put_Line (Idle.Endpoints.Image (Id) & "  " & Form);
+         end Put;
+
+      begin
+         Put (Idle.Endpoints.Interface_Id (Item),
+              Idle.Endpoints.Interface_Form (Item));
+         for Subprogram of Item.Subprograms loop
+            Put (Idle.Endpoints.Subprogram_Id (Item, Subprogram),
+                 Idle.Endpoints.Subprogram_Form (Item, Subprogram));
+         end loop;
+      end List;
+
    begin
-      if not Syntax_Only then
-         Endpoints.Load (To_String (Endpoint_File));
-      end if;
 
       for File of Files loop
          declare
@@ -132,21 +168,23 @@ begin
                               Idle.Parser.Parse_File (File);
          begin
             Items.Append (Item);
-            if not Syntax_Only and then not Check_Only
-              and then Idle.Diagnostics.Error_Count = Errors_Before
-            then
-               case Target is
-                  when Idle.Targets.Kernel_Target =>
-                     Idle.Targets.Kernel.Generate
-                       (Item, Endpoints, To_String (Output_Directory));
-               end case;
+            if Idle.Diagnostics.Error_Count = Errors_Before then
+               if List_Only then
+                  List (Item);
+               elsif not Syntax_Only and then not Check_Only then
+                  case Target is
+                     when Idle.Targets.Kernel_Target =>
+                        Idle.Targets.Kernel.Generate
+                          (Item, To_String (Output_Directory));
+                  end case;
+               end if;
             end if;
          end;
       end loop;
 
       Parse_Errors := Idle.Diagnostics.Error_Count;
       if Check_Only and then Parse_Errors = 0 then
-         Idle.Check.Check_All (Items, Endpoints);
+         Idle.Check.Check_All (Items);
       end if;
    end;
 

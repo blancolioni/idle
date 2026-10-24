@@ -5,37 +5,37 @@ package Rose.Interfaces.Directory is
    type File_Kind is (Directory, Ordinary_File, Special_File);
 
    Directory_Interface            : constant Rose.Objects.Endpoint_Id :=
-     16#73CB_EA92_6209#;
+     16#1C5_FBB7_19DE_112A#;
 
    Directory_Entry_Count_Endpoint : constant Rose.Objects.Endpoint_Id :=
-     16#653D_E0D0_57C3#;
+     16#ADDF_FA0F_D647_4D75#;
 
    Directory_Entry_Name_Endpoint  : constant Rose.Objects.Endpoint_Id :=
-     16#6A71_8E59_E724#;
+     16#DB37_1B14_7C74_740F#;
 
    Directory_Entry_Kind_Endpoint  : constant Rose.Objects.Endpoint_Id :=
-     16#85EC_1CD6_1D24#;
+     16#DE96_8891_CE34_5B4F#;
 
    Directory_Entry_Size_Endpoint  : constant Rose.Objects.Endpoint_Id :=
-     16#728F_CCA4_905E#;
+     16#5FA_DAEB_F56E_5038#;
 
    Find_Entry_Endpoint            : constant Rose.Objects.Endpoint_Id :=
-     16#C71_18A7_C791#;
+     16#ECDE_34C4_3D46_477B#;
 
    Get_Ordinary_File_Endpoint     : constant Rose.Objects.Endpoint_Id :=
-     16#594B_E7C6_0A99#;
+     16#20D5_30E6_B1E4_F50A#;
 
    Get_Directory_Endpoint         : constant Rose.Objects.Endpoint_Id :=
-     16#17C2_1154_7115#;
+     16#1A5A_45A6_6CB5_6E1D#;
 
    Read_File_Endpoint             : constant Rose.Objects.Endpoint_Id :=
-     16#DCB0_BC08_9761#;
+     16#EB8A_CB9A_A7B9_FD83#;
 
    Create_Directory_Endpoint      : constant Rose.Objects.Endpoint_Id :=
-     16#3583_2795_9762#;
+     16#A869_05E0_FF03_B268#;
 
    Create_File_Endpoint           : constant Rose.Objects.Endpoint_Id :=
-     16#AF04_2836_AD88#;
+     16#3451_684E_97FB_9A2A#;
 
    Directory_Entry_Count_Index    : constant := 0;
 

@@ -1,0 +1,4 @@
+errors/aspects.idl:2:18: error: unknown aspect Colour; the only aspect is Endpoint_Id
+errors/aspects.idl:6:26: error: an endpoint id must be a non-zero integer that fits in 64 bits
+errors/aspects.idl:9:26: error: an endpoint id must be a non-zero integer that fits in 64 bits
+errors/aspects.idl:12:26: error: missing endpoint id (an integer literal)
