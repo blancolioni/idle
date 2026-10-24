@@ -1,0 +1,9 @@
+--  Badge is declared by both Named and Labelled, with the same signature,
+--  so it is one subprogram, with Named's pinned id. The server handles
+--  Labelled's id for it too.
+
+interface Gauge : Counter, Labelled is
+
+   procedure Reset;
+
+end Gauge;

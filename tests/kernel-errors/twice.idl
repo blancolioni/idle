@@ -1,5 +1,8 @@
+--  Badge is inherited from Named, and declared again with a different
+--  signature.
+
 interface Twice : Named is
 
-   function Badge return Capability;
+   function Badge return Natural;
 
 end Twice;

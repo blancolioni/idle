@@ -23,6 +23,9 @@ package Idle.Hierarchy is
       Owner       : Idle.Syntax.Interface_Declaration;
       --  The interface that declares it, whose types it can name.
       Subprogram  : Idle.Syntax.Subprogram;
+      Also_Declared_By : Interface_Vectors.Vector;
+      --  The other interfaces of the hierarchy that declare a subprogram
+      --  with the same name and signature, which is the same subprogram.
    end record;
 
    package Member_Vectors is
@@ -42,6 +45,11 @@ package Idle.Hierarchy is
    --  The subprograms of each of Ancestors (Item), in that order, and
    --  then those of Item. The position of a subprogram in this list is
    --  the position of its cap in the reply to Item's interface cap.
+   --
+   --  A subprogram that more than one of them declares, with the same
+   --  name and signature, is one member: it has the place, id and cap of
+   --  its first declaration, and the other interfaces that declare it are
+   --  in Also_Declared_By.
 
    --  A parent that cannot be found, or an interface that is its own
    --  ancestor, is reported as an error through Idle.Diagnostics, and is
@@ -49,9 +57,10 @@ package Idle.Hierarchy is
 
    procedure Check_Members (Item : Idle.Syntax.Interface_Declaration);
    --  Report each subprogram name that Item and its ancestors declare
-   --  more than once. The names of the subprograms are the names of the
-   --  client's operations and of the server's handlers, so they must
-   --  differ.
+   --  more than once with different signatures. The names of the
+   --  subprograms are the names of the client's operations and of the
+   --  server's handlers, so they must differ unless the subprograms are
+   --  the same.
 
    procedure Add_Search_Directory (Directory : String);
    --  Look for declarations in Directory as well, after the directory of

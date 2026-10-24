@@ -4,6 +4,7 @@ with Syn;
 with Syn.Factory;
 with Syn.Units;
 
+with Idle.Endpoints;
 with Idle.Hierarchy;
 with Idle.Names;
 with Idle.Targets.Kernel.Support;
@@ -723,12 +724,34 @@ package body Idle.Targets.Kernel.Server is
       -------------------
 
       function Registrations return Syn.Node_Array is
+         Extra : Node_List;
       begin
+         --  A subprogram that more than one interface declares has the id
+         --  of its first declaration, and is handled under the ids of the
+         --  others too.
+
+         for Member of Idle.Hierarchy.Members (Item) loop
+            for Other of Member.Also_Declared_By loop
+               for Declared of Other.Subprograms loop
+                  if Idle.Names.Key (To_String (Declared.Name))
+                    = Idle.Names.Key (To_String (Member.Subprogram.Name))
+                  then
+                     Extra.Append
+                       (Register
+                          (Idle.Endpoints.Image
+                             (Idle.Endpoints.Subprogram_Id (Other, Declared)),
+                           Handle (Member.Subprogram)));
+                  end if;
+               end loop;
+            end loop;
+         end loop;
+
          return [for For_Interface of Interfaces =>
                    Register (Interface_Name (For_Interface),
                              Get_Interface (For_Interface))]
            & [for Subprogram of Subprograms =>
-                Register (Endpoint_Name (Subprogram), Handle (Subprogram))];
+                Register (Endpoint_Name (Subprogram), Handle (Subprogram))]
+           & Extra.To_Array;
       end Registrations;
 
       --------------
