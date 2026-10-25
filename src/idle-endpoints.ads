@@ -34,6 +34,14 @@ package Idle.Endpoints is
       return String;
    --  The canonical form of the subprogram Item, declared by Owner.
 
+   function Signature_Form
+     (Owner : Idle.Syntax.Interface_Declaration;
+      Item  : Idle.Syntax.Subprogram)
+      return String;
+   --  The canonical form of Item without its qualified name: its
+   --  parameters and result. Two subprograms with the same name have the
+   --  same signature if these are equal.
+
    function Hash (Form : String) return Endpoint_Id;
    --  The id derived from the canonical form Form.
 

@@ -10,3 +10,5 @@ rose/stream_reader
 parents/named
 parents/counter
 parents/meter
+parents/labelled
+parents/gauge
