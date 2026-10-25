@@ -75,6 +75,8 @@ package body Idle.Targets.Kernel.Client is
       procedure Use_Type (Info : Types.Type_Info);
       --  Add what the client needs to name values of type Info.
 
+      procedure Write_Conversions;
+
       ---------------
       -- Add_Close --
       ---------------
@@ -678,6 +680,81 @@ package body Idle.Targets.Kernel.Client is
          end if;
       end Use_Type;
 
+      -----------------------
+      -- Write_Conversions --
+      -----------------------
+
+      --  A client of each ancestor, from the caps of the subprograms it
+      --  declares or inherits, and without an interface cap: the result
+      --  can call only the ancestor's subprograms, and cannot be used to
+      --  get this interface's caps back. A writable directory is passed
+      --  as a read-only one this way.
+      --
+      --  The conversions are a child of the client, written only for an
+      --  interface with ancestors, so that only a program that converts
+      --  depends on the ancestors' clients.
+
+      procedure Write_Conversions is
+         Ancestors           : constant Idle.Hierarchy.Interface_Vectors.Vector
+           := Idle.Hierarchy.Ancestors (Item);
+         Conversions_Context : Context_List;
+         Conversions_Part    : Node_List;
+         Conversions_Bodies  : Body_List;
+      begin
+         if Ancestors.Is_Empty then
+            return;
+         end if;
+
+         for Ancestor of Ancestors loop
+            declare
+               Ancestor_Name : constant String :=
+                 Idle.Names.Ada_Name (To_String (Ancestor.Name));
+               Ancestor_Package : constant String :=
+                 "Rose.Interfaces." & Ancestor_Name & ".Client";
+               Ancestor_Type : constant String :=
+                 Ancestor_Package & "." & Ancestor_Name & "_Client";
+               Specification : constant not null Syn.Node_Access :=
+                 F.New_Function
+                   ("To_" & Ancestor_Name, F.New_Name (Ancestor_Type),
+                    [Client_Parameter]);
+            begin
+               Conversions_Context.Add (Ancestor_Package);
+               Conversions_Part.Append (Specification);
+               Conversions_Bodies.Add
+                 ("To_" & Ancestor_Name,
+                  F.New_Subprogram_Body
+                    (Specification => Specification,
+                     Declarations  =>
+                       [F.New_Object
+                          ("Result", F.New_Name (Ancestor_Type))],
+                     Statements    =>
+                       [Call (Ancestor_Package & ".Open_Cap_Set",
+                              [F.New_Name ("Result")]
+                              & [for Subprogram of Support.Subprograms
+                                                     (Ancestor) =>
+                                   F.New_Name ("Item." & Name (Subprogram))]),
+                        F.New_Return (F.New_Name ("Result"))]));
+            end;
+         end loop;
+
+         Syn.Units.Write
+           (F.New_Compilation_Unit
+              (Context => Conversions_Context.To_Array (F),
+               Item    =>
+                 F.New_Package
+                   (Name        => Package_Name & ".Conversions",
+                    Public_Part => Conversions_Part.To_Array)),
+            Output_Directory);
+
+         Syn.Units.Write
+           (F.New_Compilation_Unit
+              (Item =>
+                 F.New_Package_Body
+                   (Name         => Package_Name & ".Conversions",
+                    Declarations => Conversions_Bodies.To_Array)),
+            Output_Directory);
+      end Write_Conversions;
+
    begin
       Public_Part.Append (F.New_Private_Type (Client_Type));
       Spec_Context.Add ("Rose.Capabilities");
@@ -730,6 +807,8 @@ package body Idle.Targets.Kernel.Client is
                        F.New_Name ("Rose.Invocation.OK"))]
                    & Bodies.To_Array)),
          Output_Directory);
+
+      Write_Conversions;
    end Generate;
 
 end Idle.Targets.Kernel.Client;
