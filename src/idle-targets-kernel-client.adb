@@ -266,10 +266,10 @@ package body Idle.Targets.Kernel.Client is
       --  Words are sent in data words and caps in cap slots, each in the
       --  order of the parameters; a string or array travels in the
       --  invocation buffer. The reply holds the out values, in order,
-      --  then the function result; a cap or interface result is the
-      --  first cap of the reply, and an interface result is opened as a
-      --  client of that interface. A string result is copied from the
-      --  buffer, and its length is the data word after the out values.
+      --  then the function result: words and string lengths in data
+      --  words, and caps and interfaces in cap slots. An interface is
+      --  opened as a client of that interface. A string is copied from
+      --  the buffer, and its length is its data word in the reply.
 
       procedure Add_Subprogram (Member : Idle.Hierarchy.Member) is
          use all type Types.Category;
@@ -300,13 +300,38 @@ package body Idle.Targets.Kernel.Client is
          function Params return not null Syn.Node_Access
          is (F.New_Name ("Params"));
 
+         function Profile return Syn.Node_Array;
+         --  The parameters, with a length after each out or in out
+         --  string.
+
+         -------------
+         -- Profile --
+         -------------
+
+         function Profile return Syn.Node_Array is
+            Result : Node_List;
+         begin
+            for Parameter of Subprogram.Parameters loop
+               Result.Append
+                 (F.New_Parameter
+                    (Name (Parameter),
+                     F.New_Name (Client_Type_Of (Info (Parameter))),
+                     Mode (Parameter)));
+               if Info (Parameter).Category = String_Value
+                 and then Parameter.Mode /= Idle.Syntax.In_Mode
+               then
+                  Result.Append
+                    (F.New_Parameter
+                       (Name (Parameter) & "_Last", F.New_Name ("Natural"),
+                        Syn.Out_Mode));
+               end if;
+            end loop;
+            return Result.To_Array;
+         end Profile;
+
          Parameters : constant Syn.Node_Array :=
            [Client_Parameter]
-           & [for Parameter of Subprogram.Parameters =>
-                F.New_Parameter
-                  (Name (Parameter),
-                   F.New_Name (Client_Type_Of (Info (Parameter))),
-                   Mode (Parameter))]
+           & Profile
            & (if Returns_String
               then [F.New_Parameter
                       ("Result", F.New_Name ("String"), Syn.Out_Mode),
@@ -324,7 +349,9 @@ package body Idle.Targets.Kernel.Client is
 
          Statements  : Node_List;
          Reply_Words : Natural := 0;
+         Reply_Caps  : Natural := 0;
          Index       : Natural := 0;
+         Cap_Index   : Natural := 0;
 
       begin
          Public_Part.Append (Specification);
@@ -372,6 +399,16 @@ package body Idle.Targets.Kernel.Client is
                      when String_Value =>
                         Statements.Append
                           (Call (System_Calls & "Send_Text", [Params, Value]));
+                        if Parameter.Mode = Idle.Syntax.In_Out_Mode then
+                           --  The server writes the new text in place.
+                           Statements.Append
+                             (F.New_Assignment
+                                (F.New_Call
+                                   ("Params.Control.Flags",
+                                    [F.New_Name
+                                       ("Rose.Invocation.Writable_Buffer")]),
+                                 F.New_Name ("True")));
+                        end if;
                      when Storage_Value =>
                         Statements.Append
                           (Call (System_Calls & "Send_Storage_Array",
@@ -389,7 +426,15 @@ package body Idle.Targets.Kernel.Client is
                end if;
 
                if Parameter.Mode /= Idle.Syntax.In_Mode then
-                  Reply_Words := Reply_Words + Types.Words (Parameter_Info);
+                  Reply_Words :=
+                    Reply_Words + Types.Words (Parameter_Info)
+                    + (if Parameter_Info.Category = String_Value
+                       then 1 else 0);
+                  if Parameter_Info.Category in
+                    Capability_Value | Interface_Value
+                  then
+                     Reply_Caps := Reply_Caps + 1;
+                  end if;
                end if;
             end;
          end loop;
@@ -411,9 +456,14 @@ package body Idle.Targets.Kernel.Client is
          if Subprogram.Is_Function
            and then Result.Category in Capability_Value | Interface_Value
          then
+            Reply_Caps := Reply_Caps + 1;
+         end if;
+         if Reply_Caps > 0 then
             Statements.Append
               (Call (System_Calls & "Receive_Caps",
-                     [Params, F.New_Integer_Literal (1)]));
+                     [Params,
+                      F.New_Integer_Literal
+                        (Long_Long_Long_Integer (Reply_Caps))]));
          end if;
          if Returns_String then
             Statements.Append
@@ -443,11 +493,44 @@ package body Idle.Targets.Kernel.Client is
                   Value          : constant not null Syn.Node_Access :=
                     F.New_Name (Name (Parameter));
                begin
-                  if Types.Is_Buffer (Parameter_Info) then
+                  if Parameter_Info.Category = String_Value then
+                     Statements.Append
+                       (Call (System_Calls & "Copy_Text",
+                              [Params,
+                               F.New_Call
+                                 ("Natural",
+                                  [F.New_Call
+                                     (System_Calls & "Get_Word_32",
+                                      [Params,
+                                       F.New_Integer_Literal
+                                         (Long_Long_Long_Integer (Index))])]),
+                               Value,
+                               F.New_Name (Name (Parameter) & "_Last")]));
+                     Index := Index + 1;
+                  elsif Types.Is_Buffer (Parameter_Info) then
                      Statements.Append
                        (Call (System_Calls & "Copy_Received_Buffer",
                               [F.New_Attribute (Value, "Length"),
                                F.New_Attribute (Value, "Address")]));
+                  elsif Parameter_Info.Category = Capability_Value then
+                     Statements.Append
+                       (F.New_Assignment
+                          (Value,
+                           F.New_Call
+                             ("Params.Caps",
+                              [F.New_Integer_Literal
+                                 (Long_Long_Long_Integer (Cap_Index))])));
+                     Cap_Index := Cap_Index + 1;
+                  elsif Parameter_Info.Category = Interface_Value then
+                     Statements.Append
+                       (Call (Qualified (Client_Package (Parameter_Info),
+                                         "Open"),
+                              [Value,
+                               F.New_Call
+                                 ("Params.Caps",
+                                  [F.New_Integer_Literal
+                                     (Long_Long_Long_Integer (Cap_Index))])]));
+                     Cap_Index := Cap_Index + 1;
                   else
                      Statements.Append
                        (F.New_Assignment
@@ -468,7 +551,9 @@ package body Idle.Targets.Kernel.Client is
                   Statements.Append
                     (F.New_Return
                        (F.New_Call
-                          ("Params.Caps", [F.New_Integer_Literal (0)])));
+                          ("Params.Caps",
+                           [F.New_Integer_Literal
+                              (Long_Long_Long_Integer (Cap_Index))])));
                when Interface_Value =>
                   Statements.Append
                     (F.New_Block
@@ -481,7 +566,9 @@ package body Idle.Targets.Kernel.Client is
                                  [F.New_Name ("Result"),
                                   F.New_Call
                                     ("Params.Caps",
-                                     [F.New_Integer_Literal (0)])]),
+                                     [F.New_Integer_Literal
+                                        (Long_Long_Long_Integer
+                                           (Cap_Index))])]),
                            F.New_Return (F.New_Name ("Result"))]));
                when String_Value =>
                   Statements.Append

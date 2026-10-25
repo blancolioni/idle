@@ -331,7 +331,11 @@ package body Idle.Targets.Kernel is
                else
                   Check_Interface (Info, Type_Name, Parameter.Position);
 
+                  --  Only the caps that are sent are counted: out caps come
+                  --  back in the reply.
+
                   if Cap_Array_Seen
+                    and then Parameter.Mode /= Idle.Syntax.Out_Mode
                     and then Info.Category in
                       Capability_Value | Interface_Value
                       | Capability_Array_Value
@@ -341,7 +345,9 @@ package body Idle.Targets.Kernel is
                             & "capability parameter");
                   end if;
 
-                  if Info.Category = Capability_Array_Value then
+                  if Info.Category = Capability_Array_Value
+                    and then Parameter.Mode /= Idle.Syntax.Out_Mode
+                  then
                      Cap_Array_Seen := True;
                   end if;
 
@@ -350,9 +356,7 @@ package body Idle.Targets.Kernel is
                   end if;
 
                   if Parameter.Mode /= Idle.Syntax.In_Mode
-                    and then Info.Category in
-                      Capability_Value | Interface_Value
-                      | Capability_Array_Value | String_Value
+                    and then Info.Category = Capability_Array_Value
                   then
                      Error (Member.File_Name, Parameter.Position,
                             Unsupported_Text
