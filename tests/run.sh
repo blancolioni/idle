@@ -81,7 +81,8 @@ fi
 
 commands="rose-core.ads rose-core-echo.ads rose-core-echo_main.adb
 rose-core-echo_metadata.ads rose-core-head.ads rose-core-head_main.adb
-rose-core-head_metadata.ads"
+rose-core-head_metadata.ads rose-core-copy.ads rose-core-copy_main.adb
+rose-core-copy_metadata.ads"
 rm -rf output/commands && mkdir output/commands
 if $idle --target kernel -I rose -o output/commands commands/*.idl; then
   for file in $commands; do
@@ -155,7 +156,7 @@ fi
 # Commands, packages and roles that break the rules. Each command finds
 # its package beside it, in command-errors/, and its roles in commands/.
 
-if $idle --target kernel -I commands -I rose -o output      command-errors/rose-core-bad.idl command-errors/nowhere-thing.idl      command-errors/bad_role.idl command-errors/rose-core-logger.idl      command-errors/rose-core.idl 2> output/diagnostics.txt; then
+if $idle --target kernel -I commands -I rose -o output      command-errors/rose-core-bad.idl command-errors/nowhere-thing.idl      command-errors/bad_role.idl command-errors/rose-core-modes.idl      command-errors/rose-core.idl 2> output/diagnostics.txt; then
   fail "command errors (expected errors)"
 elif diff -u command-errors/expected.txt output/diagnostics.txt; then
   pass "command errors"

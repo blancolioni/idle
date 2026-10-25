@@ -16,11 +16,19 @@ package Idle.Commands is
 
    type Argument_Type is
      (Boolean_Argument, Natural_Argument, Positive_Argument,
-      String_Argument, String_List_Argument, Other_Argument);
+      String_Argument, String_List_Argument, Interface_Argument,
+      Other_Argument);
 
-   function Type_Of (Item : Idle.Syntax.Argument) return Argument_Type;
+   function Type_Of
+     (Near : Idle.Syntax.Interface_Declaration;
+      Item : Idle.Syntax.Argument)
+      return Argument_Type;
+   --  The kind of the argument or role member Item, declared by Near. A
+   --  type that is not predefined is an Interface_Argument if it names an
+   --  interface, and an Other_Argument if it does not.
 
-   type Place_Kind is (Word_Place, Cap_Place, Item_Place, List_Place);
+   type Place_Kind is
+     (No_Place, Word_Place, Cap_Place, Item_Place, List_Place);
 
    type Place is record
       Kind  : Place_Kind := Word_Place;
@@ -31,18 +39,34 @@ package Idle.Commands is
       --  For a List_Place, the data word that holds its number of items.
    end record;
    --  Where an argument is in the launch invocation: role members are
-   --  caps, first and in role order; scalars and a list's count are data
-   --  words, in declaration order; and strings are buffer items, those of
-   --  string arguments first, in declaration order, then a list's.
+   --  caps, first and in role order, and then interface arguments, in
+   --  declaration order; scalars and a list's count are data words, in
+   --  declaration order; and strings are buffer items, those of string
+   --  arguments first, in declaration order, then a list's. An out
+   --  argument has no place in the invocation (No_Place).
+   --
+   --  Where a result is in the reply to the launch invocation: out and in
+   --  out scalars are data words from 1, after the completion word, and
+   --  out and in out strings are buffer items from 1, each in declaration
+   --  order. Interface arguments have no result: their mode is the right
+   --  that the shell grants to the cap.
 
    type Stream is (No_Stream, Input_Stream, Output_Stream, Error_Stream);
+
+   type System_Cap is
+     (No_System_Cap, Create_Endpoint_Cap, Delete_Cap, Rescind_Cap);
+   --  A role member that the generated main passes to
+   --  Rose.System_Calls.Use_Capabilities, by its name.
 
    type Placed_Argument is record
       Argument  : Idle.Syntax.Argument;
       Role      : Unbounded_String;
       --  The role it comes from, or "" for a declared argument.
       Stream    : Commands.Stream := No_Stream;
+      System    : System_Cap := No_System_Cap;
+      Kind      : Argument_Type := Other_Argument;
       Where     : Place;
+      Result    : Place := (Kind => No_Place, others => <>);
    end record;
 
    package Placed_Vectors is

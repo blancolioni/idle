@@ -1,0 +1,5 @@
+command Rose.Core.Modes is
+   Total : out Natural := 3;
+   Files : in out String_List;
+   Input : File := Nothing;
+end Rose.Core.Modes;
