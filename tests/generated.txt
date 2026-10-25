@@ -11,3 +11,5 @@ parents/named
 parents/counter
 parents/meter
 modes/exchange
+parents/labelled
+parents/gauge

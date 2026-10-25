@@ -1,6 +1,6 @@
 check-errors/misnamed.idl:1:1: error: interface Other_Name should be declared in other_name.idl
 check-errors/typo.idl:3:4: error: unknown interface Nowhere: no check-errors/nowhere.idl declares it
 check-errors/second.idl:5:4: error: Second.Start has the same endpoint id as First.Run
-check-errors/both.idl:3:1: error: Run is declared by both First and Both
+check-errors/both.idl:4:1: error: Run is declared by both First and Both, with different signatures
 check-errors/pinned.idl:5:4: warning: the endpoint id of Pinned.Reset is pinned to its own hash, so the pin is not needed
 check-errors/extra.idl: warning: not compiled by this build
