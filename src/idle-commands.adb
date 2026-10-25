@@ -84,7 +84,8 @@ package body Idle.Commands is
             declare
                use all type Idle.Syntax.Parameter_Mode;
                Name       : constant String := To_String (Argument.Name);
-               Kind       : constant Argument_Type := Type_Of (Argument);
+               Kind       : constant Argument_Type :=
+                 Type_Of (Item, Argument);
                Short_Name : constant String :=
                  Commands.Aspect (Argument.Aspects, "Short_Name");
                Count      : Natural := 0;
@@ -105,18 +106,30 @@ package body Idle.Commands is
                          & " --version itself");
                end if;
 
-               if Argument.Mode /= In_Mode then
-                  Error (Argument.Position,
-                         "out and in out arguments are not yet supported");
+               if Argument.Mode = Out_Mode and then Argument.Has_Default
+               then
+                  Error (Argument.Default.Position,
+                         "an out argument has no default");
                end if;
 
                case Kind is
                   when Other_Argument =>
                      Error (Argument.Position,
-                            "arguments of type "
+                            "unknown type "
                             & To_String (Argument.Of_Type.Name)
-                            & " are not yet supported");
+                            & ": an argument is a Boolean, Natural,"
+                            & " Positive, String, String_List or"
+                            & " interface");
+                  when Interface_Argument =>
+                     if Argument.Has_Default then
+                        Error (Argument.Default.Position,
+                               "an interface argument has no default");
+                     end if;
                   when String_List_Argument =>
+                     if Argument.Mode /= In_Mode then
+                        Error (Argument.Position,
+                               "a String_List argument is always in");
+                     end if;
                      Lists := Lists + 1;
                      if Lists > 1 then
                         Error (Argument.Position,
@@ -134,7 +147,10 @@ package body Idle.Commands is
                      end if;
                      List_Seen := True;
                   when others =>
-                     if List_Seen and then Short_Name = "" then
+                     if List_Seen
+                       and then Short_Name = ""
+                       and then Argument.Mode /= Out_Mode
+                     then
                         Error (Argument.Position,
                                "a positional argument cannot follow the"
                                & " String_List argument, which takes the"
@@ -180,7 +196,9 @@ package body Idle.Commands is
                                      "the default of a String argument is"
                                      & " a string");
                            end if;
-                        when String_List_Argument | Other_Argument =>
+                        when String_List_Argument | Interface_Argument
+                           | Other_Argument
+                        =>
                            null;
                      end case;
                   end;
@@ -335,19 +353,6 @@ package body Idle.Commands is
             end if;
          end loop;
 
-         if Item.Kind = Command_Unit then
-            for Placed of Signature (Item) loop
-               if Placed.Role /= Null_Unbounded_String
-                 and then Placed.Stream = No_Stream
-               then
-                  Error (Item.Position,
-                         "the member " & To_String (Placed.Argument.Name)
-                         & " of the role " & To_String (Placed.Role)
-                         & " is not yet supported: only the standard"
-                         & " streams are");
-               end if;
-            end loop;
-         end if;
       end Check_Roles;
 
       -----------
@@ -490,11 +495,14 @@ package body Idle.Commands is
      (Item : Idle.Syntax.Interface_Declaration)
       return Placed_Vectors.Vector
    is
+      use all type Idle.Syntax.Parameter_Mode;
       Result      : Placed_Vectors.Vector;
       Next_Word   : Natural := 0;
       Next_Cap    : Natural := 0;
       String_Args : Natural := 0;
       Next_Item   : Positive := 1;
+      Next_Result_Word : Positive := 1;
+      Next_Result_Item : Positive := 1;
    begin
       for Role of Idle.Hierarchy.Ancestors (Item) loop
          for Member of Role.Arguments loop
@@ -511,41 +519,82 @@ package body Idle.Commands is
                         then Output_Stream
                         elsif Same (Name, "Standard_Error") then Error_Stream
                         else No_Stream),
-                     Where    => (Cap_Place, Next_Cap, 0)));
+                     System   =>
+                       (if Same (Name, "Create_Endpoint")
+                        then Create_Endpoint_Cap
+                        elsif Same (Name, "Delete_Cap") then Delete_Cap
+                        elsif Same (Name, "Rescind_Cap") then Rescind_Cap
+                        else No_System_Cap),
+                     Kind     => Interface_Argument,
+                     Where    => (Cap_Place, Next_Cap, 0),
+                     Result   => <>));
                Next_Cap := Next_Cap + 1;
             end;
          end loop;
       end loop;
 
       for Argument of Item.Arguments loop
-         if Type_Of (Argument) = String_Argument then
+         if Type_Of (Item, Argument) = String_Argument
+           and then Argument.Mode /= Out_Mode
+         then
             String_Args := String_Args + 1;
          end if;
       end loop;
 
       for Argument of Item.Arguments loop
          declare
-            Where : Place;
+            Kind   : constant Argument_Type := Type_Of (Item, Argument);
+            Where  : Place := (Kind => No_Place, others => <>);
+            Answer : Place := (Kind => No_Place, others => <>);
          begin
-            case Type_Of (Argument) is
-               when Boolean_Argument | Natural_Argument | Positive_Argument
-                  | Other_Argument
-               =>
-                  Where := (Word_Place, Next_Word, 0);
-                  Next_Word := Next_Word + 1;
-               when String_Argument =>
-                  Where := (Item_Place, Next_Item, 0);
-                  Next_Item := Next_Item + 1;
-               when String_List_Argument =>
-                  Where := (List_Place, String_Args + 1, Next_Word);
-                  Next_Word := Next_Word + 1;
-            end case;
+            if Argument.Mode /= Out_Mode then
+               case Kind is
+                  when Boolean_Argument | Natural_Argument
+                     | Positive_Argument | Other_Argument
+                  =>
+                     Where := (Word_Place, Next_Word, 0);
+                     Next_Word := Next_Word + 1;
+                  when String_Argument =>
+                     Where := (Item_Place, Next_Item, 0);
+                     Next_Item := Next_Item + 1;
+                  when String_List_Argument =>
+                     Where := (List_Place, String_Args + 1, Next_Word);
+                     Next_Word := Next_Word + 1;
+                  when Interface_Argument =>
+                     Where := (Cap_Place, Next_Cap, 0);
+                     Next_Cap := Next_Cap + 1;
+               end case;
+            elsif Kind = Interface_Argument then
+               Where := (Cap_Place, Next_Cap, 0);
+               Next_Cap := Next_Cap + 1;
+            end if;
+
+            if Argument.Mode /= In_Mode then
+               case Kind is
+                  when Boolean_Argument | Natural_Argument
+                     | Positive_Argument
+                  =>
+                     Answer := (Word_Place, Next_Result_Word, 0);
+                     Next_Result_Word := Next_Result_Word + 1;
+                  when String_Argument =>
+                     Answer := (Item_Place, Next_Result_Item, 0);
+                     Next_Result_Item := Next_Result_Item + 1;
+                  when String_List_Argument | Interface_Argument
+                     | Other_Argument
+                  =>
+                     null;
+               end case;
+            end if;
+
             Result.Append
               (Placed_Argument'
                  (Argument => Argument,
                   Role     => Null_Unbounded_String,
                   Stream   => No_Stream,
-                  Where    => Where));
+                  System   => No_System_Cap,
+                  Kind     => Kind,
+                  Where    => Where,
+                  Result   => Answer));
          end;
       end loop;
 
@@ -567,11 +616,16 @@ package body Idle.Commands is
    -- Type_Of --
    -------------
 
-   function Type_Of (Item : Idle.Syntax.Argument) return Argument_Type is
-      Name : constant String := To_String (Item.Of_Type.Name);
+   function Type_Of
+     (Near : Idle.Syntax.Interface_Declaration;
+      Item : Idle.Syntax.Argument)
+      return Argument_Type
+   is
+      Name  : constant String := To_String (Item.Of_Type.Name);
+      Found : Idle.Syntax.Interface_Declaration;
    begin
       if Item.Of_Type.Is_Interface then
-         return Other_Argument;
+         return Interface_Argument;
       elsif Same (Name, "Boolean") then
          return Boolean_Argument;
       elsif Same (Name, "Natural") then
@@ -582,6 +636,10 @@ package body Idle.Commands is
          return String_Argument;
       elsif Same (Name, "String_List") then
          return String_List_Argument;
+      elsif Idle.Hierarchy.Find (Near, Name, Found)
+        and then Found.Kind in Idle.Syntax.Interface_Unit
+      then
+         return Interface_Argument;
       else
          return Other_Argument;
       end if;
