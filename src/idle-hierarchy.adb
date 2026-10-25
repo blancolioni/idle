@@ -4,6 +4,7 @@ with Ada.Directories;
 with Ada.Strings.Hash;
 
 with Idle.Diagnostics;
+with Idle.Endpoints;
 with Idle.Names;
 with Idle.Parser;
 
@@ -143,7 +144,8 @@ package body Idle.Hierarchy is
                     (To_String (All_Members (Index).Subprogram.Name))
                   & " is declared by both "
                   & To_String (All_Members (Previous).Declared_In) & " and "
-                  & To_String (All_Members (Index).Declared_In));
+                  & To_String (All_Members (Index).Declared_In)
+                  & ", with different signatures");
             end if;
          end loop;
       end loop;
@@ -271,12 +273,33 @@ package body Idle.Hierarchy is
       procedure Add (From : Idle.Syntax.Interface_Declaration) is
       begin
          for Subprogram of From.Subprograms loop
-            Result.Append
-              (Member'
-                 (Declared_In => From.Name,
-                  File_Name   => From.File_Name,
-                  Owner       => From,
-                  Subprogram  => Subprogram));
+            declare
+               Merged : Boolean := False;
+            begin
+               for Existing of Result loop
+                  if Idle.Names.Key (To_String (Existing.Subprogram.Name))
+                    = Idle.Names.Key (To_String (Subprogram.Name))
+                    and then Idle.Endpoints.Signature_Form
+                               (Existing.Owner, Existing.Subprogram)
+                             = Idle.Endpoints.Signature_Form
+                                 (From, Subprogram)
+                  then
+                     Existing.Also_Declared_By.Append (From);
+                     Merged := True;
+                     exit;
+                  end if;
+               end loop;
+
+               if not Merged then
+                  Result.Append
+                    (Member'
+                       (Declared_In      => From.Name,
+                        File_Name        => From.File_Name,
+                        Owner            => From,
+                        Subprogram       => Subprogram,
+                        Also_Declared_By => <>));
+               end if;
+            end;
          end loop;
       end Add;
 

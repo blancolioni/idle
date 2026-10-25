@@ -1,0 +1,6 @@
+interface Labelled is
+
+   function Badge return Capability;
+   procedure Set_Label (Label : Word);
+
+end Labelled;

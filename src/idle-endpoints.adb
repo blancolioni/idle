@@ -84,6 +84,23 @@ package body Idle.Endpoints is
       end if;
    end Interface_Id;
 
+   --------------------
+   -- Signature_Form --
+   --------------------
+
+   function Signature_Form
+     (Owner : Idle.Syntax.Interface_Declaration;
+      Item  : Idle.Syntax.Subprogram)
+      return String
+   is
+      Form : constant String := Subprogram_Form (Owner, Item);
+      Head : constant String :=
+        Prefix & Idle.Names.Key (To_String (Owner.Name))
+        & "." & Idle.Names.Key (To_String (Item.Name));
+   begin
+      return Form (Form'First + Head'Length .. Form'Last);
+   end Signature_Form;
+
    ---------------------
    -- Subprogram_Form --
    ---------------------

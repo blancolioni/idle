@@ -1,1 +1,1 @@
-kernel-errors/twice.idl:1:1: error: Badge is declared by both Named and Twice
+kernel-errors/twice.idl:4:1: error: Badge is declared by both Named and Twice, with different signatures

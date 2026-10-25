@@ -1,0 +1,5 @@
+kernel-errors/clash.idl:3:4: error: constant Clash_Interface has the same name as the id of interface Clash, which the interface package declares
+kernel-errors/clash.idl:4:4: error: constant subprogram_count has the same name as the number of subprograms, which the interface package declares
+kernel-errors/clash.idl:6:4: error: type Badge_Index has the same name as the cap index of Named.Badge, which the interface package declares
+kernel-errors/clash.idl:7:4: error: type Start_Endpoint has the same name as the endpoint id of Clash.Start, which the interface package declares
+kernel-errors/clash.idl:8:4: error: enumeration literal Named_Interface has the same name as the id of interface Named, which the interface package declares

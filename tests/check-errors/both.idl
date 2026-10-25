@@ -1,7 +1,8 @@
---  Run is inherited from First, and declared again.
+--  Run is inherited from First, and declared again with a different
+--  signature.
 
 interface Both : First is
 
-   procedure Run;
+   procedure Run (Times : Natural);
 
 end Both;
