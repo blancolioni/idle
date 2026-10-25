@@ -40,11 +40,20 @@ while read -r entry; do
     fail "kernel target for $entry"
     continue
   fi
+  conversions=
+  for file in "rose-interfaces-$name-client-conversions.ads" \
+              "rose-interfaces-$name-client-conversions.adb"; do
+    # Only an interface with ancestors has conversions.
+    if [ -f "expected/$file" ] || [ -f "output/$file" ]; then
+      conversions="$conversions $file"
+    fi
+  done
   for file in "rose-interfaces-$name.ads" \
               "rose-interfaces-$name-client.ads" \
               "rose-interfaces-$name-client.adb" \
               "rose-interfaces-$name-server.ads" \
-              "rose-interfaces-$name-server.adb"; do
+              "rose-interfaces-$name-server.adb" \
+              $conversions; do
     if diff -u "expected/$file" "output/$file"; then
       pass "$file"
     else
