@@ -178,71 +178,103 @@ package body Rose.Interfaces.Meter.Server is
       Cap        : Rose.Capabilities.Capability;
       Identifier : constant Rose.Objects.Capability_Identifier :=
         Parameters.Identifier;
+      Ancestor   : Natural := 0;
    begin
+      if Parameters.Control.Flags (Rose.Invocation.Send_Words) then
+         Ancestor := Natural (Parameters.Data (0));
+      end if;
       Rose.System_Calls.Initialize_Reply (Parameters, Parameters.Reply_Cap);
-      if Badge_Cap = Rose.Capabilities.Null_Capability then
-         if not Rose.Server.Has_Instance
-           (Server_Instance,
-            Badge_Endpoint,
-            Identifier)
-         then
-            Rose.Server.Set_Instance_Cap
+      if Ancestor = 0 then
+         if Badge_Cap = Rose.Capabilities.Null_Capability then
+            if not Rose.Server.Has_Instance
               (Server_Instance,
                Badge_Endpoint,
-               Identifier,
-               Rose.Server.Create_Endpoint (Badge_Endpoint, Identifier));
+               Identifier)
+            then
+               Rose.Server.Set_Instance_Cap
+                 (Server_Instance,
+                  Badge_Endpoint,
+                  Identifier,
+                  Rose.Server.Create_Endpoint (Badge_Endpoint, Identifier));
+            end if;
+            Cap :=
+              Rose.Server.Get_Instance_Cap
+                (Server_Instance,
+                 Badge_Endpoint,
+                 Identifier);
+         else
+            Cap := Badge_Cap;
          end if;
-         Cap :=
-           Rose.Server.Get_Instance_Cap
-             (Server_Instance,
-              Badge_Endpoint,
-              Identifier);
-      else
-         Cap := Badge_Cap;
-      end if;
-      Rose.System_Calls.Send_Cap (Parameters, Cap);
-      if Increment_Cap = Rose.Capabilities.Null_Capability then
-         if not Rose.Server.Has_Instance
-           (Server_Instance,
-            Increment_Endpoint,
-            Identifier)
-         then
-            Rose.Server.Set_Instance_Cap
+         Rose.System_Calls.Send_Cap (Parameters, Cap);
+         if Increment_Cap = Rose.Capabilities.Null_Capability then
+            if not Rose.Server.Has_Instance
               (Server_Instance,
                Increment_Endpoint,
-               Identifier,
-               Rose.Server.Create_Endpoint (Increment_Endpoint, Identifier));
+               Identifier)
+            then
+               Rose.Server.Set_Instance_Cap
+                 (Server_Instance,
+                  Increment_Endpoint,
+                  Identifier,
+                  Rose.Server.Create_Endpoint
+                    (Increment_Endpoint,
+                     Identifier));
+            end if;
+            Cap :=
+              Rose.Server.Get_Instance_Cap
+                (Server_Instance,
+                 Increment_Endpoint,
+                 Identifier);
+         else
+            Cap := Increment_Cap;
          end if;
-         Cap :=
-           Rose.Server.Get_Instance_Cap
-             (Server_Instance,
-              Increment_Endpoint,
-              Identifier);
-      else
-         Cap := Increment_Cap;
-      end if;
-      Rose.System_Calls.Send_Cap (Parameters, Cap);
-      if Value_Cap = Rose.Capabilities.Null_Capability then
-         if not Rose.Server.Has_Instance
-           (Server_Instance,
-            Value_Endpoint,
-            Identifier)
-         then
-            Rose.Server.Set_Instance_Cap
+         Rose.System_Calls.Send_Cap (Parameters, Cap);
+         if Value_Cap = Rose.Capabilities.Null_Capability then
+            if not Rose.Server.Has_Instance
               (Server_Instance,
                Value_Endpoint,
-               Identifier,
-               Rose.Server.Create_Endpoint (Value_Endpoint, Identifier));
+               Identifier)
+            then
+               Rose.Server.Set_Instance_Cap
+                 (Server_Instance,
+                  Value_Endpoint,
+                  Identifier,
+                  Rose.Server.Create_Endpoint (Value_Endpoint, Identifier));
+            end if;
+            Cap :=
+              Rose.Server.Get_Instance_Cap
+                (Server_Instance,
+                 Value_Endpoint,
+                 Identifier);
+         else
+            Cap := Value_Cap;
          end if;
-         Cap :=
-           Rose.Server.Get_Instance_Cap
-             (Server_Instance,
-              Value_Endpoint,
-              Identifier);
+         Rose.System_Calls.Send_Cap (Parameters, Cap);
       else
-         Cap := Value_Cap;
+         if Ancestor = 1 then
+            if not Rose.Server.Has_Instance
+              (Server_Instance,
+               Named_Interface,
+               Identifier)
+            then
+               Rose.Server.Set_Instance_Cap
+                 (Server_Instance,
+                  Named_Interface,
+                  Identifier,
+                  Rose.Server.Create_Endpoint (Named_Interface, Identifier));
+            end if;
+            Rose.System_Calls.Send_Cap
+              (Parameters,
+               Rose.Server.Get_Instance_Cap
+                 (Server_Instance,
+                  Named_Interface,
+                  Identifier));
+         else
+            Rose.System_Calls.Send_Error
+              (Parameters,
+               Rose.Invocation.Invalid_Operation);
+         end if;
       end if;
-      Rose.System_Calls.Send_Cap (Parameters, Cap);
    end Handle_Get_Counter_Interface;
 
    --------------------------------
@@ -256,92 +288,146 @@ package body Rose.Interfaces.Meter.Server is
       Cap        : Rose.Capabilities.Capability;
       Identifier : constant Rose.Objects.Capability_Identifier :=
         Parameters.Identifier;
+      Ancestor   : Natural := 0;
    begin
+      if Parameters.Control.Flags (Rose.Invocation.Send_Words) then
+         Ancestor := Natural (Parameters.Data (0));
+      end if;
       Rose.System_Calls.Initialize_Reply (Parameters, Parameters.Reply_Cap);
-      if Badge_Cap = Rose.Capabilities.Null_Capability then
-         if not Rose.Server.Has_Instance
-           (Server_Instance,
-            Badge_Endpoint,
-            Identifier)
-         then
-            Rose.Server.Set_Instance_Cap
+      if Ancestor = 0 then
+         if Badge_Cap = Rose.Capabilities.Null_Capability then
+            if not Rose.Server.Has_Instance
               (Server_Instance,
                Badge_Endpoint,
-               Identifier,
-               Rose.Server.Create_Endpoint (Badge_Endpoint, Identifier));
+               Identifier)
+            then
+               Rose.Server.Set_Instance_Cap
+                 (Server_Instance,
+                  Badge_Endpoint,
+                  Identifier,
+                  Rose.Server.Create_Endpoint (Badge_Endpoint, Identifier));
+            end if;
+            Cap :=
+              Rose.Server.Get_Instance_Cap
+                (Server_Instance,
+                 Badge_Endpoint,
+                 Identifier);
+         else
+            Cap := Badge_Cap;
          end if;
-         Cap :=
-           Rose.Server.Get_Instance_Cap
-             (Server_Instance,
-              Badge_Endpoint,
-              Identifier);
-      else
-         Cap := Badge_Cap;
-      end if;
-      Rose.System_Calls.Send_Cap (Parameters, Cap);
-      if Increment_Cap = Rose.Capabilities.Null_Capability then
-         if not Rose.Server.Has_Instance
-           (Server_Instance,
-            Increment_Endpoint,
-            Identifier)
-         then
-            Rose.Server.Set_Instance_Cap
+         Rose.System_Calls.Send_Cap (Parameters, Cap);
+         if Increment_Cap = Rose.Capabilities.Null_Capability then
+            if not Rose.Server.Has_Instance
               (Server_Instance,
                Increment_Endpoint,
-               Identifier,
-               Rose.Server.Create_Endpoint (Increment_Endpoint, Identifier));
+               Identifier)
+            then
+               Rose.Server.Set_Instance_Cap
+                 (Server_Instance,
+                  Increment_Endpoint,
+                  Identifier,
+                  Rose.Server.Create_Endpoint
+                    (Increment_Endpoint,
+                     Identifier));
+            end if;
+            Cap :=
+              Rose.Server.Get_Instance_Cap
+                (Server_Instance,
+                 Increment_Endpoint,
+                 Identifier);
+         else
+            Cap := Increment_Cap;
          end if;
-         Cap :=
-           Rose.Server.Get_Instance_Cap
-             (Server_Instance,
-              Increment_Endpoint,
-              Identifier);
-      else
-         Cap := Increment_Cap;
-      end if;
-      Rose.System_Calls.Send_Cap (Parameters, Cap);
-      if Value_Cap = Rose.Capabilities.Null_Capability then
-         if not Rose.Server.Has_Instance
-           (Server_Instance,
-            Value_Endpoint,
-            Identifier)
-         then
-            Rose.Server.Set_Instance_Cap
+         Rose.System_Calls.Send_Cap (Parameters, Cap);
+         if Value_Cap = Rose.Capabilities.Null_Capability then
+            if not Rose.Server.Has_Instance
               (Server_Instance,
                Value_Endpoint,
-               Identifier,
-               Rose.Server.Create_Endpoint (Value_Endpoint, Identifier));
+               Identifier)
+            then
+               Rose.Server.Set_Instance_Cap
+                 (Server_Instance,
+                  Value_Endpoint,
+                  Identifier,
+                  Rose.Server.Create_Endpoint (Value_Endpoint, Identifier));
+            end if;
+            Cap :=
+              Rose.Server.Get_Instance_Cap
+                (Server_Instance,
+                 Value_Endpoint,
+                 Identifier);
+         else
+            Cap := Value_Cap;
          end if;
-         Cap :=
-           Rose.Server.Get_Instance_Cap
-             (Server_Instance,
-              Value_Endpoint,
-              Identifier);
-      else
-         Cap := Value_Cap;
-      end if;
-      Rose.System_Calls.Send_Cap (Parameters, Cap);
-      if Reset_Cap = Rose.Capabilities.Null_Capability then
-         if not Rose.Server.Has_Instance
-           (Server_Instance,
-            Reset_Endpoint,
-            Identifier)
-         then
-            Rose.Server.Set_Instance_Cap
+         Rose.System_Calls.Send_Cap (Parameters, Cap);
+         if Reset_Cap = Rose.Capabilities.Null_Capability then
+            if not Rose.Server.Has_Instance
               (Server_Instance,
                Reset_Endpoint,
-               Identifier,
-               Rose.Server.Create_Endpoint (Reset_Endpoint, Identifier));
+               Identifier)
+            then
+               Rose.Server.Set_Instance_Cap
+                 (Server_Instance,
+                  Reset_Endpoint,
+                  Identifier,
+                  Rose.Server.Create_Endpoint (Reset_Endpoint, Identifier));
+            end if;
+            Cap :=
+              Rose.Server.Get_Instance_Cap
+                (Server_Instance,
+                 Reset_Endpoint,
+                 Identifier);
+         else
+            Cap := Reset_Cap;
          end if;
-         Cap :=
-           Rose.Server.Get_Instance_Cap
-             (Server_Instance,
-              Reset_Endpoint,
-              Identifier);
+         Rose.System_Calls.Send_Cap (Parameters, Cap);
       else
-         Cap := Reset_Cap;
+         if Ancestor = 1 then
+            if not Rose.Server.Has_Instance
+              (Server_Instance,
+               Named_Interface,
+               Identifier)
+            then
+               Rose.Server.Set_Instance_Cap
+                 (Server_Instance,
+                  Named_Interface,
+                  Identifier,
+                  Rose.Server.Create_Endpoint (Named_Interface, Identifier));
+            end if;
+            Rose.System_Calls.Send_Cap
+              (Parameters,
+               Rose.Server.Get_Instance_Cap
+                 (Server_Instance,
+                  Named_Interface,
+                  Identifier));
+         else
+            if Ancestor = 2 then
+               if not Rose.Server.Has_Instance
+                 (Server_Instance,
+                  Counter_Interface,
+                  Identifier)
+               then
+                  Rose.Server.Set_Instance_Cap
+                    (Server_Instance,
+                     Counter_Interface,
+                     Identifier,
+                     Rose.Server.Create_Endpoint
+                       (Counter_Interface,
+                        Identifier));
+               end if;
+               Rose.System_Calls.Send_Cap
+                 (Parameters,
+                  Rose.Server.Get_Instance_Cap
+                    (Server_Instance,
+                     Counter_Interface,
+                     Identifier));
+            else
+               Rose.System_Calls.Send_Error
+                 (Parameters,
+                  Rose.Invocation.Invalid_Operation);
+            end if;
+         end if;
       end if;
-      Rose.System_Calls.Send_Cap (Parameters, Cap);
    end Handle_Get_Meter_Interface;
 
    --------------------------------
