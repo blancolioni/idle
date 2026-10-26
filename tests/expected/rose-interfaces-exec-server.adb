@@ -106,50 +106,80 @@ package body Rose.Interfaces.Exec.Server is
       Cap        : Rose.Capabilities.Capability;
       Identifier : constant Rose.Objects.Capability_Identifier :=
         Parameters.Identifier;
+      Ancestor   : Natural := 0;
    begin
+      if Parameters.Control.Flags (Rose.Invocation.Send_Words) then
+         Ancestor := Natural (Parameters.Data (0));
+      end if;
       Rose.System_Calls.Initialize_Reply (Parameters, Parameters.Reply_Cap);
-      if Launch_Cap = Rose.Capabilities.Null_Capability then
-         if not Rose.Server.Has_Instance
-           (Server_Instance,
-            Launch_Endpoint,
-            Identifier)
-         then
-            Rose.Server.Set_Instance_Cap
+      if Ancestor = 0 then
+         if Launch_Cap = Rose.Capabilities.Null_Capability then
+            if not Rose.Server.Has_Instance
               (Server_Instance,
                Launch_Endpoint,
-               Identifier,
-               Rose.Server.Create_Endpoint (Launch_Endpoint, Identifier));
+               Identifier)
+            then
+               Rose.Server.Set_Instance_Cap
+                 (Server_Instance,
+                  Launch_Endpoint,
+                  Identifier,
+                  Rose.Server.Create_Endpoint (Launch_Endpoint, Identifier));
+            end if;
+            Cap :=
+              Rose.Server.Get_Instance_Cap
+                (Server_Instance,
+                 Launch_Endpoint,
+                 Identifier);
+         else
+            Cap := Launch_Cap;
          end if;
-         Cap :=
-           Rose.Server.Get_Instance_Cap
-             (Server_Instance,
-              Launch_Endpoint,
-              Identifier);
-      else
-         Cap := Launch_Cap;
-      end if;
-      Rose.System_Calls.Send_Cap (Parameters, Cap);
-      if Install_Cap = Rose.Capabilities.Null_Capability then
-         if not Rose.Server.Has_Instance
-           (Server_Instance,
-            Install_Endpoint,
-            Identifier)
-         then
-            Rose.Server.Set_Instance_Cap
+         Rose.System_Calls.Send_Cap (Parameters, Cap);
+         if Install_Cap = Rose.Capabilities.Null_Capability then
+            if not Rose.Server.Has_Instance
               (Server_Instance,
                Install_Endpoint,
-               Identifier,
-               Rose.Server.Create_Endpoint (Install_Endpoint, Identifier));
+               Identifier)
+            then
+               Rose.Server.Set_Instance_Cap
+                 (Server_Instance,
+                  Install_Endpoint,
+                  Identifier,
+                  Rose.Server.Create_Endpoint (Install_Endpoint, Identifier));
+            end if;
+            Cap :=
+              Rose.Server.Get_Instance_Cap
+                (Server_Instance,
+                 Install_Endpoint,
+                 Identifier);
+         else
+            Cap := Install_Cap;
          end if;
-         Cap :=
-           Rose.Server.Get_Instance_Cap
-             (Server_Instance,
-              Install_Endpoint,
-              Identifier);
+         Rose.System_Calls.Send_Cap (Parameters, Cap);
       else
-         Cap := Install_Cap;
+         if Ancestor = 1 then
+            if not Rose.Server.Has_Instance
+              (Server_Instance,
+               Launch_Interface,
+               Identifier)
+            then
+               Rose.Server.Set_Instance_Cap
+                 (Server_Instance,
+                  Launch_Interface,
+                  Identifier,
+                  Rose.Server.Create_Endpoint (Launch_Interface, Identifier));
+            end if;
+            Rose.System_Calls.Send_Cap
+              (Parameters,
+               Rose.Server.Get_Instance_Cap
+                 (Server_Instance,
+                  Launch_Interface,
+                  Identifier));
+         else
+            Rose.System_Calls.Send_Error
+              (Parameters,
+               Rose.Invocation.Invalid_Operation);
+         end if;
       end if;
-      Rose.System_Calls.Send_Cap (Parameters, Cap);
    end Handle_Get_Exec_Interface;
 
    ---------------------------------

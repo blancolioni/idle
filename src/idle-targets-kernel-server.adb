@@ -195,6 +195,12 @@ package body Idle.Targets.Kernel.Server is
       --  order of the index constants in its interface package. An
       --  instanced server has one endpoint for each subprogram and
       --  identifier, which it creates the first time it is needed.
+      --
+      --  An invocation with a word N > 0 asks instead for the interface
+      --  cap of the Nth of Idle.Hierarchy.Ancestors (For_Interface). That
+      --  cap gives only the ancestor's subprograms, so a client narrowed
+      --  to the ancestor (see the client's conversions) can be sent to
+      --  another process.
 
       procedure Add_Get_Interface
         (For_Interface : Idle.Syntax.Interface_Declaration)
@@ -207,6 +213,44 @@ package body Idle.Targets.Kernel.Server is
              (Get_Interface (For_Interface),
               [F.New_Parameter
                  ("Parameters", F.New_Name (Record_Name), Syn.In_Out_Mode)]);
+
+         Ancestors : constant Idle.Hierarchy.Interface_Vectors.Vector :=
+           Idle.Hierarchy.Ancestors (For_Interface);
+
+         function Send_Ancestor_Cap
+           (Ancestor : Idle.Syntax.Interface_Declaration)
+            return Syn.Node_Array;
+         --  Send the interface cap of Ancestor, for the same identifier.
+
+         -----------------------
+         -- Send_Ancestor_Cap --
+         -----------------------
+
+         function Send_Ancestor_Cap
+           (Ancestor : Idle.Syntax.Interface_Declaration)
+            return Syn.Node_Array
+         is
+            Instance : constant Syn.Node_Array :=
+              [F.New_Name ("Server_Instance"),
+               F.New_Name (Interface_Name (Ancestor)),
+               F.New_Name ("Identifier")];
+         begin
+            return
+              [F.New_If
+                 (Condition =>
+                    F.New_Unary
+                      ("not", F.New_Call (Server & "Has_Instance", Instance)),
+                  Then_Part =>
+                    [Call (Server & "Set_Instance_Cap",
+                           Instance
+                           & [F.New_Call
+                                (Server & "Create_Endpoint",
+                                 [F.New_Name (Interface_Name (Ancestor)),
+                                  F.New_Name ("Identifier")])])]),
+               Call (System_Calls & "Send_Cap",
+                     [F.New_Name ("Parameters"),
+                      F.New_Call (Server & "Get_Instance_Cap", Instance)])];
+         end Send_Ancestor_Cap;
 
          function Send_Cap
            (Subprogram : Idle.Syntax.Subprogram)
@@ -259,11 +303,12 @@ package body Idle.Targets.Kernel.Server is
 
          Declarations : Node_List;
          Statements   : Node_List;
+         Own_Caps     : Node_List;
 
       begin
          Handler_Specs.Append (Specification);
 
-         if not Sent.Is_Empty then
+         if not Sent.Is_Empty or else not Ancestors.Is_Empty then
             Declarations.Append
               (F.New_Use ("Rose.Capabilities.Capability", Use_Type => True));
             Declarations.Append
@@ -276,15 +321,89 @@ package body Idle.Targets.Kernel.Server is
                   Is_Constant => True));
          end if;
 
+         if not Ancestors.Is_Empty then
+            Declarations.Append
+              (F.New_Object
+                 ("Ancestor", F.New_Name ("Natural"),
+                  F.New_Integer_Literal (0)));
+            --  The word is read before Initialize_Reply clears it.
+            Statements.Append
+              (F.New_If
+                 (Condition =>
+                    F.New_Call
+                      ("Parameters.Control.Flags",
+                       [F.New_Name ("Rose.Invocation.Send_Words")]),
+                  Then_Part =>
+                    [F.New_Assignment
+                       (F.New_Name ("Ancestor"),
+                        F.New_Call
+                          ("Natural",
+                           [F.New_Call
+                              ("Parameters.Data",
+                               [F.New_Integer_Literal (0)])]))]));
+         end if;
+
          Statements.Append
            (Call (System_Calls & "Initialize_Reply",
                   [F.New_Name ("Parameters"),
                    F.New_Name ("Parameters.Reply_Cap")]));
          for Subprogram of Sent loop
             for Statement of Send_Cap (Subprogram) loop
-               Statements.Append (Statement);
+               Own_Caps.Append (Statement);
             end loop;
          end loop;
+
+         if Ancestors.Is_Empty then
+            for Statement of Own_Caps.To_Array loop
+               Statements.Append (Statement);
+            end loop;
+         else
+            --  if Ancestor = 0 then the caps of the subprograms, elsif
+            --  Ancestor = N then the interface cap of the Nth ancestor,
+            --  else an error.
+
+            declare
+               function Choose (Index : Positive) return Syn.Node_Array;
+               --  Send the cap of the ancestor numbered Ancestor, trying
+               --  the ancestors from Index on.
+
+               ------------
+               -- Choose --
+               ------------
+
+               function Choose (Index : Positive) return Syn.Node_Array is
+               begin
+                  if Index > Natural (Ancestors.Length) then
+                     return
+                       [Call (System_Calls & "Send_Error",
+                              [F.New_Name ("Parameters"),
+                               F.New_Name
+                                 ("Rose.Invocation.Invalid_Operation")])];
+                  else
+                     return
+                       [F.New_If
+                          (Condition =>
+                             F.New_Binary
+                               (F.New_Name ("Ancestor"), "=",
+                                F.New_Integer_Literal
+                                  (Long_Long_Long_Integer (Index))),
+                           Then_Part =>
+                             Send_Ancestor_Cap (Ancestors (Index)),
+                           Else_Part => Choose (Index + 1))];
+                  end if;
+               end Choose;
+
+            begin
+               Statements.Append
+                 (F.New_If
+                    (Condition =>
+                       F.New_Binary
+                         (F.New_Name ("Ancestor"), "=",
+                          F.New_Integer_Literal (0)),
+                     Then_Part => Own_Caps.To_Array,
+                     Else_Part => Choose (1)));
+            end;
+         end if;
 
          Bodies.Add
            (Get_Interface (For_Interface),
