@@ -46,10 +46,21 @@ package Idle.Commands is
    --  argument has no place in the invocation (No_Place).
    --
    --  Where a result is in the reply to the launch invocation: out and in
-   --  out scalars are data words from 1, after the completion word, and
-   --  out and in out strings are buffer items from 1, each in declaration
-   --  order. Interface arguments have no result: their mode is the right
-   --  that the shell grants to the cap.
+   --  out scalars are data words from 1, after the completion word, out
+   --  and in out strings are buffer items from 1, and out interfaces that
+   --  are not files or directories are caps from 0 (Cap_Place), each in
+   --  declaration order. A file or directory has no result: its mode is
+   --  the right that the shell grants to the cap (see Grants_Right).
+
+   function Grants_Right
+     (Near : Idle.Syntax.Interface_Declaration;
+      Item : Idle.Syntax.Argument)
+      return Boolean;
+   --  True if the mode of the interface argument Item, declared by Near,
+   --  is the right that the shell grants to its cap (ADR 0002, section
+   --  1): its type is File or Directory, or inherits from one. An out
+   --  argument of any other interface is a result, which the command
+   --  returns as a cap.
 
    type Stream is (No_Stream, Input_Stream, Output_Stream, Error_Stream);
 

@@ -125,6 +125,15 @@ package body Idle.Commands is
                         Error (Argument.Default.Position,
                                "an interface argument has no default");
                      end if;
+                     if Argument.Mode = In_Out_Mode
+                       and then not Grants_Right (Item, Argument)
+                     then
+                        Error (Argument.Position,
+                               "an in out argument is a file or a"
+                               & " directory: "
+                               & To_String (Argument.Of_Type.Name)
+                               & " has no right to grant");
+                     end if;
                   when String_List_Argument =>
                      if Argument.Mode /= In_Mode then
                         Error (Argument.Position,
@@ -375,8 +384,8 @@ package body Idle.Commands is
             Check_Roles;
             Check_Aspects
               (Item.Aspects,
-               "Summary Description Name Authors Version Copyright", "",
-               "a command");
+               "Summary Description Name Authors Version Copyright",
+               "Server", "a command");
             Check_Arguments;
          when Package_Unit =>
             Check_Aspects
@@ -437,6 +446,34 @@ package body Idle.Commands is
       end;
       return "";
    end Detail;
+
+   ------------------
+   -- Grants_Right --
+   ------------------
+
+   function Grants_Right
+     (Near : Idle.Syntax.Interface_Declaration;
+      Item : Idle.Syntax.Argument)
+      return Boolean
+   is
+      Name  : constant String := To_String (Item.Of_Type.Name);
+      Found : Idle.Syntax.Interface_Declaration;
+
+      function Is_Right_Type (Type_Name : String) return Boolean
+      is (Same (Type_Name, "File") or else Same (Type_Name, "Directory"));
+
+   begin
+      if Is_Right_Type (Name) then
+         return True;
+      elsif Idle.Hierarchy.Find (Near, Name, Found) then
+         for Ancestor of Idle.Hierarchy.Ancestors (Found) loop
+            if Is_Right_Type (To_String (Ancestor.Name)) then
+               return True;
+            end if;
+         end loop;
+      end if;
+      return False;
+   end Grants_Right;
 
    ----------------
    -- Has_Aspect --
@@ -503,6 +540,7 @@ package body Idle.Commands is
       Next_Item   : Positive := 1;
       Next_Result_Word : Positive := 1;
       Next_Result_Item : Positive := 1;
+      Next_Result_Cap  : Natural := 0;
    begin
       for Role of Idle.Hierarchy.Ancestors (Item) loop
          for Member of Role.Arguments loop
@@ -564,7 +602,9 @@ package body Idle.Commands is
                      Where := (Cap_Place, Next_Cap, 0);
                      Next_Cap := Next_Cap + 1;
                end case;
-            elsif Kind = Interface_Argument then
+            elsif Kind = Interface_Argument
+              and then Grants_Right (Item, Argument)
+            then
                Where := (Cap_Place, Next_Cap, 0);
                Next_Cap := Next_Cap + 1;
             end if;
@@ -579,9 +619,12 @@ package body Idle.Commands is
                   when String_Argument =>
                      Answer := (Item_Place, Next_Result_Item, 0);
                      Next_Result_Item := Next_Result_Item + 1;
-                  when String_List_Argument | Interface_Argument
-                     | Other_Argument
-                  =>
+                  when Interface_Argument =>
+                     if not Grants_Right (Item, Argument) then
+                        Answer := (Cap_Place, Next_Result_Cap, 0);
+                        Next_Result_Cap := Next_Result_Cap + 1;
+                     end if;
+                  when String_List_Argument | Other_Argument =>
                      null;
                end case;
             end if;

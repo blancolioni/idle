@@ -79,6 +79,8 @@ package body Idle.Targets.Kernel.Commands is
       Statements    : Node_List;
       Arguments     : Node_List;
       Results       : Node_List;
+      Serve         : Node_List;
+      --  For a server, the call that serves after the reply.
       System_Args   : Node_List;
       Spec_Context  : Context_List;
       Main_Context  : Context_List;
@@ -345,9 +347,38 @@ package body Idle.Targets.Kernel.Commands is
                   (Launch & "Cap_Argument",
                    [Call_Node, Literal (Where.Index)]));
 
+            procedure Return_Cap;
+            --  Pass the command a cap to set, and send it back as the
+            --  result. A server sets it to its own interface cap, which
+            --  it could not open as a client before it serves.
+
             procedure Use_Client;
             --  Pass the cap of the argument to the command as a client of
             --  its interface.
+
+            ----------------
+            -- Return_Cap --
+            ----------------
+
+            procedure Return_Cap is
+               Cap_Type : constant String := "Rose.Capabilities.Capability";
+            begin
+               Spec_Context.Add ("Rose.Capabilities");
+               Main_Context.Add ("Rose.Capabilities");
+               Declarations.Append
+                 (F.New_Object (Argument_Name, F.New_Name (Cap_Type)));
+               Arguments.Append
+                 (F.New_Named (Argument_Name, F.New_Name (Argument_Name)));
+               Parameters.Append
+                 (F.New_Parameter
+                    (Argument_Name, F.New_Name (Cap_Type), Syn.Out_Mode));
+               Results.Append
+                 (F.New_Call_Statement
+                    (F.New_Call
+                       (Launch & "Cap_Result",
+                        [Call_Node, Literal (Answer.Index),
+                         F.New_Name (Argument_Name)])));
+            end Return_Cap;
 
             ----------------
             -- Use_Client --
@@ -439,7 +470,10 @@ package body Idle.Targets.Kernel.Commands is
                end if;
                if Answer.Kind /= No_Place then
                   Line ("result",
-                        (if Answer.Kind = Word_Place then "word" else "item")
+                        (case Answer.Kind is
+                            when Word_Place => "word",
+                            when Cap_Place  => "cap",
+                            when others     => "item")
                         & Natural'Image (Answer.Index));
                end if;
                if Argument.Has_Default then
@@ -461,7 +495,11 @@ package body Idle.Targets.Kernel.Commands is
                        (Argument.Aspects, "Help",
                         Argument_Name & " (no help)"));
 
-               if Placed.Kind = Interface_Argument then
+               if Placed.Kind = Interface_Argument
+                 and then Answer.Kind = Cap_Place
+               then
+                  Return_Cap;
+               elsif Placed.Kind = Interface_Argument then
                   --  The mode is the right that the shell grants to the
                   --  cap, so the command takes the client as in.
                   Use_Client;
@@ -513,12 +551,31 @@ package body Idle.Targets.Kernel.Commands is
       --  The main: receive the launch invocation, give the standard
       --  streams and system caps to the run-time system, open the
       --  interface arguments, call the command, and complete with its
-      --  results. It withs the metadata only to link it into the
-      --  executable.
+      --  results. A server then calls the procedure that its Server
+      --  aspect names, which serves and does not return. The main withs
+      --  the metadata only to link it into the executable.
 
       Main_Context.Add ("Rose.Command_Line.Launch");
       Main_Context.Add (Name);
       Main_Context.Add (Metadata_Name);
+
+      if Idle.Commands.Has_Aspect (Item.Aspects, "Server") then
+         declare
+            Server : constant String :=
+              Idle.Commands.Aspect (Item.Aspects, "Server");
+            Dot    : Natural := 0;
+         begin
+            for I in Server'Range loop
+               if Server (I) = '.' then
+                  Dot := I;
+               end if;
+            end loop;
+            Main_Context.Add
+              (if Dot = 0 then Server
+               else Server (Server'First .. Dot - 1));
+            Serve.Append (F.New_Call_Statement (F.New_Name (Server)));
+         end;
+      end if;
 
       Syn.Units.Write
         (F.New_Compilation_Unit
@@ -544,7 +601,8 @@ package body Idle.Targets.Kernel.Commands is
                          else F.New_Call (Name, Arguments.To_Array))]
                    & Results.To_Array
                    & [F.New_Call_Statement
-                        (F.New_Call (Launch & "Complete", [Call_Node]))])),
+                        (F.New_Call (Launch & "Complete", [Call_Node]))]
+                   & Serve.To_Array)),
          Output_Directory);
    end Generate_Command;
 

@@ -28,5 +28,6 @@ command-errors/bad_role.idl:4:4: error: unknown interface Nonesuch
 command-errors/rose-core-modes.idl:2:27: error: an out argument has no default
 command-errors/rose-core-modes.idl:3:4: error: a String_List argument is always in
 command-errors/rose-core-modes.idl:4:20: error: an interface argument has no default
+command-errors/rose-core-modes.idl:5:4: error: an in out argument is a file or a directory: Named has no right to grant
 command-errors/rose-core.idl:2:19: error: the value of Version is a string
 command-errors/rose-core.idl:3:8: error: unknown aspect Colour of a package
