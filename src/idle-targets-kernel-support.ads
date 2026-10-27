@@ -16,6 +16,8 @@ private package Idle.Targets.Kernel.Support is
    Capability_Name : constant String := "Rose.Capabilities.Capability";
    Word_Name       : constant String := "Rose.Words.Word";
    Record_Name     : constant String := "Rose.Invocation.Invocation_Record";
+   Text_Name       : constant String := "Rose.Strings.Text";
+   --  For the user target, the type of an out or in out string.
 
    function Standard_Type (Name : String) return String;
    --  The Ada type of the predefined IDL type Name, or "" if there is no

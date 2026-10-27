@@ -30,17 +30,10 @@ package body Idle.Targets.Kernel is
    function Check_User
      (Item : Idle.Syntax.Interface_Declaration)
       return Boolean;
-   --  Report what the user target does not support yet, beyond what
-   --  Check reports; a constant or type of Item with the name of its
-   --  object type; and a subprogram with the name of one of the object
-   --  type's cap functions. True if there was nothing to report.
-
-   function Check_User_Command
-     (Item : Idle.Syntax.Interface_Declaration)
-      return Boolean;
-   --  Report what the user target does not support yet in the command
-   --  Item, which has been checked by Idle.Commands.Check: out and in out
-   --  strings. True if there was nothing to report.
+   --  Report what the user target cannot generate, beyond what Check
+   --  reports: a constant or type of Item with the name of its object
+   --  type, and a subprogram with the name of one of the object type's
+   --  cap functions. True if there was nothing to report.
 
    function Constant_Reference
      (Item  : Idle.Syntax.Interface_Declaration;
@@ -454,9 +447,6 @@ package body Idle.Targets.Kernel is
      (Item : Idle.Syntax.Interface_Declaration)
       return Boolean
    is
-      use all type Types.Category;
-      use type Idle.Syntax.Parameter_Mode;
-
       Object_Name : constant String :=
         Object_Type_Name (To_String (Item.Name));
       OK          : Boolean := True;
@@ -465,11 +455,6 @@ package body Idle.Targets.Kernel is
         (File_Name : Unbounded_String;
          Position  : Idle.Syntax.Source_Position;
          Message   : String);
-
-      procedure Unsupported
-        (File_Name : Unbounded_String;
-         Position  : Idle.Syntax.Source_Position;
-         What      : String);
 
       function Is_Cap_Function (Name : String) return Boolean
       is (Idle.Names.Key (Name)
@@ -495,20 +480,6 @@ package body Idle.Targets.Kernel is
            (To_String (File_Name), Position.Line, Position.Column, Message);
          OK := False;
       end Error;
-
-      -----------------
-      -- Unsupported --
-      -----------------
-
-      procedure Unsupported
-        (File_Name : Unbounded_String;
-         Position  : Idle.Syntax.Source_Position;
-         What      : String)
-      is
-      begin
-         Error (File_Name, Position,
-                What & " are not yet supported by the user target");
-      end Unsupported;
 
    begin
       for Declared_Constant of Item.Constants loop
@@ -545,72 +516,10 @@ package body Idle.Targets.Kernel is
                       & "declares");
             end if;
          end;
-
-         for Parameter of Member.Subprogram.Parameters loop
-            if Types.Resolve (Member.Owner, Parameter.Of_Type).Category
-              = String_Value
-              and then Parameter.Mode /= Idle.Syntax.In_Mode
-            then
-               Unsupported (Member.File_Name, Parameter.Position,
-                            "out and in out strings");
-            end if;
-         end loop;
-
-         if Member.Subprogram.Is_Function
-           and then Types.Resolve (Member.Owner, Member.Subprogram.Result)
-                      .Category = String_Value
-         then
-            Unsupported (Member.File_Name, Member.Subprogram.Position,
-                         "string results");
-         end if;
       end loop;
 
       return OK;
    end Check_User;
-
-   ------------------------
-   -- Check_User_Command --
-   ------------------------
-
-   function Check_User_Command
-     (Item : Idle.Syntax.Interface_Declaration)
-      return Boolean
-   is
-      use all type Idle.Commands.Argument_Type;
-      use type Idle.Syntax.Parameter_Mode;
-
-      OK : Boolean := True;
-
-      procedure Unsupported
-        (Position : Idle.Syntax.Source_Position;
-         What     : String);
-
-      -----------------
-      -- Unsupported --
-      -----------------
-
-      procedure Unsupported
-        (Position : Idle.Syntax.Source_Position;
-         What     : String)
-      is
-      begin
-         Idle.Diagnostics.Error
-           (To_String (Item.File_Name), Position.Line, Position.Column,
-            What & " are not yet supported by the user target");
-         OK := False;
-      end Unsupported;
-
-   begin
-      for Placed of Idle.Commands.Signature (Item) loop
-         if Placed.Kind = String_Argument
-           and then Placed.Argument.Mode /= Idle.Syntax.In_Mode
-         then
-            Unsupported (Placed.Argument.Position, "out and in out strings");
-         end if;
-      end loop;
-
-      return OK;
-   end Check_User_Command;
 
    ------------------------
    -- Constant_Reference --
@@ -707,12 +616,7 @@ package body Idle.Targets.Kernel is
                Server.Generate (Item, Output_Directory, Target);
             end if;
          when Idle.Syntax.Command_Unit =>
-            --  The units are the same for both targets, for the commands
-            --  that the user target supports.
-            if Idle.Commands.Check (Item)
-              and then (Target = Kernel_Target
-                        or else Check_User_Command (Item))
-            then
+            if Idle.Commands.Check (Item) then
                Commands.Generate_Command (Item, Output_Directory, Target);
             end if;
          when Idle.Syntax.Package_Unit =>
@@ -882,6 +786,17 @@ package body Idle.Targets.Kernel is
                                          Parameter.Mode
                                          = Idle.Syntax.Out_Mode)),
                                  Syn.In_Out_Mode));
+                        elsif Info.Category = Types.String_Value
+                          and then Parameter.Mode /= Idle.Syntax.In_Mode
+                        then
+                           Context.Add ("Rose.Strings");
+                           Parameters.Append
+                             (F.New_Parameter
+                                (Support.Name (Parameter),
+                                 F.New_Name (Text_Name),
+                                 (if Parameter.Mode = Idle.Syntax.Out_Mode
+                                  then Syn.Out_Mode
+                                  else Syn.In_Out_Mode)));
                         else
                            Parameters.Append
                              (F.New_Parameter

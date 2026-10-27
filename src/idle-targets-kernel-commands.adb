@@ -137,7 +137,10 @@ package body Idle.Targets.Kernel.Commands is
                when Boolean_Argument     => "Boolean",
                when Natural_Argument     => "Natural",
                when Positive_Argument    => "Positive",
-               when String_Argument      => "String",
+               when String_Argument      =>
+                 (if Target = User_Target and then Argument.Mode /= In_Mode
+                  then "Rose.Command_Line.Text"
+                  else "String"),
                when String_List_Argument => "Rose.Command_Line.String_List",
                when Interface_Argument | Other_Argument => "");
          Mode          : constant Syn.Parameter_Mode :=
@@ -209,7 +212,30 @@ package body Idle.Targets.Kernel.Commands is
          --  after the launch invocation is received, so not in the
          --  local's declaration.
 
-         if Kind = String_Argument then
+         if Kind = String_Argument and then Target = User_Target then
+            --  A text, sent back as a string.
+            Main_Context.Add ("Rose.Strings");
+            Spec_Context.Add ("Rose.Command_Line");
+            Declarations.Append
+              (F.New_Object
+                 (Argument_Name, F.New_Name ("Rose.Command_Line.Text")));
+            if Argument.Mode = In_Out_Mode then
+               Statements.Append
+                 (F.New_Assignment
+                    (F.New_Name (Argument_Name),
+                     F.New_Call ("Rose.Strings.To_Text", [Value])));
+            end if;
+            Arguments.Append
+              (F.New_Named (Argument_Name, F.New_Name (Argument_Name)));
+            Results.Append
+              (F.New_Call_Statement
+                 (F.New_Call
+                    (Launch & "String_Result",
+                     [Call_Node, Literal (Answer.Index),
+                      F.New_Call
+                        ("Rose.Strings.To_String",
+                         [F.New_Name (Argument_Name)])])));
+         elsif Kind = String_Argument then
             Parameters.Append
               (F.New_Parameter
                  (Last_Name, F.New_Name ("Natural"), Syn.Out_Mode));

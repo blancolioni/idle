@@ -1,8 +1,3 @@
-modes/exchange.idl:17:47: error: out and in out strings are not yet supported by the user target
-modes/exchange.idl:20:55: error: out and in out strings are not yet supported by the user target
 user-errors/clash.idl:4:4: error: type Clash_Object has the same name as the object type, which the interface package declares
 user-errors/cap_name.idl:6:4: error: subprogram Cap_Name_Cap has the name of a function that the object type declares
 user-errors/cap_name.idl:8:4: error: subprogram Stream_Writer_Cap has the name of a function that the object type declares
-rose/directory.idl:6:4: error: string results are not yet supported by the user target
-commands/rose-core-copy.idl:18:4: error: out and in out strings are not yet supported by the user target
-commands/rose-core-copy.idl:20:4: error: out and in out strings are not yet supported by the user target

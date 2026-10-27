@@ -117,6 +117,18 @@ package body Idle.Targets.Kernel.Server is
           else To_String (Info.Ada_Name));
       --  The Ada type of Info in the server, where an interface is a cap.
 
+      function Uses_Text (Member : Idle.Hierarchy.Member) return Boolean
+      is ((Member.Subprogram.Is_Function
+           and then Types.Resolve (Member.Owner, Member.Subprogram.Result)
+                      .Category in Types.String_Value)
+          or else
+            (for some Parameter of Member.Subprogram.Parameters =>
+               Types.Resolve (Member.Owner, Parameter.Of_Type).Category
+                 in Types.String_Value
+               and then Parameter.Mode not in Idle.Syntax.In_Mode));
+      --  For the user target: True if the handler of Member copies a
+      --  string or text to the buffer with Rose.Strings.Copy.
+
       procedure Use_Type
         (Info      : Types.Type_Info;
          Is_Result : Boolean := False);
@@ -916,8 +928,26 @@ package body Idle.Targets.Kernel.Server is
                              (Literal (1), "..",
                               F.New_Name (Object_Name & "_Count"))]);
                   when String_Value =>
-                     Declarations.Append
-                       (Buffer_Overlay (Object_Name, String_Type));
+                     if User and then Parameter.Mode /= Idle.Syntax.In_Mode
+                     then
+                        --  A text, from the buffer for an in out string,
+                        --  which is copied to the buffer for the reply.
+                        Declarations.Append
+                          (Buffer_Overlay (Object_Name & "_Buffer",
+                                           String_Type));
+                        Declarations.Append
+                          (F.New_Object
+                             (Object_Name, F.New_Name (Text_Name),
+                              (if Parameter.Mode = Idle.Syntax.Out_Mode
+                               then null
+                               else F.New_Call
+                                      ("Rose.Strings.To_Text",
+                                       [F.New_Name
+                                          (Object_Name & "_Buffer")]))));
+                     else
+                        Declarations.Append
+                          (Buffer_Overlay (Object_Name, String_Type));
+                     end if;
                      if Parameter.Mode /= Idle.Syntax.In_Mode then
                         Declarations.Append
                           (F.New_Object
@@ -933,6 +963,7 @@ package body Idle.Targets.Kernel.Server is
                Arguments.Append (Argument);
                if Info.Category = String_Value
                  and then Parameter.Mode /= Idle.Syntax.In_Mode
+                 and then not User
                then
                   Arguments.Append (F.New_Name (Object_Name & "_Last"));
                end if;
@@ -944,8 +975,10 @@ package body Idle.Targets.Kernel.Server is
               (F.New_Object
                  ("Last", F.New_Name ("Natural"), Literal (0)));
             Declarations.Append (Buffer_Overlay ("Result", String_Type));
-            Arguments.Append (F.New_Name ("Result"));
-            Arguments.Append (F.New_Name ("Last"));
+            if not User then
+               Arguments.Append (F.New_Name ("Result"));
+               Arguments.Append (F.New_Name ("Last"));
+            end if;
          end if;
 
          if User then
@@ -977,6 +1010,12 @@ package body Idle.Targets.Kernel.Server is
                  and then Result.Category = Interface_Value
                then
                   Result_Call := Value;
+               elsif Returns_String then
+                  --  The string is copied to the buffer, as much as fits.
+                  Statements.Append
+                    (Call ("Rose.Strings.Copy",
+                           [Value, F.New_Name ("Result"),
+                            F.New_Name ("Last")]));
                elsif Subprogram.Is_Function then
                   Declarations.Append
                     (F.New_Object
@@ -1026,6 +1065,14 @@ package body Idle.Targets.Kernel.Server is
                                         then "." & Types.Cap_Function (Info)
                                         else ""))]));
                      when String_Value =>
+                        if User then
+                           Reply.Append
+                             (Call ("Rose.Strings.Copy",
+                                    [F.New_Name (Name (Parameter)),
+                                     F.New_Name (Name (Parameter) & "_Buffer"),
+                                     F.New_Name
+                                       (Name (Parameter) & "_Last")]));
+                        end if;
                         Reply.Append
                           (Call (System_Calls & "Send_Word",
                                  [Parameters,
@@ -1374,6 +1421,9 @@ package body Idle.Targets.Kernel.Server is
                Use_Type
                  (Types.Resolve (Member.Owner, Member.Subprogram.Result),
                   Is_Result => True);
+            end if;
+            if Uses_Text (Member) then
+               Body_Context.Add ("Rose.Strings");
             end if;
          end loop;
       else
