@@ -8,4 +8,12 @@ rose/directory.idl:13:4: error: interface results are not yet supported by the u
 rose/directory.idl:15:4: error: interface results are not yet supported by the user target
 rose/directory.idl:17:4: error: interface results are not yet supported by the user target
 rose/directory.idl:18:4: error: interface results are not yet supported by the user target
-commands/rose-core-echo.idl:1:1: error: commands are not yet supported by the user target
+commands/rose-core-copy.idl:4:1: error: role members that are not standard streams or system caps (Logging) are not yet supported by the user target
+commands/rose-core-copy.idl:7:4: error: interface arguments are not yet supported by the user target
+commands/rose-core-copy.idl:9:4: error: interface arguments are not yet supported by the user target
+commands/rose-core-copy.idl:11:4: error: interface arguments are not yet supported by the user target
+commands/rose-core-copy.idl:18:4: error: out and in out strings are not yet supported by the user target
+commands/rose-core-copy.idl:20:4: error: out and in out strings are not yet supported by the user target
+commands/rose-core-serve.idl:4:1: error: server commands are not yet supported by the user target
+commands/rose-core-serve.idl:10:4: error: interface arguments are not yet supported by the user target
+commands/rose-core-serve.idl:12:4: error: interface arguments are not yet supported by the user target

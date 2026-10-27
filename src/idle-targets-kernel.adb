@@ -34,6 +34,15 @@ package body Idle.Targets.Kernel is
    --  Check reports, and a constant or type of Item with the name of its
    --  object type. True if there was nothing to report.
 
+   function Check_User_Command
+     (Item : Idle.Syntax.Interface_Declaration)
+      return Boolean;
+   --  Report what the user target does not support yet in the command
+   --  Item, which has been checked by Idle.Commands.Check: interface
+   --  arguments, role members that are neither standard streams nor
+   --  system caps, out and in out strings, and the server form. True if
+   --  there was nothing to report.
+
    function Constant_Reference
      (Item  : Idle.Syntax.Interface_Declaration;
       Owner : Idle.Syntax.Interface_Declaration;
@@ -553,6 +562,67 @@ package body Idle.Targets.Kernel is
    end Check_User;
 
    ------------------------
+   -- Check_User_Command --
+   ------------------------
+
+   function Check_User_Command
+     (Item : Idle.Syntax.Interface_Declaration)
+      return Boolean
+   is
+      use all type Idle.Commands.Argument_Type;
+      use all type Idle.Commands.Stream;
+      use all type Idle.Commands.System_Cap;
+      use type Idle.Syntax.Parameter_Mode;
+
+      OK : Boolean := True;
+
+      procedure Unsupported
+        (Position : Idle.Syntax.Source_Position;
+         What     : String);
+
+      -----------------
+      -- Unsupported --
+      -----------------
+
+      procedure Unsupported
+        (Position : Idle.Syntax.Source_Position;
+         What     : String)
+      is
+      begin
+         Idle.Diagnostics.Error
+           (To_String (Item.File_Name), Position.Line, Position.Column,
+            What & " are not yet supported by the user target");
+         OK := False;
+      end Unsupported;
+
+   begin
+      if Idle.Commands.Has_Aspect (Item.Aspects, "Server") then
+         Unsupported (Item.Position, "server commands");
+      end if;
+
+      for Placed of Idle.Commands.Signature (Item) loop
+         if Length (Placed.Role) > 0 then
+            if Placed.Stream = No_Stream
+              and then Placed.System = No_System_Cap
+            then
+               Unsupported
+                 (Item.Position,
+                  "role members that are not standard streams or system "
+                  & "caps (" & To_String (Placed.Argument.Name) & ")");
+            end if;
+         elsif Placed.Kind = Interface_Argument then
+            Unsupported (Placed.Argument.Position, "interface arguments");
+         elsif Placed.Kind = String_Argument
+           and then Placed.Argument.Mode /= Idle.Syntax.In_Mode
+         then
+            Unsupported (Placed.Argument.Position, "out and in out strings");
+         end if;
+      end loop;
+
+      return OK;
+   end Check_User_Command;
+
+   ------------------------
    -- Constant_Reference --
    ------------------------
 
@@ -647,12 +717,12 @@ package body Idle.Targets.Kernel is
                Server.Generate (Item, Output_Directory, Target);
             end if;
          when Idle.Syntax.Command_Unit =>
-            if Target = User_Target then
-               Idle.Diagnostics.Error
-                 (To_String (Item.File_Name), Item.Position.Line,
-                  Item.Position.Column,
-                  "commands are not yet supported by the user target");
-            elsif Idle.Commands.Check (Item) then
+            --  The units are the same for both targets, for the commands
+            --  that the user target supports.
+            if Idle.Commands.Check (Item)
+              and then (Target = Kernel_Target
+                        or else Check_User_Command (Item))
+            then
                Commands.Generate_Command (Item, Output_Directory);
             end if;
          when Idle.Syntax.Package_Unit =>
