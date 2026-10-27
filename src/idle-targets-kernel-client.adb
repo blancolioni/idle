@@ -589,6 +589,16 @@ package body Idle.Targets.Kernel.Client is
          function Params return not null Syn.Node_Access
          is (F.New_Name ("Params"));
 
+         function Reply_Word (Index : Natural) return not null Syn.Node_Access
+         is (F.New_Call
+               ("Natural",
+                [F.New_Call
+                   (System_Calls & "Get_Word_32",
+                    [Params,
+                     F.New_Integer_Literal
+                       (Long_Long_Long_Integer (Index))])]));
+         --  The data word Index of the reply, as a length.
+
          function Profile return Syn.Node_Array;
          --  The parameters, with a length after each out or in out
          --  string.
@@ -613,6 +623,15 @@ package body Idle.Targets.Kernel.Client is
                            then Client_Type_Of (Info (Parameter))
                            else Types.Object_Class (Info (Parameter))),
                         Syn.In_Out_Mode));
+               elsif User
+                 and then Info (Parameter).Category = String_Value
+                 and then Parameter.Mode /= Idle.Syntax.In_Mode
+               then
+                  --  A text, which the client sets from the reply.
+                  Result.Append
+                    (F.New_Parameter
+                       (Name (Parameter), F.New_Name (Text_Name),
+                        Mode (Parameter)));
                else
                   Result.Append
                     (F.New_Parameter
@@ -622,6 +641,7 @@ package body Idle.Targets.Kernel.Client is
                end if;
                if Info (Parameter).Category = String_Value
                  and then Parameter.Mode /= Idle.Syntax.In_Mode
+                 and then not User
                then
                   Result.Append
                     (F.New_Parameter
@@ -635,7 +655,7 @@ package body Idle.Targets.Kernel.Client is
          Parameters : constant Syn.Node_Array :=
            [Item_Parameter]
            & Profile
-           & (if Returns_String
+           & (if Returns_String and then not User
               then [F.New_Parameter
                       ("Result", F.New_Name ("String"), Syn.Out_Mode),
                     F.New_Parameter
@@ -646,7 +666,8 @@ package body Idle.Targets.Kernel.Client is
            (if User then Syn.Is_Overriding else Syn.No_Indicator);
 
          Specification : constant not null Syn.Node_Access :=
-           (if Subprogram.Is_Function and then not Returns_String
+           (if Subprogram.Is_Function
+              and then (User or else not Returns_String)
             then F.New_Function
                    (Subprogram_Name,
                     F.New_Name
@@ -719,7 +740,14 @@ package body Idle.Targets.Kernel.Client is
                                      [Params, F.New_Name ("Cap")])]));
                      when String_Value =>
                         Statements.Append
-                          (Call (System_Calls & "Send_Text", [Params, Value]));
+                          (Call (System_Calls & "Send_Text",
+                                 [Params,
+                                  (if User
+                                     and then Parameter.Mode
+                                              = Idle.Syntax.In_Out_Mode
+                                   then F.New_Call
+                                          ("Rose.Texts.To_String", [Value])
+                                   else Value)]));
                         if Parameter.Mode = Idle.Syntax.In_Out_Mode then
                            --  The server writes the new text in place.
                            Statements.Append
@@ -740,10 +768,22 @@ package body Idle.Targets.Kernel.Client is
                      when Unknown =>
                         raise Program_Error;
                   end case;
+               elsif User and then Parameter_Info.Category = String_Value then
+                  Statements.Append
+                    (Call (System_Calls & "Receive_Buffer",
+                           [Params,
+                            F.New_Name ("Rose.Texts.Max_Length")]));
                elsif Types.Is_Buffer (Parameter_Info) then
                   Statements.Append
                     (Call (System_Calls & "Receive_Buffer",
                            [Params, F.New_Attribute (Value, "Length")]));
+               end if;
+
+               if User
+                 and then Parameter_Info.Category = String_Value
+                 and then Parameter.Mode /= Idle.Syntax.In_Mode
+               then
+                  Spec_Context.Add ("Rose.Texts");
                end if;
 
                if Parameter.Mode /= Idle.Syntax.In_Mode then
@@ -819,7 +859,39 @@ package body Idle.Targets.Kernel.Client is
                   Value          : constant not null Syn.Node_Access :=
                     F.New_Name (Name (Parameter));
                begin
-                  if Parameter_Info.Category = String_Value then
+                  if Parameter_Info.Category = String_Value and then User then
+                     --  The text is copied from the reply.
+                     Statements.Append
+                       (F.New_Block
+                          (Declarations =>
+                             [F.New_Object
+                                ("Received",
+                                 F.New_Call
+                                   ("String",
+                                    [F.New_Binary
+                                       (F.New_Integer_Literal (1), "..",
+                                        F.New_Name
+                                          ("Rose.Texts.Max_Length"))])),
+                              F.New_Object
+                                ("Received_Last", F.New_Name ("Natural"))],
+                           Statements   =>
+                             [Call (System_Calls & "Copy_Text",
+                                    [Params,
+                                     Reply_Word (Index),
+                                     F.New_Name ("Received"),
+                                     F.New_Name ("Received_Last")]),
+                              F.New_Assignment
+                                (Value,
+                                 F.New_Call
+                                   ("Rose.Texts.To_Text",
+                                    [F.New_Call
+                                       ("Received",
+                                        [F.New_Binary
+                                           (F.New_Integer_Literal (1), "..",
+                                            F.New_Name
+                                              ("Received_Last"))])]))]));
+                     Index := Index + 1;
+                  elsif Parameter_Info.Category = String_Value then
                      Statements.Append
                        (Call (System_Calls & "Copy_Text",
                               [Params,
@@ -915,18 +987,40 @@ package body Idle.Targets.Kernel.Client is
                                            (Cap_Index))])]),
                            F.New_Return (F.New_Name ("Result"))]));
                when String_Value =>
-                  Statements.Append
-                    (Call (System_Calls & "Copy_Text",
-                           [Params,
-                            F.New_Call
-                              ("Natural",
-                               [F.New_Call
-                                  (System_Calls & "Get_Word_32",
-                                   [Params,
-                                    F.New_Integer_Literal
-                                      (Long_Long_Long_Integer (Index))])]),
-                            F.New_Name ("Result"),
-                            F.New_Name ("Last")]));
+                  if User then
+                     --  A string of the length in the reply, copied from
+                     --  it.
+                     Statements.Append
+                       (F.New_Block
+                          (Declarations =>
+                             [F.New_Object
+                                ("Result",
+                                 F.New_Call
+                                   ("String",
+                                    [F.New_Binary
+                                       (F.New_Integer_Literal (1), "..",
+                                        Reply_Word (Index))])),
+                              F.New_Object ("Last", F.New_Name ("Natural"))],
+                           Statements   =>
+                             [Call (System_Calls & "Copy_Text",
+                                    [Params,
+                                     F.New_Attribute
+                                       (F.New_Name ("Result"), "Length"),
+                                     F.New_Name ("Result"),
+                                     F.New_Name ("Last")]),
+                              F.New_Return
+                                (F.New_Call
+                                   ("Result",
+                                    [F.New_Binary
+                                       (F.New_Integer_Literal (1), "..",
+                                        F.New_Name ("Last"))]))]));
+                  else
+                     Statements.Append
+                       (Call (System_Calls & "Copy_Text",
+                              [Params, Reply_Word (Index),
+                               F.New_Name ("Result"),
+                               F.New_Name ("Last")]));
+                  end if;
                when Capability_Array_Value | Storage_Value | Unknown =>
                   raise Program_Error;
             end case;

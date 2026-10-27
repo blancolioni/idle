@@ -16,3 +16,5 @@ rose/timer
 rose/launch
 rose/exec
 modes/partner
+rose/directory
+modes/exchange

@@ -44,12 +44,14 @@ package Idle.Targets.Kernel is
    --
    --  An interface argument is an in out object of the interface, and an
    --  interface result is one too, built in place as a client. An out
-   --  interface is a client that the subprogram opens. The interface
-   --  package names other interfaces through limited with clauses.
+   --  interface is a client that the subprogram opens. A string result is
+   --  a String, and an out or in out string a Rose.Texts.Text. The
+   --  interface package names other interfaces through limited with
+   --  clauses.
    --
-   --  The user target does not yet support string results, or out and in
-   --  out strings. Its units for a command are those of the kernel target,
-   --  but that the command takes each interface argument, and each role
-   --  member that is an interface, as an in out object of the interface.
+   --  The user target's units for a command are those of the kernel
+   --  target, but that the command takes each interface argument, and
+   --  each role member that is an interface, as an in out object of the
+   --  interface, and an out or in out string as a Rose.Command_Line.Text.
 
 end Idle.Targets.Kernel;
