@@ -63,7 +63,8 @@ package body Idle.Parser is
 
    function Parse_Value return Aspect_Value;
    --  An aspect's value or an argument's default: an integer literal, a
-   --  character literal, a name, or a string: string literals joined by
+   --  character literal, a name, which can be qualified, as in
+   --  User.Server.Start_Server, or a string: string literals joined by
    --  "&", a text block, or Text_File ("name").
 
    function Read_Text_File (Name : String) return String;
@@ -661,8 +662,7 @@ package body Idle.Parser is
                Expect (Tok_Right_Paren, [Tok_Comma, Tok_Semicolon, Tok_Is]);
             else
                Result.Kind := Name_Value;
-               Result.Text := To_Unbounded_String (Tok_Text);
-               Scan;
+               Result.Text := Parse_Qualified_Name ("value");
             end if;
 
          when others =>

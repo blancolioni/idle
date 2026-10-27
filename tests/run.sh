@@ -91,7 +91,8 @@ fi
 commands="rose-core.ads rose-core-echo.ads rose-core-echo_main.adb
 rose-core-echo_metadata.ads rose-core-head.ads rose-core-head_main.adb
 rose-core-head_metadata.ads rose-core-copy.ads rose-core-copy_main.adb
-rose-core-copy_metadata.ads"
+rose-core-copy_metadata.ads rose-core-serve.ads rose-core-serve_main.adb
+rose-core-serve_metadata.ads"
 rm -rf output/commands && mkdir output/commands
 if $idle --target kernel -I rose -o output/commands commands/*.idl; then
   for file in $commands; do

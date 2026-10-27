@@ -1,0 +1,14 @@
+--  A server (idle#37): an out interface that is not a file or directory
+--  is a cap result, and the main serves after it replies.
+
+command Rose.Core.Serve : Create_Endpoint
+  with Summary => "Serve a name.",
+       Server  => Serve_Server.Start
+is
+   Name : String
+     with Help => "the name to serve";
+   Home : in Directory
+     with Help => "a directory, whose mode is a right";
+   Result : out Named
+     with Help => "the interface that is served";
+end Rose.Core.Serve;
