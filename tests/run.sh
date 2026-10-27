@@ -139,6 +139,26 @@ while read -r entry; do
   done
 done < generated-user.txt
 
+# Commands that the user target supports, whose units are the same as
+# the kernel target's.
+
+user_commands="rose-core.ads rose-core-echo.ads rose-core-echo_main.adb
+rose-core-echo_metadata.ads rose-core-head.ads rose-core-head_main.adb
+rose-core-head_metadata.ads"
+if $idle --target user -I commands -I rose -o output/user \
+     commands/rose-core.idl commands/rose-core-echo.idl \
+     commands/rose-core-head.idl; then
+  for file in $user_commands; do
+    if diff -u "expected-user/$file" "output/user/$file"; then
+      pass "user $file"
+    else
+      fail "user $file"
+    fi
+  done
+else
+  fail "user target for commands"
+fi
+
 if [ "$(ls output/user)" = "$(ls expected-user)" ]; then
   pass "files generated for the user target"
 else
@@ -209,11 +229,13 @@ fi
 
 # What the user target does not support yet: out interfaces and strings
 # (modes/exchange), string and interface results (rose/directory), a type
-# with the name of the object type, and commands.
+# with the name of the object type, and commands with interface
+# arguments, out strings, other role members, or a server.
 
 if $idle --target user -I commands -I rose -o output \
      modes/exchange.idl user-errors/clash.idl rose/directory.idl \
-     commands/rose-core-echo.idl 2> output/diagnostics.txt; then
+     commands/rose-core-copy.idl commands/rose-core-serve.idl \
+     2> output/diagnostics.txt; then
   fail "user target errors (expected errors)"
 elif diff -u user-errors/expected.txt output/diagnostics.txt; then
   pass "user target errors"

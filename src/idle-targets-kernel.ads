@@ -38,7 +38,10 @@ package Idle.Targets.Kernel is
    --                            object that the program serves, and
    --                            Attach, Publish and Interface_Cap
    --
-   --  The user target does not yet support commands, interface arguments
-   --  and results, string results, or out and in out strings.
+   --  The user target does not yet support interface arguments and
+   --  results, string results, or out and in out strings. Its units for a
+   --  command are those of the kernel target, for a command without
+   --  interface arguments or out and in out strings, whose role members
+   --  are standard streams or system caps, and that is not a server.
 
 end Idle.Targets.Kernel;
