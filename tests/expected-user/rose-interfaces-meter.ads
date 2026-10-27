@@ -1,3 +1,4 @@
+with Rose.Capabilities;
 with Rose.Interfaces.Counter;
 with Rose.Interfaces.Named;
 with Rose.Objects;
@@ -38,6 +39,10 @@ package Rose.Interfaces.Meter is
    type Meter_Object is limited interface
      and Rose.Interfaces.Counter.Counter_Object
      and Rose.Interfaces.Named.Named_Object;
+
+   function Meter_Cap
+     (Item : in out Meter_Object)
+      return Rose.Capabilities.Capability is abstract;
 
    procedure Reset (Item : in out Meter_Object) is abstract;
 

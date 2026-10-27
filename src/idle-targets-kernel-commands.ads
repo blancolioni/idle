@@ -4,7 +4,8 @@ private package Idle.Targets.Kernel.Commands is
 
    procedure Generate_Command
      (Item             : Idle.Syntax.Interface_Declaration;
-      Output_Directory : String);
+      Output_Directory : String;
+      Target           : Idle.Targets.Target);
    --  Write the units for the command Item, Pkg.Name, to Output_Directory:
    --
    --    Pkg.Name           the procedure spec the author implements
@@ -14,6 +15,10 @@ private package Idle.Targets.Kernel.Commands is
    --                       Pkg.Name, and completes the invocation
    --    Pkg.Name_Metadata  the command's metadata, in the .rose_command
    --                       section of the executable
+   --
+   --  For the user target, the command takes each interface argument,
+   --  and each role member that is not a standard stream or system cap,
+   --  as an in out object of the interface; the main passes it a client.
    --
    --  Item must have been checked by Idle.Commands.Check.
 

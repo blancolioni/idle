@@ -60,7 +60,8 @@ package body Idle.Targets.Kernel.Commands is
 
    procedure Generate_Command
      (Item             : Idle.Syntax.Interface_Declaration;
-      Output_Directory : String)
+      Output_Directory : String;
+      Target           : Idle.Targets.Target)
    is
       use all type Idle.Commands.Argument_Type;
       use all type Idle.Commands.Place_Kind;
@@ -342,6 +343,14 @@ package body Idle.Targets.Kernel.Commands is
             is (Client_Unit & "." & Idle.Names.Ada_Name (Type_Name)
                 & "_Client");
 
+            function Object_Unit return String
+            is ("Rose.Interfaces." & Idle.Names.Ada_Name (Type_Name));
+
+            function Object_Class return String
+            is (Object_Unit & "." & Idle.Names.Ada_Name (Type_Name)
+                & "_Object'Class");
+            --  For the user target, the type of the command's parameter.
+
             function Cap_Argument return not null Syn.Node_Access
             is (F.New_Call
                   (Launch & "Cap_Argument",
@@ -386,7 +395,11 @@ package body Idle.Targets.Kernel.Commands is
 
             procedure Use_Client is
             begin
-               Spec_Context.Add (Client_Unit);
+               if Target = User_Target then
+                  Spec_Context.Add (Object_Unit);
+               else
+                  Spec_Context.Add (Client_Unit);
+               end if;
                Main_Context.Add (Client_Unit);
                Declarations.Append
                  (F.New_Object (Argument_Name, F.New_Name (Client_Type)));
@@ -397,8 +410,16 @@ package body Idle.Targets.Kernel.Commands is
                         [F.New_Name (Argument_Name), Cap_Argument])));
                Arguments.Append
                  (F.New_Named (Argument_Name, F.New_Name (Argument_Name)));
-               Parameters.Append
-                 (F.New_Parameter (Argument_Name, F.New_Name (Client_Type)));
+               if Target = User_Target then
+                  Parameters.Append
+                    (F.New_Parameter
+                       (Argument_Name, F.New_Name (Object_Class),
+                        Syn.In_Out_Mode));
+               else
+                  Parameters.Append
+                    (F.New_Parameter
+                       (Argument_Name, F.New_Name (Client_Type)));
+               end if;
             end Use_Client;
 
          begin

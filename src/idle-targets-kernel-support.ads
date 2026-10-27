@@ -54,6 +54,11 @@ private package Idle.Targets.Kernel.Support is
    function Object_Type_Name (Interface_Name : String) return String;
    --  Its simple name: File_Object.
 
+   function Cap_Function (Interface_Name : String) return String;
+   --  The function that the user target's object type for the interface
+   --  Interface_Name declares, which returns the object's cap for that
+   --  interface: for File, File_Cap.
+
    Count_Name : constant String := "Subprogram_Count";
    --  The name of the constant that gives the number of caps in the
    --  reply to the interface cap.
@@ -92,6 +97,12 @@ private package Idle.Targets.Kernel.Support is
      (List      : in out Context_List;
       Unit_Name : String);
 
+   procedure Add_Limited
+     (List      : in out Context_List;
+      Unit_Name : String);
+   --  Name Unit_Name in a limited with clause, unless it is also added
+   --  with Add.
+
    function Contains
      (List      : Context_List;
       Unit_Name : String)
@@ -101,7 +112,8 @@ private package Idle.Targets.Kernel.Support is
      (List    : Context_List;
       Factory : in out Syn.Factory.Factory)
       return Syn.Node_Array;
-   --  A with clause for each unit in List.
+   --  A with clause for each unit in List, then a limited with clause for
+   --  each unit added only with Add_Limited.
 
 private
 
@@ -126,7 +138,8 @@ private
    --  compares them.
 
    type Context_List is tagged record
-      Units : Name_Sets.Set;
+      Units         : Name_Sets.Set;
+      Limited_Units : Name_Sets.Set;
    end record;
 
 end Idle.Targets.Kernel.Support;

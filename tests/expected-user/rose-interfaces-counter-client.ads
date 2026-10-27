@@ -17,32 +17,46 @@ package Rose.Interfaces.Counter.Client is
      (Client        : out Counter_Client;
       Interface_Cap : Rose.Capabilities.Capability);
 
+   function From_Cap
+     (Cap : Rose.Capabilities.Capability)
+      return Counter_Client;
+
    procedure Close (Client : in out Counter_Client);
 
    overriding function Badge
-     (Item : Counter_Client)
+     (Item : in out Counter_Client)
       return Rose.Capabilities.Capability;
 
    overriding procedure Increment
      (Item : in out Counter_Client;
       By   : Rose.Words.Word);
 
-   overriding function Value (Item : Counter_Client) return Rose.Words.Word;
+   overriding function Value
+     (Item : in out Counter_Client)
+      return Rose.Words.Word;
+
+   overriding function Counter_Cap
+     (Item : in out Counter_Client)
+      return Rose.Capabilities.Capability;
+
+   overriding function Named_Cap
+     (Item : in out Counter_Client)
+      return Rose.Capabilities.Capability;
 
    function Get_Interface_Cap
      (Item : Counter_Client)
       return Rose.Capabilities.Capability;
 
    function Get_Badge_Cap
-     (Item : Counter_Client)
+     (Item : in out Counter_Client)
       return Rose.Capabilities.Capability;
 
    function Get_Increment_Cap
-     (Item : Counter_Client)
+     (Item : in out Counter_Client)
       return Rose.Capabilities.Capability;
 
    function Get_Value_Cap
-     (Item : Counter_Client)
+     (Item : in out Counter_Client)
       return Rose.Capabilities.Capability;
 
 private
@@ -50,14 +64,16 @@ private
    type Counter_Client is
      limited new Rose.Interfaces.Counter.Counter_Object
    with record
-      Is_Open       : Boolean := False;
-      Interface_Cap : Rose.Capabilities.Capability :=
+      Is_Open             : Boolean := False;
+      Interface_Cap       : Rose.Capabilities.Capability :=
         Rose.Capabilities.Null_Capability;
-      Badge         : Rose.Capabilities.Capability :=
+      Named_Interface_Cap : Rose.Capabilities.Capability :=
         Rose.Capabilities.Null_Capability;
-      Increment     : Rose.Capabilities.Capability :=
+      Badge               : Rose.Capabilities.Capability :=
         Rose.Capabilities.Null_Capability;
-      Value         : Rose.Capabilities.Capability :=
+      Increment           : Rose.Capabilities.Capability :=
+        Rose.Capabilities.Null_Capability;
+      Value               : Rose.Capabilities.Capability :=
         Rose.Capabilities.Null_Capability;
    end record;
 

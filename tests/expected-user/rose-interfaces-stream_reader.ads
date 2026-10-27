@@ -1,3 +1,4 @@
+with Rose.Capabilities;
 with Rose.Objects;
 with System.Storage_Elements;
 
@@ -14,6 +15,10 @@ package Rose.Interfaces.Stream_Reader is
    Subprogram_Count        : constant := 1;
 
    type Stream_Reader_Object is limited interface;
+
+   function Stream_Reader_Cap
+     (Item : in out Stream_Reader_Object)
+      return Rose.Capabilities.Capability is abstract;
 
    procedure Read
      (Item   : in out Stream_Reader_Object;

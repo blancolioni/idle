@@ -1,0 +1,13 @@
+--  Interfaces of the interface's own type as an out argument, an in
+--  out argument and a result, for the user target (idle#44), which
+--  names its own client and object type for them.
+
+interface Partner is
+
+   procedure Pair
+     (Other : out interface Partner;
+      Peer  : in out interface Partner);
+
+   function Next return interface Partner;
+
+end Partner;

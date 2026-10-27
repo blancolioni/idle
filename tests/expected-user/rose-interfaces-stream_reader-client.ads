@@ -15,6 +15,10 @@ package Rose.Interfaces.Stream_Reader.Client is
      (Client        : out Stream_Reader_Client;
       Interface_Cap : Rose.Capabilities.Capability);
 
+   function From_Cap
+     (Cap : Rose.Capabilities.Capability)
+      return Stream_Reader_Client;
+
    procedure Close (Client : in out Stream_Reader_Client);
 
    overriding procedure Read
@@ -22,12 +26,16 @@ package Rose.Interfaces.Stream_Reader.Client is
       Buffer : out System.Storage_Elements.Storage_Array;
       Last   : out System.Storage_Elements.Storage_Count);
 
+   overriding function Stream_Reader_Cap
+     (Item : in out Stream_Reader_Client)
+      return Rose.Capabilities.Capability;
+
    function Get_Interface_Cap
      (Item : Stream_Reader_Client)
       return Rose.Capabilities.Capability;
 
    function Get_Read_Cap
-     (Item : Stream_Reader_Client)
+     (Item : in out Stream_Reader_Client)
       return Rose.Capabilities.Capability;
 
 private

@@ -95,7 +95,8 @@ commands="rose-core.ads rose-core-echo.ads rose-core-echo_main.adb
 rose-core-echo_metadata.ads rose-core-head.ads rose-core-head_main.adb
 rose-core-head_metadata.ads rose-core-copy.ads rose-core-copy_main.adb
 rose-core-copy_metadata.ads rose-core-serve.ads rose-core-serve_main.adb
-rose-core-serve_metadata.ads"
+rose-core-serve_metadata.ads rose-core-show.ads rose-core-show_main.adb
+rose-core-show_metadata.ads"
 rm -rf output/commands && mkdir output/commands
 if $idle --target kernel -I rose -o output/commands commands/*.idl; then
   for file in $commands; do
@@ -139,15 +140,19 @@ while read -r entry; do
   done
 done < generated-user.txt
 
-# Commands that the user target supports, whose units are the same as
-# the kernel target's.
+# Commands that the user target supports. Their units are the same as
+# the kernel target's, but that a command takes an interface argument
+# or role member as an object of the interface.
 
 user_commands="rose-core.ads rose-core-echo.ads rose-core-echo_main.adb
 rose-core-echo_metadata.ads rose-core-head.ads rose-core-head_main.adb
-rose-core-head_metadata.ads"
+rose-core-head_metadata.ads rose-core-serve.ads rose-core-serve_main.adb
+rose-core-serve_metadata.ads rose-core-show.ads rose-core-show_main.adb
+rose-core-show_metadata.ads"
 if $idle --target user -I commands -I rose -o output/user \
      commands/rose-core.idl commands/rose-core-echo.idl \
-     commands/rose-core-head.idl; then
+     commands/rose-core-head.idl commands/rose-core-serve.idl \
+     commands/rose-core-show.idl; then
   for file in $user_commands; do
     if diff -u "expected-user/$file" "output/user/$file"; then
       pass "user $file"
@@ -227,14 +232,14 @@ else
   fail "command errors"
 fi
 
-# What the user target does not support yet: out interfaces and strings
-# (modes/exchange), string and interface results (rose/directory), a type
-# with the name of the object type, and commands with interface
-# arguments, out strings, other role members, or a server.
+# What the user target does not support yet: out strings (modes/exchange
+# and the command rose-core-copy) and string results (rose/directory); a
+# type with the name of the object type; and a subprogram with the name
+# of a cap function.
 
 if $idle --target user -I commands -I rose -o output \
-     modes/exchange.idl user-errors/clash.idl rose/directory.idl \
-     commands/rose-core-copy.idl commands/rose-core-serve.idl \
+     modes/exchange.idl user-errors/clash.idl user-errors/cap_name.idl \
+     rose/directory.idl commands/rose-core-copy.idl \
      2> output/diagnostics.txt; then
   fail "user target errors (expected errors)"
 elif diff -u user-errors/expected.txt output/diagnostics.txt; then

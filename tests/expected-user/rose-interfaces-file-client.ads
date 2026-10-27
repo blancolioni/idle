@@ -18,6 +18,8 @@ package Rose.Interfaces.File.Client is
      (Client        : out File_Client;
       Interface_Cap : Rose.Capabilities.Capability);
 
+   function From_Cap (Cap : Rose.Capabilities.Capability) return File_Client;
+
    procedure Close (Client : in out File_Client);
 
    overriding procedure Read
@@ -33,33 +35,61 @@ package Rose.Interfaces.File.Client is
      (Item              : in out File_Client;
       Offset_From_Start : Rose.Words.Word_64);
 
+   overriding function File_Cap
+     (Item : in out File_Client)
+      return Rose.Capabilities.Capability;
+
+   overriding function Stream_Reader_Cap
+     (Item : in out File_Client)
+      return Rose.Capabilities.Capability;
+
+   overriding function Stream_Writer_Cap
+     (Item : in out File_Client)
+      return Rose.Capabilities.Capability;
+
+   overriding function Stream_Cap
+     (Item : in out File_Client)
+      return Rose.Capabilities.Capability;
+
+   overriding function Seekable_Cap
+     (Item : in out File_Client)
+      return Rose.Capabilities.Capability;
+
    function Get_Interface_Cap
      (Item : File_Client)
       return Rose.Capabilities.Capability;
 
    function Get_Read_Cap
-     (Item : File_Client)
+     (Item : in out File_Client)
       return Rose.Capabilities.Capability;
 
    function Get_Write_Cap
-     (Item : File_Client)
+     (Item : in out File_Client)
       return Rose.Capabilities.Capability;
 
    function Get_Seek_Cap
-     (Item : File_Client)
+     (Item : in out File_Client)
       return Rose.Capabilities.Capability;
 
 private
 
    type File_Client is limited new Rose.Interfaces.File.File_Object with record
-      Is_Open       : Boolean := False;
-      Interface_Cap : Rose.Capabilities.Capability :=
+      Is_Open                     : Boolean := False;
+      Interface_Cap               : Rose.Capabilities.Capability :=
         Rose.Capabilities.Null_Capability;
-      Read          : Rose.Capabilities.Capability :=
+      Stream_Reader_Interface_Cap : Rose.Capabilities.Capability :=
         Rose.Capabilities.Null_Capability;
-      Write         : Rose.Capabilities.Capability :=
+      Stream_Writer_Interface_Cap : Rose.Capabilities.Capability :=
         Rose.Capabilities.Null_Capability;
-      Seek          : Rose.Capabilities.Capability :=
+      Stream_Interface_Cap        : Rose.Capabilities.Capability :=
+        Rose.Capabilities.Null_Capability;
+      Seekable_Interface_Cap      : Rose.Capabilities.Capability :=
+        Rose.Capabilities.Null_Capability;
+      Read                        : Rose.Capabilities.Capability :=
+        Rose.Capabilities.Null_Capability;
+      Write                       : Rose.Capabilities.Capability :=
+        Rose.Capabilities.Null_Capability;
+      Seek                        : Rose.Capabilities.Capability :=
         Rose.Capabilities.Null_Capability;
    end record;
 

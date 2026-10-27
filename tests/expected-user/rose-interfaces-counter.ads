@@ -1,3 +1,4 @@
+with Rose.Capabilities;
 with Rose.Interfaces.Named;
 with Rose.Objects;
 with Rose.Words;
@@ -32,10 +33,16 @@ package Rose.Interfaces.Counter is
    type Counter_Object is limited interface
      and Rose.Interfaces.Named.Named_Object;
 
+   function Counter_Cap
+     (Item : in out Counter_Object)
+      return Rose.Capabilities.Capability is abstract;
+
    procedure Increment
      (Item : in out Counter_Object;
       By   : Rose.Words.Word) is abstract;
 
-   function Value (Item : Counter_Object) return Rose.Words.Word is abstract;
+   function Value
+     (Item : in out Counter_Object)
+      return Rose.Words.Word is abstract;
 
 end Rose.Interfaces.Counter;

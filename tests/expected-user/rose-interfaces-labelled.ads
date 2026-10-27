@@ -21,8 +21,12 @@ package Rose.Interfaces.Labelled is
 
    type Labelled_Object is limited interface;
 
+   function Labelled_Cap
+     (Item : in out Labelled_Object)
+      return Rose.Capabilities.Capability is abstract;
+
    function Badge
-     (Item : Labelled_Object)
+     (Item : in out Labelled_Object)
       return Rose.Capabilities.Capability is abstract;
 
    procedure Set_Label

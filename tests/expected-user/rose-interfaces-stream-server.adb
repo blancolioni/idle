@@ -1,6 +1,7 @@
+with Rose.Interfaces.Objects;
 with Rose.Invocation;
-with Rose.Objects;
 with Rose.System_Calls;
+with System;
 with System.Storage_Elements;
 
 package body Rose.Interfaces.Stream.Server is
@@ -87,6 +88,58 @@ package body Rose.Interfaces.Stream.Server is
            Rose.Objects.Capability_Identifier (Attached_Count));
       Attached_Count := Attached_Count + 1;
    end Attach;
+
+   ------------
+   -- Cap_Of --
+   ------------
+
+   function Cap_Of
+     (Object       : Stream_Interface'Class;
+      Interface_Id : Rose.Objects.Endpoint_Id :=
+        Rose.Interfaces.Stream.Stream_Interface)
+      return Rose.Capabilities.Capability
+   is
+      use type System.Address;
+      use type Rose.Objects.Capability_Identifier;
+      use type Rose.Objects.Endpoint_Id;
+      Identifier : Rose.Objects.Capability_Identifier := 0;
+   begin
+      for Item of Attached loop
+         if Item.Object /= null
+           and then Item.Object.all'Address = Object'Address
+         then
+            if Interface_Id = Rose.Interfaces.Stream.Stream_Interface then
+               return Item.Cap;
+            else
+               if Interface_Id = Rose.Interfaces.Stream.Stream_Reader_Interface
+                 or else Interface_Id = Rose.Interfaces.Stream
+                   .Stream_Writer_Interface
+               then
+                  if not Rose.Server.Has_Instance
+                    (Server_Instance,
+                     Interface_Id,
+                     Identifier)
+                  then
+                     Rose.Server.Set_Instance_Cap
+                       (Server_Instance,
+                        Interface_Id,
+                        Identifier,
+                        Rose.Server.Create_Endpoint
+                          (Interface_Id,
+                           Identifier));
+                  end if;
+                  return Rose.Server.Get_Instance_Cap
+                    (Server_Instance,
+                     Interface_Id,
+                     Identifier);
+               end if;
+            end if;
+         end if;
+         Identifier := Identifier + 1;
+      end loop;
+      raise Rose.Interfaces.Objects.Not_Served
+        with "Rose.Interfaces.Stream.Server.Cap_Of";
+   end Cap_Of;
 
    ----------
    -- Find --

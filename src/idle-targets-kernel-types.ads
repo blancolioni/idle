@@ -74,6 +74,24 @@ private package Idle.Targets.Kernel.Types is
    function Is_Buffer (Info : Type_Info) return Boolean
    is (Info.Category in String_Value | Storage_Value);
 
+   function Object_Unit (Info : Type_Info) return String
+   is ("Rose.Interfaces." & To_String (Info.Interface_Name))
+     with Pre => Info.Category = Interface_Value;
+   --  For the user target: the package that declares the object type of
+   --  the interface Info.
+
+   function Object_Class (Info : Type_Info) return String
+   is (Object_Unit (Info) & "." & To_String (Info.Interface_Name)
+       & "_Object'Class")
+     with Pre => Info.Category = Interface_Value;
+   --  The class-wide object type of the interface Info.
+
+   function Cap_Function (Info : Type_Info) return String
+   is (To_String (Info.Interface_Name) & "_Cap")
+     with Pre => Info.Category = Interface_Value;
+   --  The function of an object that returns its cap for the interface
+   --  Info.
+
    function Uses_Words_Unit (Info : Type_Info) return Boolean
    is (Info.Encoding = Converted);
    --  True if the code that sends a value of Info names Rose.Words.

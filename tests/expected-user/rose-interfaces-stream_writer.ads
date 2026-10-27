@@ -1,3 +1,4 @@
+with Rose.Capabilities;
 with Rose.Objects;
 with System.Storage_Elements;
 
@@ -14,6 +15,10 @@ package Rose.Interfaces.Stream_Writer is
    Subprogram_Count        : constant := 1;
 
    type Stream_Writer_Object is limited interface;
+
+   function Stream_Writer_Cap
+     (Item : in out Stream_Writer_Object)
+      return Rose.Capabilities.Capability is abstract;
 
    procedure Write
      (Item   : in out Stream_Writer_Object;

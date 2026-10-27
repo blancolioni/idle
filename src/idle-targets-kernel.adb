@@ -31,17 +31,16 @@ package body Idle.Targets.Kernel is
      (Item : Idle.Syntax.Interface_Declaration)
       return Boolean;
    --  Report what the user target does not support yet, beyond what
-   --  Check reports, and a constant or type of Item with the name of its
-   --  object type. True if there was nothing to report.
+   --  Check reports; a constant or type of Item with the name of its
+   --  object type; and a subprogram with the name of one of the object
+   --  type's cap functions. True if there was nothing to report.
 
    function Check_User_Command
      (Item : Idle.Syntax.Interface_Declaration)
       return Boolean;
    --  Report what the user target does not support yet in the command
-   --  Item, which has been checked by Idle.Commands.Check: interface
-   --  arguments, role members that are neither standard streams nor
-   --  system caps, out and in out strings, and the server form. True if
-   --  there was nothing to report.
+   --  Item, which has been checked by Idle.Commands.Check: out and in out
+   --  strings. True if there was nothing to report.
 
    function Constant_Reference
      (Item  : Idle.Syntax.Interface_Declaration;
@@ -472,6 +471,16 @@ package body Idle.Targets.Kernel is
          Position  : Idle.Syntax.Source_Position;
          What      : String);
 
+      function Is_Cap_Function (Name : String) return Boolean
+      is (Idle.Names.Key (Name)
+            = Idle.Names.Key (Cap_Function (To_String (Item.Name)))
+          or else (for some Ancestor of Idle.Hierarchy.Ancestors (Item) =>
+                     Idle.Names.Key (Name)
+                       = Idle.Names.Key
+                           (Cap_Function (To_String (Ancestor.Name)))));
+      --  True if Name is that of the cap function of Item's object type,
+      --  or of an ancestor's.
+
       -----------
       -- Error --
       -----------
@@ -525,36 +534,34 @@ package body Idle.Targets.Kernel is
       end loop;
 
       for Member of Idle.Hierarchy.Members (Item) loop
+         declare
+            Subprogram_Name : constant String :=
+              To_String (Member.Subprogram.Name);
+         begin
+            if Is_Cap_Function (Subprogram_Name) then
+               Error (Member.File_Name, Member.Subprogram.Position,
+                      "subprogram " & Subprogram_Name
+                      & " has the name of a function that the object type "
+                      & "declares");
+            end if;
+         end;
+
          for Parameter of Member.Subprogram.Parameters loop
-            declare
-               Info : constant Types.Type_Info :=
-                 Types.Resolve (Member.Owner, Parameter.Of_Type);
-            begin
-               if Info.Category = Interface_Value then
-                  Unsupported (Member.File_Name, Parameter.Position,
-                               "interface arguments");
-               elsif Info.Category = String_Value
-                 and then Parameter.Mode /= Idle.Syntax.In_Mode
-               then
-                  Unsupported (Member.File_Name, Parameter.Position,
-                               "out and in out strings");
-               end if;
-            end;
+            if Types.Resolve (Member.Owner, Parameter.Of_Type).Category
+              = String_Value
+              and then Parameter.Mode /= Idle.Syntax.In_Mode
+            then
+               Unsupported (Member.File_Name, Parameter.Position,
+                            "out and in out strings");
+            end if;
          end loop;
 
-         if Member.Subprogram.Is_Function then
-            case Types.Resolve (Member.Owner, Member.Subprogram.Result)
-              .Category
-            is
-               when Interface_Value =>
-                  Unsupported (Member.File_Name, Member.Subprogram.Position,
-                               "interface results");
-               when String_Value =>
-                  Unsupported (Member.File_Name, Member.Subprogram.Position,
-                               "string results");
-               when others =>
-                  null;
-            end case;
+         if Member.Subprogram.Is_Function
+           and then Types.Resolve (Member.Owner, Member.Subprogram.Result)
+                      .Category = String_Value
+         then
+            Unsupported (Member.File_Name, Member.Subprogram.Position,
+                         "string results");
          end if;
       end loop;
 
@@ -570,8 +577,6 @@ package body Idle.Targets.Kernel is
       return Boolean
    is
       use all type Idle.Commands.Argument_Type;
-      use all type Idle.Commands.Stream;
-      use all type Idle.Commands.System_Cap;
       use type Idle.Syntax.Parameter_Mode;
 
       OK : Boolean := True;
@@ -596,23 +601,8 @@ package body Idle.Targets.Kernel is
       end Unsupported;
 
    begin
-      if Idle.Commands.Has_Aspect (Item.Aspects, "Server") then
-         Unsupported (Item.Position, "server commands");
-      end if;
-
       for Placed of Idle.Commands.Signature (Item) loop
-         if Length (Placed.Role) > 0 then
-            if Placed.Stream = No_Stream
-              and then Placed.System = No_System_Cap
-            then
-               Unsupported
-                 (Item.Position,
-                  "role members that are not standard streams or system "
-                  & "caps (" & To_String (Placed.Argument.Name) & ")");
-            end if;
-         elsif Placed.Kind = Interface_Argument then
-            Unsupported (Placed.Argument.Position, "interface arguments");
-         elsif Placed.Kind = String_Argument
+         if Placed.Kind = String_Argument
            and then Placed.Argument.Mode /= Idle.Syntax.In_Mode
          then
             Unsupported (Placed.Argument.Position, "out and in out strings");
@@ -723,7 +713,7 @@ package body Idle.Targets.Kernel is
               and then (Target = Kernel_Target
                         or else Check_User_Command (Item))
             then
-               Commands.Generate_Command (Item, Output_Directory);
+               Commands.Generate_Command (Item, Output_Directory, Target);
             end if;
          when Idle.Syntax.Package_Unit =>
             if Idle.Commands.Check (Item) then
@@ -789,6 +779,7 @@ package body Idle.Targets.Kernel is
 
       function Object_Declarations return Syn.Node_Array is
          use type Idle.Syntax.Parameter_Mode;
+         use type Types.Category;
 
          Package_Name : constant String :=
            "Rose.Interfaces." & Idle.Names.Ada_Name (Name);
@@ -797,6 +788,36 @@ package body Idle.Targets.Kernel is
 
          function Type_Name (Info : Types.Type_Info) return String;
          --  The Ada type of Info, after adding its unit to the context.
+
+         function Object_Class
+           (Info   : Types.Type_Info;
+            Is_Out : Boolean := False)
+            return String;
+         --  The Ada type of the interface Info: its class-wide object
+         --  type, or its client type if Is_Out, after adding its package
+         --  to the context with a limited with clause, so that interface
+         --  packages can name each other, and their own clients.
+
+         ------------------
+         -- Object_Class --
+         ------------------
+
+         function Object_Class
+           (Info   : Types.Type_Info;
+            Is_Out : Boolean := False)
+            return String
+         is
+         begin
+            if Is_Out then
+               Context.Add_Limited (To_String (Info.Unit));
+               return To_String (Info.Ada_Name);
+            else
+               if Types.Object_Unit (Info) /= Package_Name then
+                  Context.Add_Limited (Types.Object_Unit (Info));
+               end if;
+               return Types.Object_Class (Info);
+            end if;
+         end Object_Class;
 
          ---------------
          -- Type_Name --
@@ -823,6 +844,14 @@ package body Idle.Targets.Kernel is
                   F.New_Name (Object_Type (Parent))],
                Is_Limited => True));
 
+         Context.Add ("Rose.Capabilities");
+         Result.Append
+           (F.New_Function
+              (Cap_Function (Name), F.New_Name (Capability_Name),
+               [F.New_Parameter
+                  ("Item", F.New_Name (Object_Name), Syn.In_Out_Mode)],
+               Is_Abstract => True));
+
          for Member of Members loop
             if Idle.Names.Key (To_String (Member.Declared_In))
               = Idle.Names.Key (Name)
@@ -832,36 +861,58 @@ package body Idle.Targets.Kernel is
                     Member.Subprogram;
                   Parameters : Node_List;
                begin
+                  --  Item is in out, for functions too, so that a client
+                  --  can open itself on its first call.
                   Parameters.Append
                     (F.New_Parameter
-                       ("Item", F.New_Name (Object_Name),
-                        (if Subprogram.Is_Function
-                         then Syn.In_Mode else Syn.In_Out_Mode)));
+                       ("Item", F.New_Name (Object_Name), Syn.In_Out_Mode));
                   for Parameter of Subprogram.Parameters loop
-                     Parameters.Append
-                       (F.New_Parameter
-                          (Support.Name (Parameter),
-                           F.New_Name
-                             (Type_Name
-                                (Types.Resolve
-                                   (Member.Owner, Parameter.Of_Type))),
-                           (case Parameter.Mode is
-                               when Idle.Syntax.In_Mode     => Syn.In_Mode,
-                               when Idle.Syntax.Out_Mode    => Syn.Out_Mode,
-                               when Idle.Syntax.In_Out_Mode =>
-                                 Syn.In_Out_Mode)));
+                     declare
+                        Info : constant Types.Type_Info :=
+                          Types.Resolve (Member.Owner, Parameter.Of_Type);
+                     begin
+                        if Info.Category = Types.Interface_Value then
+                           Parameters.Append
+                             (F.New_Parameter
+                                (Support.Name (Parameter),
+                                 F.New_Name
+                                   (Object_Class
+                                      (Info,
+                                       Is_Out =>
+                                         Parameter.Mode
+                                         = Idle.Syntax.Out_Mode)),
+                                 Syn.In_Out_Mode));
+                        else
+                           Parameters.Append
+                             (F.New_Parameter
+                                (Support.Name (Parameter),
+                                 F.New_Name (Type_Name (Info)),
+                                 (case Parameter.Mode is
+                                     when Idle.Syntax.In_Mode     =>
+                                       Syn.In_Mode,
+                                     when Idle.Syntax.Out_Mode    =>
+                                       Syn.Out_Mode,
+                                     when Idle.Syntax.In_Out_Mode =>
+                                       Syn.In_Out_Mode)));
+                        end if;
+                     end;
                   end loop;
 
                   if Subprogram.Is_Function then
-                     Result.Append
-                       (F.New_Function
-                          (Support.Name (Subprogram),
-                           F.New_Name
-                             (Type_Name
-                                (Types.Resolve
-                                   (Member.Owner, Subprogram.Result))),
-                           Parameters.To_Array,
-                           Is_Abstract => True));
+                     declare
+                        Info : constant Types.Type_Info :=
+                          Types.Resolve (Member.Owner, Subprogram.Result);
+                     begin
+                        Result.Append
+                          (F.New_Function
+                             (Support.Name (Subprogram),
+                              F.New_Name
+                                (if Info.Category = Types.Interface_Value
+                                 then Object_Class (Info)
+                                 else Type_Name (Info)),
+                              Parameters.To_Array,
+                              Is_Abstract => True));
+                     end;
                   else
                      Result.Append
                        (F.New_Procedure

@@ -41,6 +41,18 @@ package body Idle.Targets.Kernel.Support is
       List.Units.Include (Unit_Name);
    end Add;
 
+   -----------------
+   -- Add_Limited --
+   -----------------
+
+   procedure Add_Limited
+     (List      : in out Context_List;
+      Unit_Name : String)
+   is
+   begin
+      List.Limited_Units.Include (Unit_Name);
+   end Add_Limited;
+
    ------------
    -- Append --
    ------------
@@ -52,6 +64,15 @@ package body Idle.Targets.Kernel.Support is
    begin
       List.Items.Append (Item);
    end Append;
+
+   ------------------
+   -- Cap_Function --
+   ------------------
+
+   function Cap_Function (Interface_Name : String) return String is
+   begin
+      return Idle.Names.Ada_Name (Interface_Name) & "_Cap";
+   end Cap_Function;
 
    --------------
    -- Contains --
@@ -236,8 +257,17 @@ package body Idle.Targets.Kernel.Support is
       Factory : in out Syn.Factory.Factory)
       return Syn.Node_Array
    is
+      Result : Node_List;
    begin
-      return [for Unit_Name of List.Units => Factory.New_With (Unit_Name)];
+      for Unit_Name of List.Units loop
+         Result.Append (Factory.New_With (Unit_Name));
+      end loop;
+      for Unit_Name of List.Limited_Units loop
+         if not List.Units.Contains (Unit_Name) then
+            Result.Append (Factory.New_With (Unit_Name, Is_Limited => True));
+         end if;
+      end loop;
+      return Result.To_Array;
    end To_Array;
 
 end Idle.Targets.Kernel.Support;

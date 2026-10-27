@@ -11,3 +11,8 @@ parents/counter
 parents/labelled
 parents/gauge
 parents/meter
+rose/cap
+rose/timer
+rose/launch
+rose/exec
+modes/partner

@@ -4,6 +4,8 @@ with Rose.System_Calls;
 
 package body Rose.Interfaces.Stream_Reader.Client is
 
+   procedure Load (Item : in out Stream_Reader_Client);
+
    -----------
    -- Close --
    -----------
@@ -11,18 +13,29 @@ package body Rose.Interfaces.Stream_Reader.Client is
    procedure Close (Client : in out Stream_Reader_Client) is
       Params : aliased Rose.Invocation.Invocation_Record;
    begin
+      if Client.Is_Open then
+         Rose.System_Calls.Initialize_Send
+           (Params,
+            Rose.System_Calls.Delete_Cap_Capability);
+         Rose.System_Calls.Send_Cap (Params, Client.Read);
+         Rose.System_Calls.Invoke_Capability (Params);
+      end if;
       Client.Is_Open := False;
-      Rose.System_Calls.Initialize_Send
-        (Params,
-         Rose.System_Calls.Delete_Cap_Capability);
-      Rose.System_Calls.Send_Cap (Params, Client.Read);
-      Rose.System_Calls.Invoke_Capability (Params);
       Rose.System_Calls.Initialize_Send
         (Params,
          Rose.System_Calls.Delete_Cap_Capability);
       Rose.System_Calls.Send_Cap (Params, Client.Interface_Cap);
       Rose.System_Calls.Invoke_Capability (Params);
    end Close;
+
+   --------------
+   -- From_Cap --
+   --------------
+
+   function From_Cap
+     (Cap : Rose.Capabilities.Capability)
+      return Stream_Reader_Client
+   is (Stream_Reader_Client'(Interface_Cap => Cap, others => <>));
 
    -----------------------
    -- Get_Interface_Cap --
@@ -38,9 +51,33 @@ package body Rose.Interfaces.Stream_Reader.Client is
    ------------------
 
    function Get_Read_Cap
-     (Item : Stream_Reader_Client)
+     (Item : in out Stream_Reader_Client)
       return Rose.Capabilities.Capability
-   is (Item.Read);
+   is
+   begin
+      if not Item.Is_Open then
+         Load (Item);
+      end if;
+      return Item.Read;
+   end Get_Read_Cap;
+
+   ----------
+   -- Load --
+   ----------
+
+   procedure Load (Item : in out Stream_Reader_Client) is
+      Params : aliased Rose.Invocation.Invocation_Record;
+   begin
+      Rose.System_Calls.Initialize_Send (Params, Item.Interface_Cap);
+      Rose.System_Calls.Receive_Caps (Params, Subprogram_Count);
+      Rose.System_Calls.Invoke_Capability (Params);
+      if Params.Control.Flags (Rose.Invocation.Error) then
+         raise Rose.Interfaces.Objects.Invocation_Error
+           with "Stream_Reader.Open";
+      end if;
+      Item.Read := Params.Caps (Read_Index);
+      Item.Is_Open := True;
+   end Load;
 
    ----------
    -- Open --
@@ -50,15 +87,9 @@ package body Rose.Interfaces.Stream_Reader.Client is
      (Client        : out Stream_Reader_Client;
       Interface_Cap : Rose.Capabilities.Capability)
    is
-      Params : aliased Rose.Invocation.Invocation_Record;
    begin
       Client.Is_Open := False;
       Client.Interface_Cap := Interface_Cap;
-      Rose.System_Calls.Initialize_Send (Params, Interface_Cap);
-      Rose.System_Calls.Receive_Caps (Params, Subprogram_Count);
-      Rose.System_Calls.Invoke_Capability (Params);
-      Client.Read := Params.Caps (Read_Index);
-      Client.Is_Open := True;
    end Open;
 
    ------------------
@@ -85,6 +116,9 @@ package body Rose.Interfaces.Stream_Reader.Client is
    is
       Params : aliased Rose.Invocation.Invocation_Record;
    begin
+      if not Item.Is_Open then
+         Load (Item);
+      end if;
       Rose.System_Calls.Initialize_Send (Params, Item.Read);
       Rose.System_Calls.Receive_Buffer (Params, Buffer'Length);
       Rose.System_Calls.Receive_Words (Params, 1);
@@ -98,5 +132,14 @@ package body Rose.Interfaces.Stream_Reader.Client is
         System.Storage_Elements.Storage_Count
           (Rose.System_Calls.Get_Word_32 (Params, 0));
    end Read;
+
+   -----------------------
+   -- Stream_Reader_Cap --
+   -----------------------
+
+   overriding function Stream_Reader_Cap
+     (Item : in out Stream_Reader_Client)
+      return Rose.Capabilities.Capability
+   is (Item.Interface_Cap);
 
 end Rose.Interfaces.Stream_Reader.Client;

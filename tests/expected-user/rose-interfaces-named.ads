@@ -24,8 +24,12 @@ package Rose.Interfaces.Named is
 
    type Named_Object is limited interface;
 
+   function Named_Cap
+     (Item : in out Named_Object)
+      return Rose.Capabilities.Capability is abstract;
+
    function Badge
-     (Item : Named_Object)
+     (Item : in out Named_Object)
       return Rose.Capabilities.Capability is abstract;
 
 end Rose.Interfaces.Named;

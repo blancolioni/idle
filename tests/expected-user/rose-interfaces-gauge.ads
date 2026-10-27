@@ -1,3 +1,4 @@
+with Rose.Capabilities;
 with Rose.Interfaces.Counter;
 with Rose.Interfaces.Labelled;
 with Rose.Objects;
@@ -46,6 +47,10 @@ package Rose.Interfaces.Gauge is
    type Gauge_Object is limited interface
      and Rose.Interfaces.Counter.Counter_Object
      and Rose.Interfaces.Labelled.Labelled_Object;
+
+   function Gauge_Cap
+     (Item : in out Gauge_Object)
+      return Rose.Capabilities.Capability is abstract;
 
    procedure Reset (Item : in out Gauge_Object) is abstract;
 

@@ -4,6 +4,8 @@ with Rose.System_Calls;
 
 package body Rose.Interfaces.Cap_Set.Client is
 
+   procedure Load (Item : in out Cap_Set_Client);
+
    ------------
    -- Append --
    ------------
@@ -14,6 +16,9 @@ package body Rose.Interfaces.Cap_Set.Client is
    is
       Params : aliased Rose.Invocation.Invocation_Record;
    begin
+      if not Item.Is_Open then
+         Load (Item);
+      end if;
       Rose.System_Calls.Initialize_Send (Params, Item.Append);
       for Cap of Caps loop
          Rose.System_Calls.Send_Cap (Params, Cap);
@@ -24,6 +29,15 @@ package body Rose.Interfaces.Cap_Set.Client is
       end if;
    end Append;
 
+   -----------------
+   -- Cap_Set_Cap --
+   -----------------
+
+   overriding function Cap_Set_Cap
+     (Item : in out Cap_Set_Client)
+      return Rose.Capabilities.Capability
+   is (Item.Interface_Cap);
+
    -----------
    -- Close --
    -----------
@@ -31,22 +45,24 @@ package body Rose.Interfaces.Cap_Set.Client is
    procedure Close (Client : in out Cap_Set_Client) is
       Params : aliased Rose.Invocation.Invocation_Record;
    begin
+      if Client.Is_Open then
+         Rose.System_Calls.Initialize_Send
+           (Params,
+            Rose.System_Calls.Delete_Cap_Capability);
+         Rose.System_Calls.Send_Cap (Params, Client.Append);
+         Rose.System_Calls.Invoke_Capability (Params);
+         Rose.System_Calls.Initialize_Send
+           (Params,
+            Rose.System_Calls.Delete_Cap_Capability);
+         Rose.System_Calls.Send_Cap (Params, Client.Get_Cap);
+         Rose.System_Calls.Invoke_Capability (Params);
+         Rose.System_Calls.Initialize_Send
+           (Params,
+            Rose.System_Calls.Delete_Cap_Capability);
+         Rose.System_Calls.Send_Cap (Params, Client.Length);
+         Rose.System_Calls.Invoke_Capability (Params);
+      end if;
       Client.Is_Open := False;
-      Rose.System_Calls.Initialize_Send
-        (Params,
-         Rose.System_Calls.Delete_Cap_Capability);
-      Rose.System_Calls.Send_Cap (Params, Client.Append);
-      Rose.System_Calls.Invoke_Capability (Params);
-      Rose.System_Calls.Initialize_Send
-        (Params,
-         Rose.System_Calls.Delete_Cap_Capability);
-      Rose.System_Calls.Send_Cap (Params, Client.Get_Cap);
-      Rose.System_Calls.Invoke_Capability (Params);
-      Rose.System_Calls.Initialize_Send
-        (Params,
-         Rose.System_Calls.Delete_Cap_Capability);
-      Rose.System_Calls.Send_Cap (Params, Client.Length);
-      Rose.System_Calls.Invoke_Capability (Params);
       Rose.System_Calls.Initialize_Send
         (Params,
          Rose.System_Calls.Delete_Cap_Capability);
@@ -54,26 +70,44 @@ package body Rose.Interfaces.Cap_Set.Client is
       Rose.System_Calls.Invoke_Capability (Params);
    end Close;
 
+   --------------
+   -- From_Cap --
+   --------------
+
+   function From_Cap
+     (Cap : Rose.Capabilities.Capability)
+      return Cap_Set_Client
+   is (Cap_Set_Client'(Interface_Cap => Cap, others => <>));
+
    --------------------
    -- Get_Append_Cap --
    --------------------
 
    function Get_Append_Cap
-     (Item : Cap_Set_Client)
+     (Item : in out Cap_Set_Client)
       return Rose.Capabilities.Capability
-   is (Item.Append);
+   is
+   begin
+      if not Item.Is_Open then
+         Load (Item);
+      end if;
+      return Item.Append;
+   end Get_Append_Cap;
 
    -------------
    -- Get_Cap --
    -------------
 
    overriding function Get_Cap
-     (Item  : Cap_Set_Client;
+     (Item  : in out Cap_Set_Client;
       Index : Positive)
       return Rose.Capabilities.Capability
    is
       Params : aliased Rose.Invocation.Invocation_Record;
    begin
+      if not Item.Is_Open then
+         Load (Item);
+      end if;
       Rose.System_Calls.Initialize_Send (Params, Item.Get_Cap);
       Rose.System_Calls.Send_Word (Params, Index);
       Rose.System_Calls.Receive_Caps (Params, 1);
@@ -89,9 +123,15 @@ package body Rose.Interfaces.Cap_Set.Client is
    ---------------------
 
    function Get_Get_Cap_Cap
-     (Item : Cap_Set_Client)
+     (Item : in out Cap_Set_Client)
       return Rose.Capabilities.Capability
-   is (Item.Get_Cap);
+   is
+   begin
+      if not Item.Is_Open then
+         Load (Item);
+      end if;
+      return Item.Get_Cap;
+   end Get_Get_Cap_Cap;
 
    -----------------------
    -- Get_Interface_Cap --
@@ -107,17 +147,26 @@ package body Rose.Interfaces.Cap_Set.Client is
    --------------------
 
    function Get_Length_Cap
-     (Item : Cap_Set_Client)
+     (Item : in out Cap_Set_Client)
       return Rose.Capabilities.Capability
-   is (Item.Length);
+   is
+   begin
+      if not Item.Is_Open then
+         Load (Item);
+      end if;
+      return Item.Length;
+   end Get_Length_Cap;
 
    ------------
    -- Length --
    ------------
 
-   overriding function Length (Item : Cap_Set_Client) return Natural is
+   overriding function Length (Item : in out Cap_Set_Client) return Natural is
       Params : aliased Rose.Invocation.Invocation_Record;
    begin
+      if not Item.Is_Open then
+         Load (Item);
+      end if;
       Rose.System_Calls.Initialize_Send (Params, Item.Length);
       Rose.System_Calls.Receive_Words (Params, 1);
       Rose.System_Calls.Invoke_Capability (Params);
@@ -128,6 +177,25 @@ package body Rose.Interfaces.Cap_Set.Client is
    end Length;
 
    ----------
+   -- Load --
+   ----------
+
+   procedure Load (Item : in out Cap_Set_Client) is
+      Params : aliased Rose.Invocation.Invocation_Record;
+   begin
+      Rose.System_Calls.Initialize_Send (Params, Item.Interface_Cap);
+      Rose.System_Calls.Receive_Caps (Params, Subprogram_Count);
+      Rose.System_Calls.Invoke_Capability (Params);
+      if Params.Control.Flags (Rose.Invocation.Error) then
+         raise Rose.Interfaces.Objects.Invocation_Error with "Cap_Set.Open";
+      end if;
+      Item.Append := Params.Caps (Append_Index);
+      Item.Get_Cap := Params.Caps (Get_Cap_Index);
+      Item.Length := Params.Caps (Length_Index);
+      Item.Is_Open := True;
+   end Load;
+
+   ----------
    -- Open --
    ----------
 
@@ -135,17 +203,9 @@ package body Rose.Interfaces.Cap_Set.Client is
      (Client        : out Cap_Set_Client;
       Interface_Cap : Rose.Capabilities.Capability)
    is
-      Params : aliased Rose.Invocation.Invocation_Record;
    begin
       Client.Is_Open := False;
       Client.Interface_Cap := Interface_Cap;
-      Rose.System_Calls.Initialize_Send (Params, Interface_Cap);
-      Rose.System_Calls.Receive_Caps (Params, Subprogram_Count);
-      Rose.System_Calls.Invoke_Capability (Params);
-      Client.Append := Params.Caps (Append_Index);
-      Client.Get_Cap := Params.Caps (Get_Cap_Index);
-      Client.Length := Params.Caps (Length_Index);
-      Client.Is_Open := True;
    end Open;
 
    ------------------

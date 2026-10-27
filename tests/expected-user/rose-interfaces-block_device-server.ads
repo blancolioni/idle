@@ -1,4 +1,5 @@
 with Rose.Capabilities;
+with Rose.Objects;
 with Rose.Server;
 
 package Rose.Interfaces.Block_Device.Server is
@@ -16,6 +17,12 @@ package Rose.Interfaces.Block_Device.Server is
 
    function Interface_Cap
      (Object : not null access Block_Device_Interface'Class)
+      return Rose.Capabilities.Capability;
+
+   function Cap_Of
+     (Object       : Block_Device_Interface'Class;
+      Interface_Id : Rose.Objects.Endpoint_Id :=
+        Rose.Interfaces.Block_Device.Block_Device_Interface)
       return Rose.Capabilities.Capability;
 
 end Rose.Interfaces.Block_Device.Server;

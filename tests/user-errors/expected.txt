@@ -1,19 +1,8 @@
 modes/exchange.idl:17:47: error: out and in out strings are not yet supported by the user target
-modes/exchange.idl:20:23: error: interface arguments are not yet supported by the user target
 modes/exchange.idl:20:55: error: out and in out strings are not yet supported by the user target
 user-errors/clash.idl:4:4: error: type Clash_Object has the same name as the object type, which the interface package declares
+user-errors/cap_name.idl:6:4: error: subprogram Cap_Name_Cap has the name of a function that the object type declares
+user-errors/cap_name.idl:8:4: error: subprogram Stream_Writer_Cap has the name of a function that the object type declares
 rose/directory.idl:6:4: error: string results are not yet supported by the user target
-rose/directory.idl:12:4: error: interface results are not yet supported by the user target
-rose/directory.idl:13:4: error: interface results are not yet supported by the user target
-rose/directory.idl:15:4: error: interface results are not yet supported by the user target
-rose/directory.idl:17:4: error: interface results are not yet supported by the user target
-rose/directory.idl:18:4: error: interface results are not yet supported by the user target
-commands/rose-core-copy.idl:4:1: error: role members that are not standard streams or system caps (Logging) are not yet supported by the user target
-commands/rose-core-copy.idl:7:4: error: interface arguments are not yet supported by the user target
-commands/rose-core-copy.idl:9:4: error: interface arguments are not yet supported by the user target
-commands/rose-core-copy.idl:11:4: error: interface arguments are not yet supported by the user target
 commands/rose-core-copy.idl:18:4: error: out and in out strings are not yet supported by the user target
 commands/rose-core-copy.idl:20:4: error: out and in out strings are not yet supported by the user target
-commands/rose-core-serve.idl:4:1: error: server commands are not yet supported by the user target
-commands/rose-core-serve.idl:10:4: error: interface arguments are not yet supported by the user target
-commands/rose-core-serve.idl:12:4: error: interface arguments are not yet supported by the user target
