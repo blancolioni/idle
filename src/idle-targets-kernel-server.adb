@@ -26,8 +26,12 @@ package body Idle.Targets.Kernel.Server is
 
    procedure Generate
      (Item             : Idle.Syntax.Interface_Declaration;
-      Output_Directory : String)
+      Output_Directory : String;
+      Target           : Idle.Targets.Target)
    is
+      User           : constant Boolean := Target = User_Target;
+      --  The user target, whose server dispatches each call to an object
+      --  that the program attached, instead of to a handler.
       Ada_Name       : constant String :=
         Idle.Names.Ada_Name (To_String (Item.Name));
       Package_Name   : constant String :=
@@ -66,6 +70,20 @@ package body Idle.Targets.Kernel.Server is
          return String
       is ("Handle_Get_" & Idle.Names.Ada_Name (To_String (For_Interface.Name))
           & "_Interface");
+
+      function Id (For_Interface : Idle.Syntax.Interface_Declaration)
+        return String
+      is (if User
+          then "Rose.Interfaces." & Ada_Name & "."
+               & Interface_Name (For_Interface)
+          else Interface_Name (For_Interface));
+      --  The interface id of For_Interface. The user target's server
+      --  package declares a type with the name of the interface id of
+      --  Item, so it names the ids by their package.
+
+      Interface_Type : constant String := Ada_Name & "_Interface";
+      --  For the user target, the interface that a served object
+      --  implements.
       --  The procedure that replies to an invocation of the interface id
       --  of For_Interface.
 
@@ -83,6 +101,7 @@ package body Idle.Targets.Kernel.Server is
       --  The object that holds the server's handler for Subprogram.
 
       procedure Add_Attach;
+      procedure Add_Attached_Objects;
       procedure Add_Get_Interface
         (For_Interface : Idle.Syntax.Interface_Declaration);
       procedure Add_Getters;
@@ -153,7 +172,7 @@ package body Idle.Targets.Kernel.Server is
                Statements    =>
                  Keep_Handlers
                  & [for For_Interface of Interfaces =>
-                      Register (Interface_Name (For_Interface),
+                      Register (Id (For_Interface),
                                 Get_Interface (For_Interface))]
                  & [F.New_If
                       (Condition =>
@@ -184,6 +203,172 @@ package body Idle.Targets.Kernel.Server is
                              F.New_Name (Name (Subprogram))]
                         & [F.New_Name ("Instanced")])]));
       end Add_Attach;
+
+      --------------------------
+      -- Add_Attached_Objects --
+      --------------------------
+
+      --  For the user target: the interface of a served object, and a
+      --  table of the attached objects. An object's identifier is its
+      --  position in the table, so the first is 0, which is the
+      --  identifier of a cap that is not instanced, and of a restore
+      --  notice. Each object has an interface cap for its identifier.
+
+      procedure Add_Attached_Objects is
+         Object_Parameter : constant not null Syn.Node_Access :=
+           F.New_Parameter
+             ("Object", F.New_Name ("not null access " & Interface_Type
+                                    & "'Class"));
+         Context_Parameter : constant not null Syn.Node_Access :=
+           F.New_Parameter
+             ("Server_Context", F.New_Name ("Rose.Server.Server_Context"),
+              Syn.In_Out_Mode);
+         Attach : constant not null Syn.Node_Access :=
+           F.New_Procedure ("Attach", [Context_Parameter, Object_Parameter]);
+         Publish : constant not null Syn.Node_Access :=
+           F.New_Procedure ("Publish", [Context_Parameter, Object_Parameter]);
+         Interface_Cap : constant not null Syn.Node_Access :=
+           F.New_Function
+             ("Interface_Cap", F.New_Name (Capability_Name),
+              [Object_Parameter]);
+         Find : constant not null Syn.Node_Access :=
+           F.New_Function
+             ("Find", F.New_Name ("Object_Access"),
+              [F.New_Parameter
+                 ("Identifier",
+                  F.New_Name ("Rose.Objects.Capability_Identifier"))]);
+         Count : constant not null Syn.Node_Access :=
+           F.New_Name ("Attached_Count");
+      begin
+         Public_Part.Append
+           (F.New_Interface_Type
+              (Interface_Type,
+               [F.New_Name (Object_Type (To_String (Item.Name)))],
+               Is_Limited => True));
+         Public_Part.Append (Attach);
+         Public_Part.Append (Publish);
+         Public_Part.Append (Interface_Cap);
+
+         Objects.Append
+           (F.New_Access_Type
+              ("Object_Access", F.New_Name (Interface_Type & "'Class"),
+               Is_All => True));
+         Objects.Append
+           (F.New_Record_Type
+              ("Attached_Object",
+               [F.New_Component ("Object", F.New_Name ("Object_Access")),
+                F.New_Component
+                  ("Cap", F.New_Name (Capability_Name),
+                   F.New_Name ("Rose.Capabilities.Null_Capability"))]));
+         Objects.Append
+           (F.New_Object
+              ("Max_Attached", Initial_Value => F.New_Integer_Literal (16),
+               Is_Constant => True));
+         Objects.Append
+           (F.New_Array_Type
+              ("Attached_Array",
+               F.New_Binary
+                 (F.New_Integer_Literal (0), "..",
+                  F.New_Binary
+                    (F.New_Name ("Max_Attached"), "-",
+                     F.New_Integer_Literal (1))),
+               F.New_Name ("Attached_Object")));
+         Objects.Append
+           (F.New_Object ("Attached", F.New_Name ("Attached_Array")));
+         Objects.Append
+           (F.New_Object
+              ("Attached_Count", F.New_Name ("Natural"),
+               F.New_Integer_Literal (0)));
+         Objects.Append
+           (F.New_Object
+              ("Registered", F.New_Name ("Boolean"), F.New_Name ("False")));
+
+         Handler_Specs.Append (Find);
+
+         Bodies.Add
+           ("Attach",
+            F.New_Subprogram_Body
+              (Specification => Attach,
+               Statements    =>
+                 [F.New_If
+                    (Condition =>
+                       F.New_Unary ("not", F.New_Name ("Registered")),
+                     Then_Part =>
+                       Registrations
+                       & [F.New_Assignment
+                            (F.New_Name ("Registered"),
+                             F.New_Name ("True"))]),
+                  F.New_If
+                    (Condition =>
+                       F.New_Binary (Count, "=", F.New_Name ("Max_Attached")),
+                     Then_Part =>
+                       [F.New_Raise
+                          (F.New_Name ("Constraint_Error"),
+                           F.New_String_Literal
+                             (Package_Name & ": too many objects"))]),
+                  F.New_Assignment
+                    (F.New_Name ("Attached (Attached_Count).Object"),
+                     F.New_Call ("Object_Access", [F.New_Name ("Object")])),
+                  F.New_Assignment
+                    (F.New_Name ("Attached (Attached_Count).Cap"),
+                     F.New_Call
+                       (Server & "Create_Endpoint",
+                        [F.New_Name (Id (Item)),
+                         F.New_Call
+                           ("Rose.Objects.Capability_Identifier",
+                            [Count])])),
+                  F.New_Assignment
+                    (Count,
+                     F.New_Binary (Count, "+", F.New_Integer_Literal (1)))]));
+
+         Bodies.Add
+           ("Find",
+            F.New_Subprogram_Body
+              (Specification => Find,
+               Declarations  =>
+                 [F.New_Use ("Rose.Objects.Capability_Identifier",
+                             Use_Type => True)],
+               Statements    =>
+                 [F.New_If
+                    (Condition =>
+                       F.New_Binary
+                         (F.New_Name ("Identifier"), ">=",
+                          F.New_Call
+                            ("Rose.Objects.Capability_Identifier", [Count])),
+                     Then_Part => [F.New_Return (F.New_Name ("null"))]),
+                  F.New_Return
+                    (F.New_Name ("Attached (Natural (Identifier)).Object"))]));
+
+         Bodies.Add
+           ("Interface_Cap",
+            F.New_Subprogram_Body
+              (Specification => Interface_Cap,
+               Statements    =>
+                 [F.New_For_Of_Loop
+                    ("Item", F.New_Name ("Attached"),
+                     [F.New_If
+                        (Condition =>
+                           F.New_Binary
+                             (F.New_Name ("Item.Object"), "=",
+                              F.New_Call
+                                ("Object_Access", [F.New_Name ("Object")])),
+                         Then_Part =>
+                           [F.New_Return (F.New_Name ("Item.Cap"))])]),
+                  F.New_Return
+                    (F.New_Name ("Rose.Capabilities.Null_Capability"))]));
+
+         Bodies.Add
+           ("Publish",
+            F.New_Subprogram_Body
+              (Specification => Publish,
+               Statements    =>
+                 [Call ("Attach",
+                        [F.New_Name ("Server_Context"),
+                         F.New_Name ("Object")]),
+                  Call (Server & "Publish_Interface",
+                        [F.New_Call
+                           ("Interface_Cap", [F.New_Name ("Object")])])]));
+      end Add_Attached_Objects;
 
       -----------------------
       -- Add_Get_Interface --
@@ -269,36 +454,43 @@ package body Idle.Targets.Kernel.Server is
               [F.New_Name ("Server_Instance"),
                F.New_Name (Endpoint_Name (Subprogram)),
                F.New_Name ("Identifier")];
-         begin
-            return
+            Instance_Cap : constant Syn.Node_Array :=
               [F.New_If
                  (Condition =>
-                    F.New_Binary
-                      (F.New_Name (Cap_Object (Subprogram)), "=",
-                       F.New_Name ("Rose.Capabilities.Null_Capability")),
+                    F.New_Unary
+                      ("not",
+                       F.New_Call (Server & "Has_Instance", Instance)),
                   Then_Part =>
-                    [F.New_If
-                       (Condition =>
-                          F.New_Unary
-                            ("not",
-                             F.New_Call (Server & "Has_Instance", Instance)),
-                        Then_Part =>
-                          [Call (Server & "Set_Instance_Cap",
-                                 Instance
-                                 & [F.New_Call
-                                      (Server & "Create_Endpoint",
-                                       [F.New_Name
-                                          (Endpoint_Name (Subprogram)),
-                                        F.New_Name ("Identifier")])])]),
-                     F.New_Assignment
-                       (F.New_Name ("Cap"),
-                        F.New_Call (Server & "Get_Instance_Cap", Instance))],
-                  Else_Part =>
-                    [F.New_Assignment
-                       (F.New_Name ("Cap"),
-                        F.New_Name (Cap_Object (Subprogram)))]),
-               Call (System_Calls & "Send_Cap",
-                     [F.New_Name ("Parameters"), F.New_Name ("Cap")])];
+                    [Call (Server & "Set_Instance_Cap",
+                           Instance
+                           & [F.New_Call
+                                (Server & "Create_Endpoint",
+                                 [F.New_Name (Endpoint_Name (Subprogram)),
+                                  F.New_Name ("Identifier")])])]),
+               F.New_Assignment
+                 (F.New_Name ("Cap"),
+                  F.New_Call (Server & "Get_Instance_Cap", Instance))];
+            --  The cap for the identifier, made the first time.
+            Send : constant not null Syn.Node_Access :=
+              Call (System_Calls & "Send_Cap",
+                    [F.New_Name ("Parameters"), F.New_Name ("Cap")]);
+         begin
+            if User then
+               return Instance_Cap & [Send];
+            else
+               return
+                 [F.New_If
+                    (Condition =>
+                       F.New_Binary
+                         (F.New_Name (Cap_Object (Subprogram)), "=",
+                          F.New_Name ("Rose.Capabilities.Null_Capability")),
+                     Then_Part => Instance_Cap,
+                     Else_Part =>
+                       [F.New_Assignment
+                          (F.New_Name ("Cap"),
+                           F.New_Name (Cap_Object (Subprogram)))]),
+                  Send];
+            end if;
          end Send_Cap;
 
          Declarations : Node_List;
@@ -309,8 +501,12 @@ package body Idle.Targets.Kernel.Server is
          Handler_Specs.Append (Specification);
 
          if not Sent.Is_Empty or else not Ancestors.Is_Empty then
-            Declarations.Append
-              (F.New_Use ("Rose.Capabilities.Capability", Use_Type => True));
+            if not User then
+               --  To compare with the caps that are not instanced.
+               Declarations.Append
+                 (F.New_Use
+                    ("Rose.Capabilities.Capability", Use_Type => True));
+            end if;
             Declarations.Append
               (F.New_Object ("Cap", F.New_Name (Capability_Name)));
             Declarations.Append
@@ -505,7 +701,15 @@ package body Idle.Targets.Kernel.Server is
 
       begin
          Handler_Specs.Append (Specification);
-         Arguments.Append (F.New_Name ("Parameters.Identifier"));
+         if User then
+            Declarations.Append
+              (F.New_Object
+                 ("Object", F.New_Name ("Object_Access"),
+                  F.New_Call ("Find", [F.New_Name ("Parameters.Identifier")]),
+                  Is_Constant => True));
+         else
+            Arguments.Append (F.New_Name ("Parameters.Identifier"));
+         end if;
 
          for Parameter of Subprogram.Parameters loop
             declare
@@ -605,7 +809,42 @@ package body Idle.Targets.Kernel.Server is
             Arguments.Append (F.New_Name ("Last"));
          end if;
 
-         if Subprogram.Is_Function and then not Returns_String then
+         if User then
+            --  An identifier with no object is an error, as in
+            --  Rose.Server for an endpoint with no handler.
+
+            Statements.Append
+              (F.New_If
+                 (Condition =>
+                    F.New_Binary
+                      (F.New_Name ("Object"), "=", F.New_Name ("null")),
+                  Then_Part =>
+                    [Call (System_Calls & "Initialize_Reply",
+                           [Parameters,
+                            F.New_Name ("Parameters.Reply_Cap")]),
+                     Call (System_Calls & "Send_Error",
+                           [Parameters,
+                            F.New_Name ("Rose.Invocation.Invalid_Operation")]),
+                     F.New_Return]));
+
+            declare
+               Callee : constant String := "Object." & Name (Subprogram);
+               Value  : constant not null Syn.Node_Access :=
+                 (if Arguments.To_Array'Length = 0
+                  then F.New_Name (Callee)
+                  else F.New_Call (Callee, Arguments.To_Array));
+            begin
+               if Subprogram.Is_Function then
+                  Declarations.Append
+                    (F.New_Object
+                       ("Result", F.New_Name (Server_Type_Of (Result))));
+                  Statements.Append
+                    (F.New_Assignment (F.New_Name ("Result"), Value));
+               else
+                  Statements.Append (F.New_Call_Statement (Value));
+               end if;
+            end;
+         elsif Subprogram.Is_Function and then not Returns_String then
             Declarations.Append
               (F.New_Object
                  ("Result",
@@ -909,7 +1148,7 @@ package body Idle.Targets.Kernel.Server is
          end loop;
 
          return [for For_Interface of Interfaces =>
-                   Register (Interface_Name (For_Interface),
+                   Register (Id (For_Interface),
                              Get_Interface (For_Interface))]
            & [for Subprogram of Subprograms =>
                 Register (Endpoint_Name (Subprogram), Handle (Subprogram))]
@@ -927,7 +1166,11 @@ package body Idle.Targets.Kernel.Server is
             else To_String (Info.Unit));
       begin
          if Unit /= "" and then Unit /= "Rose.Interfaces." & Ada_Name then
-            Spec_Context.Add (Unit);
+            if not User then
+               Spec_Context.Add (Unit);
+            elsif not Spec_Context.Contains (Unit) then
+               Body_Context.Add (Unit);
+            end if;
          end if;
          if Types.Uses_Words_Unit (Info) then
             Uses_Words := True;
@@ -942,13 +1185,26 @@ package body Idle.Targets.Kernel.Server is
         (F.New_Object
            ("Server_Instance", F.New_Name ("Rose.Server.Server_Instance")));
 
-      for Member of Idle.Hierarchy.Members (Item) loop
-         Add_Handler_Type (Member);
-      end loop;
-      Add_Attach;
-      Add_Publish;
-      Add_Getters;
-      Add_Remove_Instance;
+      if User then
+         Add_Attached_Objects;
+         for Member of Idle.Hierarchy.Members (Item) loop
+            for Parameter of Member.Subprogram.Parameters loop
+               Use_Type (Types.Resolve (Member.Owner, Parameter.Of_Type));
+            end loop;
+            if Member.Subprogram.Is_Function then
+               Use_Type
+                 (Types.Resolve (Member.Owner, Member.Subprogram.Result));
+            end if;
+         end loop;
+      else
+         for Member of Idle.Hierarchy.Members (Item) loop
+            Add_Handler_Type (Member);
+         end loop;
+         Add_Attach;
+         Add_Publish;
+         Add_Getters;
+         Add_Remove_Instance;
+      end if;
 
       for For_Interface of Interfaces loop
          Add_Get_Interface (For_Interface);
@@ -959,6 +1215,9 @@ package body Idle.Targets.Kernel.Server is
 
       Body_Context.Add ("Rose.Invocation");
       Body_Context.Add ("Rose.System_Calls");
+      if User then
+         Body_Context.Add ("Rose.Objects");
+      end if;
       if Uses_Words and then not Spec_Context.Contains ("Rose.Words") then
          Body_Context.Add ("Rose.Words");
       end if;

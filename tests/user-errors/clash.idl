@@ -1,0 +1,6 @@
+--  A type with the name of the user target's object type.
+
+interface Clash is
+   type Clash_Object is range 0 .. 1;
+   procedure Reset;
+end Clash;

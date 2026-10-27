@@ -4,10 +4,12 @@ package Idle.Targets.Kernel is
 
    procedure Generate
      (Item             : Idle.Syntax.Interface_Declaration;
-      Output_Directory : String);
-   --  Write the units for Item to Output_Directory. For a command or an
-   --  IDL package, see Idle.Targets.Kernel.Commands; a role has none. For
-   --  an interface, they are the packages that implement it:
+      Output_Directory : String;
+      Target           : Idle.Targets.Target := Kernel_Target);
+   --  Write the units for Item, for Target, to Output_Directory. For a
+   --  command or an IDL package, see Idle.Targets.Kernel.Commands; a role
+   --  has none. For an interface, they are the packages that implement
+   --  it:
    --
    --    Rose.Interfaces.<Name>         the endpoint ids of the interface
    --                                   and of each of its subprograms
@@ -21,5 +23,22 @@ package Idle.Targets.Kernel is
    --  more than one string or array in a subprogram. These, and unknown
    --  types, are reported as errors through Idle.Diagnostics, and nothing
    --  is written.
+   --
+   --  For the user target, the packages have the same names and the same
+   --  encoding, from the same code, but:
+   --
+   --    Rose.Interfaces.<Name>  also declares <Name>_Object, a limited
+   --                            interface with an abstract primitive for
+   --                            each subprogram it declares, whose
+   --                            parents are those of its IDL parents
+   --    ...Client               <Name>_Client implements <Name>_Object;
+   --                            a call that fails raises
+   --                            Rose.Interfaces.Objects.Invocation_Error
+   --    ...Server               <Name>_Interface, an interface for an
+   --                            object that the program serves, and
+   --                            Attach, Publish and Interface_Cap
+   --
+   --  The user target does not yet support commands, interface arguments
+   --  and results, string results, or out and in out strings.
 
 end Idle.Targets.Kernel;
