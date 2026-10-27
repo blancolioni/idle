@@ -36,6 +36,8 @@ package body Idle.Targets.Kernel.Client is
       Client_Type  : constant String := Ada_Name & "_Client";
       Subprograms  : constant Idle.Syntax.Subprogram_Vectors.Vector :=
         Support.Subprograms (Item);
+      Ancestors    : constant Idle.Hierarchy.Interface_Vectors.Vector :=
+        Idle.Hierarchy.Ancestors (Item);
 
       F            : Syn.Factory.Factory;
       Spec_Context : Context_List;
@@ -44,6 +46,8 @@ package body Idle.Targets.Kernel.Client is
       --  True if the body converts values to Rose.Words types.
       Public_Part  : Node_List;
       Components   : Node_List;
+      Body_Specs   : Node_List;
+      --  For the user target, the specs of the body's own subprograms.
       Bodies       : Body_List;
 
       function Call
@@ -55,6 +59,32 @@ package body Idle.Targets.Kernel.Client is
       function Cap_Getter (Name : String) return String
       is ("Get_" & Name & "_Cap");
       --  The function that returns the cap of the subprogram Name.
+
+      function Ancestor_Cap
+        (Ancestor : Idle.Syntax.Interface_Declaration)
+         return String
+      is (Idle.Names.Ada_Name (To_String (Ancestor.Name)) & "_Interface_Cap");
+      --  For the user target, the component that keeps the interface cap
+      --  of Ancestor, once it has been asked for.
+
+      function Load_If_Closed return not null Syn.Node_Access
+      is (F.New_If
+            (Condition => F.New_Unary ("not", F.New_Name ("Item.Is_Open")),
+             Then_Part => [Call ("Load", [F.New_Name ("Item")])]));
+      --  For the user target: get the caps of the subprograms, if Item
+      --  does not have them yet.
+
+      function Raise_On_Error (What : String) return not null Syn.Node_Access
+      is (F.New_If
+            (Condition =>
+               F.New_Call ("Params.Control.Flags",
+                           [F.New_Name ("Rose.Invocation.Error")]),
+             Then_Part =>
+               [F.New_Raise
+                  (F.New_Name ("Rose.Interfaces.Objects.Invocation_Error"),
+                   F.New_String_Literal (Ada_Name & "." & What))]));
+      --  For the user target: raise Invocation_Error if the invocation
+      --  in Params failed.
 
       function Client_Package (Info : Types.Type_Info) return String;
       --  The client package of the interface Info, or "" if it is this
@@ -73,24 +103,125 @@ package body Idle.Targets.Kernel.Client is
          return not null Syn.Node_Access;
       --  The client object as the first parameter of a subprogram.
 
-      function Item_Parameter
-        (Is_Function : Boolean)
-         return not null Syn.Node_Access;
+      function Item_Parameter return not null Syn.Node_Access;
       --  The client object as the first parameter of the subprogram of a
-      --  member: Item, or for the user target an in out Item if it is a
-      --  procedure, as the object type declares it.
+      --  member: Item, or for the user target an in out Item, as the
+      --  object type declares it.
 
+      procedure Add_Cap_Functions;
       procedure Add_Close;
       procedure Add_Error_Functions;
+      procedure Add_From_Cap;
       procedure Add_Getters;
+      procedure Add_Load;
       procedure Add_Open;
       procedure Add_Open_Cap_Set;
       procedure Add_Subprogram (Member : Idle.Hierarchy.Member);
 
-      procedure Use_Type (Info : Types.Type_Info);
-      --  Add what the client needs to name values of type Info.
+      procedure Use_Type
+        (Info      : Types.Type_Info;
+         Is_Out    : Boolean := False;
+         Is_Result : Boolean := False);
+      --  Add what the client needs to name values of type Info, an out
+      --  parameter if Is_Out, or the function result if Is_Result. For
+      --  the user target, the spec names an interface by its object
+      --  type, or for an out interface by its client, through a limited
+      --  with clause, so that two clients can name each other; the body
+      --  opens a client of the interface for an out interface or a
+      --  result.
 
       procedure Write_Conversions;
+
+      -----------------------
+      -- Add_Cap_Functions --
+      -----------------------
+
+      --  For the user target: the client's cap for each interface that
+      --  its object type implements. Its own is its interface cap. That of
+      --  the Nth ancestor is asked for with the word N, as the kernel
+      --  target's conversions ask for it, the first time it is needed,
+      --  and kept.
+
+      procedure Add_Cap_Functions is
+
+         function Specification
+           (Interface_Name : String)
+            return not null Syn.Node_Access
+         is (F.New_Function
+               (Cap_Function (Interface_Name), F.New_Name (Capability_Name),
+                [F.New_Parameter
+                   ("Item", F.New_Name (Client_Type), Syn.In_Out_Mode)],
+                Indicator => Syn.Is_Overriding));
+
+         Own   : constant not null Syn.Node_Access :=
+           Specification (To_String (Item.Name));
+         Index : Natural := 0;
+
+      begin
+         Public_Part.Append (Own);
+         Bodies.Add
+           (Cap_Function (To_String (Item.Name)),
+            F.New_Expression_Function
+              (Own, F.New_Name ("Item.Interface_Cap")));
+
+         for Ancestor of Ancestors loop
+            Index := Index + 1;
+            declare
+               Ancestor_Name : constant String := To_String (Ancestor.Name);
+               Component     : constant not null Syn.Node_Access :=
+                 F.New_Name ("Item." & Ancestor_Cap (Ancestor));
+               Ancestor_Spec : constant not null Syn.Node_Access :=
+                 Specification (Ancestor_Name);
+               Params        : constant not null Syn.Node_Access :=
+                 F.New_Name ("Params");
+               Null_Cap      : constant not null Syn.Node_Access :=
+                 F.New_Name ("Rose.Capabilities.Null_Capability");
+            begin
+               Public_Part.Append (Ancestor_Spec);
+               Bodies.Add
+                 (Cap_Function (Ancestor_Name),
+                  F.New_Subprogram_Body
+                    (Specification => Ancestor_Spec,
+                     Declarations  =>
+                       [F.New_Use
+                          ("Rose.Capabilities.Capability", Use_Type => True),
+                        F.New_Object
+                          ("Params", F.New_Name (Record_Name),
+                           Is_Aliased => True)],
+                     Statements    =>
+                       [F.New_If
+                          (Condition =>
+                             F.New_Binary
+                               (F.New_Binary (Component, "=", Null_Cap),
+                                "and then",
+                                F.New_Binary
+                                  (F.New_Name ("Item.Interface_Cap"), "/=",
+                                   Null_Cap)),
+                           Then_Part =>
+                             [Call (System_Calls & "Initialize_Send",
+                                    [Params,
+                                     F.New_Name ("Item.Interface_Cap")]),
+                              Call (System_Calls & "Send_Word",
+                                    [Params,
+                                     F.New_Call
+                                       ("Natural",
+                                        [F.New_Integer_Literal
+                                           (Long_Long_Long_Integer
+                                              (Index))])]),
+                              Call (System_Calls & "Receive_Caps",
+                                    [Params, F.New_Integer_Literal (1)]),
+                              Call (System_Calls & "Invoke_Capability",
+                                    [Params]),
+                              Raise_On_Error (Cap_Function (Ancestor_Name)),
+                              F.New_Assignment
+                                (Component,
+                                 F.New_Call
+                                   ("Params.Caps",
+                                    [F.New_Integer_Literal (0)]))]),
+                        F.New_Return (Component)]));
+            end;
+         end loop;
+      end Add_Cap_Functions;
 
       ---------------
       -- Add_Close --
@@ -113,15 +244,48 @@ package body Idle.Targets.Kernel.Client is
          --  Invoke_Capability can be inlined, which breaks the invocation.
 
          Statements : Node_List;
+         Own_Caps   : Node_List;
       begin
-         Statements.Append
-           (F.New_Assignment
-              (F.New_Name ("Client.Is_Open"), F.New_Name ("False")));
          for Subprogram of Subprograms loop
             for Statement of Delete (Name (Subprogram)) loop
-               Statements.Append (Statement);
+               Own_Caps.Append (Statement);
             end loop;
          end loop;
+
+         if User then
+            --  The caps of the subprograms, and of the ancestors, are
+            --  there only if they were asked for.
+            Statements.Append
+              (F.New_If
+                 (Condition => F.New_Name ("Client.Is_Open"),
+                  Then_Part => Own_Caps.To_Array));
+            Statements.Append
+              (F.New_Assignment
+                 (F.New_Name ("Client.Is_Open"), F.New_Name ("False")));
+            for Ancestor of Ancestors loop
+               Statements.Append
+                 (F.New_If
+                    (Condition =>
+                       F.New_Binary
+                         (F.New_Name ("Client." & Ancestor_Cap (Ancestor)),
+                          "/=",
+                          F.New_Name ("Rose.Capabilities.Null_Capability")),
+                     Then_Part =>
+                       Delete (Ancestor_Cap (Ancestor))
+                       & [F.New_Assignment
+                            (F.New_Name
+                               ("Client." & Ancestor_Cap (Ancestor)),
+                             F.New_Name
+                               ("Rose.Capabilities.Null_Capability"))]));
+            end loop;
+         else
+            Statements.Append
+              (F.New_Assignment
+                 (F.New_Name ("Client.Is_Open"), F.New_Name ("False")));
+            for Statement of Own_Caps.To_Array loop
+               Statements.Append (Statement);
+            end loop;
+         end if;
          for Statement of Delete ("Interface_Cap") loop
             Statements.Append (Statement);
          end loop;
@@ -132,9 +296,13 @@ package body Idle.Targets.Kernel.Client is
             F.New_Subprogram_Body
               (Specification => Specification,
                Declarations  =>
-                 [F.New_Object
-                    ("Params", F.New_Name (Record_Name),
-                     Is_Aliased => True)],
+                 (if User and then not Ancestors.Is_Empty
+                  then [F.New_Use ("Rose.Capabilities.Capability",
+                                   Use_Type => True)]
+                  else Syn.No_Nodes)
+                 & [F.New_Object
+                      ("Params", F.New_Name (Record_Name),
+                       Is_Aliased => True)],
                Statements    => Statements.To_Array));
       end Add_Close;
 
@@ -164,6 +332,29 @@ package body Idle.Targets.Kernel.Client is
               (Get_Last_Error, F.New_Name ("Last_Error")));
       end Add_Error_Functions;
 
+      ------------------
+      -- Add_From_Cap --
+      ------------------
+
+      --  For the user target: a client opened from an interface cap, as
+      --  Open opens one, which an interface result is built from.
+
+      procedure Add_From_Cap is
+         Specification : constant not null Syn.Node_Access :=
+           F.New_Function
+             ("From_Cap", F.New_Name (Client_Type),
+              [F.New_Parameter ("Cap", F.New_Name (Capability_Name))]);
+      begin
+         Public_Part.Append (Specification);
+         Bodies.Add
+           ("From_Cap",
+            F.New_Expression_Function
+              (Specification,
+               F.New_Raw
+                 (Client_Type
+                  & "'(Interface_Cap => Cap, others => <>)")));
+      end Add_From_Cap;
+
       -----------------
       -- Add_Getters --
       -----------------
@@ -177,15 +368,34 @@ package body Idle.Targets.Kernel.Client is
          ----------------
 
          procedure Add_Getter (Name, Component : String) is
+            Loads : constant Boolean :=
+              User and then Component /= "Interface_Cap";
+            --  For the user target, the caps of the subprograms are got
+            --  first, if the client does not have them yet.
             Specification : constant not null Syn.Node_Access :=
               F.New_Function
-                (Name, F.New_Name (Capability_Name), [Client_Parameter]);
+                (Name, F.New_Name (Capability_Name),
+                 [(if Loads
+                   then F.New_Parameter
+                          ("Item", F.New_Name (Client_Type),
+                           Syn.In_Out_Mode)
+                   else Client_Parameter)]);
          begin
             Public_Part.Append (Specification);
-            Bodies.Add
-              (Name,
-               F.New_Expression_Function
-                 (Specification, F.New_Name ("Item." & Component)));
+            if Loads then
+               Bodies.Add
+                 (Name,
+                  F.New_Subprogram_Body
+                    (Specification => Specification,
+                     Statements    =>
+                       [Load_If_Closed,
+                        F.New_Return (F.New_Name ("Item." & Component))]));
+            else
+               Bodies.Add
+                 (Name,
+                  F.New_Expression_Function
+                    (Specification, F.New_Name ("Item." & Component)));
+            end if;
          end Add_Getter;
 
       begin
@@ -194,6 +404,50 @@ package body Idle.Targets.Kernel.Client is
             Add_Getter (Cap_Getter (Name (Subprogram)), Name (Subprogram));
          end loop;
       end Add_Getters;
+
+      --------------
+      -- Add_Load --
+      --------------
+
+      --  For the user target: get the caps of the subprograms from the
+      --  interface cap, which Add_Open does for the kernel target. A
+      --  client gets them on its first call, so that opening one is not
+      --  an invocation: a server that receives an object of its caller
+      --  cannot invoke it while the caller waits for the reply.
+
+      procedure Add_Load is
+         Specification : constant not null Syn.Node_Access :=
+           F.New_Procedure
+             ("Load",
+              [F.New_Parameter
+                 ("Item", F.New_Name (Client_Type), Syn.In_Out_Mode)]);
+         Params : constant not null Syn.Node_Access := F.New_Name ("Params");
+      begin
+         Body_Specs.Append (Specification);
+         Bodies.Add
+           ("Load",
+            F.New_Subprogram_Body
+              (Specification => Specification,
+               Declarations  =>
+                 [F.New_Object
+                    ("Params", F.New_Name (Record_Name),
+                     Is_Aliased => True)],
+               Statements    =>
+                 [Call (System_Calls & "Initialize_Send",
+                        [Params, F.New_Name ("Item.Interface_Cap")]),
+                  Call (System_Calls & "Receive_Caps",
+                        [Params, F.New_Name (Count_Name)]),
+                  Call (System_Calls & "Invoke_Capability", [Params]),
+                  Raise_On_Error ("Open")]
+                 & [for Subprogram of Subprograms =>
+                      F.New_Assignment
+                        (F.New_Name ("Item." & Name (Subprogram)),
+                         F.New_Call
+                           ("Params.Caps",
+                            [F.New_Name (Index_Name (Subprogram))]))]
+                 & [F.New_Assignment
+                      (F.New_Name ("Item.Is_Open"), F.New_Name ("True"))]));
+      end Add_Load;
 
       --------------
       -- Add_Open --
@@ -218,6 +472,24 @@ package body Idle.Targets.Kernel.Client is
                    ("Params.Caps", [F.New_Name (Index_Name (Subprogram))]))];
       begin
          Public_Part.Append (Specification);
+         if User then
+            Bodies.Add
+              ("Open",
+               F.New_Subprogram_Body
+                 (Specification => Specification,
+                  Statements    =>
+                    [F.New_Assignment
+                       (F.New_Name ("Client.Is_Open"), F.New_Name ("False")),
+                     F.New_Assignment
+                       (F.New_Name ("Client.Interface_Cap"),
+                        F.New_Name ("Interface_Cap"))]
+                    & [for Ancestor of Ancestors =>
+                         F.New_Assignment
+                           (F.New_Name ("Client." & Ancestor_Cap (Ancestor)),
+                            F.New_Name
+                              ("Rose.Capabilities.Null_Capability"))]));
+            return;
+         end if;
          Bodies.Add
            ("Open",
             F.New_Subprogram_Body
@@ -329,11 +601,25 @@ package body Idle.Targets.Kernel.Client is
             Result : Node_List;
          begin
             for Parameter of Subprogram.Parameters loop
-               Result.Append
-                 (F.New_Parameter
-                    (Name (Parameter),
-                     F.New_Name (Client_Type_Of (Info (Parameter))),
-                     Mode (Parameter)));
+               if User and then Info (Parameter).Category = Interface_Value
+               then
+                  --  An object of the interface, or a client for an out
+                  --  interface, which is opened from the cap in the reply.
+                  Result.Append
+                    (F.New_Parameter
+                       (Name (Parameter),
+                        F.New_Name
+                          (if Parameter.Mode = Idle.Syntax.Out_Mode
+                           then Client_Type_Of (Info (Parameter))
+                           else Types.Object_Class (Info (Parameter))),
+                        Syn.In_Out_Mode));
+               else
+                  Result.Append
+                    (F.New_Parameter
+                       (Name (Parameter),
+                        F.New_Name (Client_Type_Of (Info (Parameter))),
+                        Mode (Parameter)));
+               end if;
                if Info (Parameter).Category = String_Value
                  and then Parameter.Mode /= Idle.Syntax.In_Mode
                then
@@ -347,7 +633,7 @@ package body Idle.Targets.Kernel.Client is
          end Profile;
 
          Parameters : constant Syn.Node_Array :=
-           [Item_Parameter (Subprogram.Is_Function)]
+           [Item_Parameter]
            & Profile
            & (if Returns_String
               then [F.New_Parameter
@@ -363,7 +649,10 @@ package body Idle.Targets.Kernel.Client is
            (if Subprogram.Is_Function and then not Returns_String
             then F.New_Function
                    (Subprogram_Name,
-                    F.New_Name (Client_Type_Of (Result)),
+                    F.New_Name
+                      (if User and then Result.Category = Interface_Value
+                       then Types.Object_Class (Result)
+                       else Client_Type_Of (Result)),
                     Parameters,
                     Indicator => Indicator)
             else F.New_Procedure
@@ -382,6 +671,9 @@ package body Idle.Targets.Kernel.Client is
               (Subprogram_Name, F.New_Name (Capability_Name),
                F.New_Name ("Rose.Capabilities.Null_Capability")));
 
+         if User then
+            Statements.Append (Load_If_Closed);
+         end if;
          Statements.Append
            (Call (System_Calls & "Initialize_Send",
                   [Params, F.New_Name ("Item." & Subprogram_Name)]));
@@ -392,7 +684,9 @@ package body Idle.Targets.Kernel.Client is
                Value          : constant not null Syn.Node_Access :=
                  F.New_Name (Name (Parameter));
             begin
-               Use_Type (Parameter_Info);
+               Use_Type
+                 (Parameter_Info,
+                  Is_Out => Parameter.Mode = Idle.Syntax.Out_Mode);
 
                if Parameter.Mode /= Idle.Syntax.Out_Mode then
                   case Parameter_Info.Category is
@@ -407,11 +701,16 @@ package body Idle.Targets.Kernel.Client is
                         Statements.Append
                           (Call (System_Calls & "Send_Cap",
                                  [Params,
-                                  F.New_Call
-                                    (Qualified
-                                       (Client_Package (Parameter_Info),
-                                        "Get_Interface_Cap"),
-                                     [Value])]));
+                                  (if User
+                                   then F.New_Name
+                                          (Name (Parameter) & "."
+                                           & Types.Cap_Function
+                                               (Parameter_Info))
+                                   else F.New_Call
+                                          (Qualified
+                                             (Client_Package (Parameter_Info),
+                                              "Get_Interface_Cap"),
+                                           [Value]))]));
                      when Capability_Array_Value =>
                         Statements.Append
                           (F.New_For_Of_Loop
@@ -462,7 +761,7 @@ package body Idle.Targets.Kernel.Client is
          end loop;
 
          if Subprogram.Is_Function then
-            Use_Type (Result);
+            Use_Type (Result, Is_Result => True);
             Reply_Words :=
               Reply_Words
               + (if Returns_String then 1 else Types.Words (Result));
@@ -495,17 +794,7 @@ package body Idle.Targets.Kernel.Client is
          Statements.Append
            (Call (System_Calls & "Invoke_Capability", [Params]));
          if User then
-            Statements.Append
-              (F.New_If
-                 (Condition =>
-                    F.New_Call ("Params.Control.Flags",
-                                [F.New_Name ("Rose.Invocation.Error")]),
-                  Then_Part =>
-                    [F.New_Raise
-                       (F.New_Name
-                          ("Rose.Interfaces.Objects.Invocation_Error"),
-                        F.New_String_Literal
-                          (Ada_Name & "." & Subprogram_Name))]));
+            Statements.Append (Raise_On_Error (Subprogram_Name));
          else
             Statements.Append
               (F.New_Assignment
@@ -558,6 +847,14 @@ package body Idle.Targets.Kernel.Client is
                               [F.New_Integer_Literal
                                  (Long_Long_Long_Integer (Cap_Index))])));
                      Cap_Index := Cap_Index + 1;
+                  elsif Parameter_Info.Category = Interface_Value
+                    and then User
+                    and then Parameter.Mode = Idle.Syntax.In_Out_Mode
+                  then
+                     --  The object was passed by reference, and is still
+                     --  the caller's: the cap that the server sends back
+                     --  is not used.
+                     Cap_Index := Cap_Index + 1;
                   elsif Parameter_Info.Category = Interface_Value then
                      Statements.Append
                        (Call (Qualified (Client_Package (Parameter_Info),
@@ -593,7 +890,17 @@ package body Idle.Targets.Kernel.Client is
                               (Long_Long_Long_Integer (Cap_Index))])));
                when Interface_Value =>
                   Statements.Append
-                    (F.New_Block
+                    (if User
+                     then F.New_Return
+                            (F.New_Call
+                               (Qualified (Client_Package (Result),
+                                           "From_Cap"),
+                                [F.New_Call
+                                   ("Params.Caps",
+                                    [F.New_Integer_Literal
+                                       (Long_Long_Long_Integer
+                                          (Cap_Index))])]))
+                     else F.New_Block
                        (Declarations =>
                           [F.New_Object
                              ("Result",
@@ -664,6 +971,13 @@ package body Idle.Targets.Kernel.Client is
                  F.New_Component
                    ("Interface_Cap", F.New_Name (Capability_Name),
                     F.New_Name ("Rose.Capabilities.Null_Capability"))]
+           & (if User
+              then [for Ancestor of Ancestors =>
+                      F.New_Component
+                        (Ancestor_Cap (Ancestor),
+                         F.New_Name (Capability_Name),
+                         F.New_Name ("Rose.Capabilities.Null_Capability"))]
+              else Syn.No_Nodes)
            & Components.To_Array;
       end Client_Components;
 
@@ -715,12 +1029,11 @@ package body Idle.Targets.Kernel.Client is
       -- Item_Parameter --
       --------------------
 
-      function Item_Parameter
-        (Is_Function : Boolean)
-         return not null Syn.Node_Access
-      is
+      function Item_Parameter return not null Syn.Node_Access is
       begin
-         if User and then not Is_Function then
+         if User then
+            --  For functions too: the client gets its caps on its first
+            --  call.
             return F.New_Parameter
               ("Item", F.New_Name (Client_Type), Syn.In_Out_Mode);
          else
@@ -732,10 +1045,29 @@ package body Idle.Targets.Kernel.Client is
       -- Use_Type --
       --------------
 
-      procedure Use_Type (Info : Types.Type_Info) is
+      procedure Use_Type
+        (Info      : Types.Type_Info;
+         Is_Out    : Boolean := False;
+         Is_Result : Boolean := False)
+      is
          Unit : constant String := To_String (Info.Unit);
       begin
-         if Unit /= ""
+         if User and then Info.Category in Types.Interface_Value then
+            if Unit /= Package_Name then
+               if Is_Out then
+                  Spec_Context.Add_Limited (Unit);
+               end if;
+               if Is_Out or else Is_Result then
+                  Body_Context.Add (Unit);
+               end if;
+            end if;
+            if not Is_Out
+              and then Types.Object_Unit (Info)
+                         /= "Rose.Interfaces." & Ada_Name
+            then
+               Spec_Context.Add (Types.Object_Unit (Info));
+            end if;
+         elsif Unit /= ""
            and then Unit /= "Rose.Interfaces." & Ada_Name
            and then Unit /= Package_Name
          then
@@ -881,10 +1213,17 @@ package body Idle.Targets.Kernel.Client is
 
       Add_Open_Cap_Set;
       Add_Open;
+      if User then
+         Add_From_Cap;
+         Add_Load;
+      end if;
       Add_Close;
       for Member of Idle.Hierarchy.Members (Item) loop
          Add_Subprogram (Member);
       end loop;
+      if User then
+         Add_Cap_Functions;
+      end if;
       Add_Getters;
       if not User then
          Add_Error_Functions;
@@ -925,7 +1264,7 @@ package body Idle.Targets.Kernel.Client is
                 (Name         => Package_Name,
                  Declarations =>
                    (if User
-                    then Syn.No_Nodes
+                    then Body_Specs.To_Array
                     else [F.New_Use ("Rose.Invocation.Invocation_Error",
                                      Use_Type => True),
                           F.New_Object

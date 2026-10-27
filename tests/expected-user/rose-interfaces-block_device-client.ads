@@ -17,6 +17,10 @@ package Rose.Interfaces.Block_Device.Client is
      (Client        : out Block_Device_Client;
       Interface_Cap : Rose.Capabilities.Capability);
 
+   function From_Cap
+     (Cap : Rose.Capabilities.Capability)
+      return Block_Device_Client;
+
    procedure Close (Client : in out Block_Device_Client);
 
    overriding procedure Get_Parameters
@@ -36,20 +40,24 @@ package Rose.Interfaces.Block_Device.Client is
       Count  : Natural;
       Blocks : System.Storage_Elements.Storage_Array);
 
+   overriding function Block_Device_Cap
+     (Item : in out Block_Device_Client)
+      return Rose.Capabilities.Capability;
+
    function Get_Interface_Cap
      (Item : Block_Device_Client)
       return Rose.Capabilities.Capability;
 
    function Get_Get_Parameters_Cap
-     (Item : Block_Device_Client)
+     (Item : in out Block_Device_Client)
       return Rose.Capabilities.Capability;
 
    function Get_Read_Blocks_Cap
-     (Item : Block_Device_Client)
+     (Item : in out Block_Device_Client)
       return Rose.Capabilities.Capability;
 
    function Get_Write_Blocks_Cap
-     (Item : Block_Device_Client)
+     (Item : in out Block_Device_Client)
       return Rose.Capabilities.Capability;
 
 private

@@ -1,3 +1,4 @@
+with Rose.Capabilities;
 with Rose.Interfaces.Stream_Reader;
 with Rose.Interfaces.Stream_Writer;
 with Rose.Objects;
@@ -28,5 +29,9 @@ package Rose.Interfaces.Stream is
    type Stream_Object is limited interface
      and Rose.Interfaces.Stream_Reader.Stream_Reader_Object
      and Rose.Interfaces.Stream_Writer.Stream_Writer_Object;
+
+   function Stream_Cap
+     (Item : in out Stream_Object)
+      return Rose.Capabilities.Capability is abstract;
 
 end Rose.Interfaces.Stream;

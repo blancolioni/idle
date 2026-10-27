@@ -1,3 +1,4 @@
+with Rose.Capabilities;
 with Rose.Objects;
 
 package Rose.Interfaces.Restorable is
@@ -13,6 +14,10 @@ package Rose.Interfaces.Restorable is
    Subprogram_Count     : constant := 1;
 
    type Restorable_Object is limited interface;
+
+   function Restorable_Cap
+     (Item : in out Restorable_Object)
+      return Rose.Capabilities.Capability is abstract;
 
    procedure Restored (Item : in out Restorable_Object) is abstract;
 

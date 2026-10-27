@@ -1,3 +1,4 @@
+with Rose.Capabilities;
 with Rose.Objects;
 with Rose.Words;
 with System.Storage_Elements;
@@ -34,11 +35,15 @@ package Rose.Interfaces.Block_Device is
 
    type Block_Device_Object is limited interface;
 
+   function Block_Device_Cap
+     (Item : in out Block_Device_Object)
+      return Rose.Capabilities.Capability is abstract;
+
    procedure Get_Parameters
      (Item        : in out Block_Device_Object;
       Block_Count : out Rose.Interfaces.Block_Device.Block_Address_Type;
-      Block_Size  : out Rose.Interfaces.Block_Device
-        .Block_Size_Type) is abstract;
+      Block_Size  : out Rose.Interfaces.Block_Device.Block_Size_Type)
+   is abstract;
 
    procedure Read_Blocks
      (Item   : in out Block_Device_Object;

@@ -4,16 +4,21 @@ with Rose.System_Calls;
 
 package body Rose.Interfaces.Meter.Client is
 
+   procedure Load (Item : in out Meter_Client);
+
    -----------
    -- Badge --
    -----------
 
    overriding function Badge
-     (Item : Meter_Client)
+     (Item : in out Meter_Client)
       return Rose.Capabilities.Capability
    is
       Params : aliased Rose.Invocation.Invocation_Record;
    begin
+      if not Item.Is_Open then
+         Load (Item);
+      end if;
       Rose.System_Calls.Initialize_Send (Params, Item.Badge);
       Rose.System_Calls.Receive_Caps (Params, 1);
       Rose.System_Calls.Invoke_Capability (Params);
@@ -28,29 +33,48 @@ package body Rose.Interfaces.Meter.Client is
    -----------
 
    procedure Close (Client : in out Meter_Client) is
+      use type Rose.Capabilities.Capability;
       Params : aliased Rose.Invocation.Invocation_Record;
    begin
+      if Client.Is_Open then
+         Rose.System_Calls.Initialize_Send
+           (Params,
+            Rose.System_Calls.Delete_Cap_Capability);
+         Rose.System_Calls.Send_Cap (Params, Client.Badge);
+         Rose.System_Calls.Invoke_Capability (Params);
+         Rose.System_Calls.Initialize_Send
+           (Params,
+            Rose.System_Calls.Delete_Cap_Capability);
+         Rose.System_Calls.Send_Cap (Params, Client.Increment);
+         Rose.System_Calls.Invoke_Capability (Params);
+         Rose.System_Calls.Initialize_Send
+           (Params,
+            Rose.System_Calls.Delete_Cap_Capability);
+         Rose.System_Calls.Send_Cap (Params, Client.Value);
+         Rose.System_Calls.Invoke_Capability (Params);
+         Rose.System_Calls.Initialize_Send
+           (Params,
+            Rose.System_Calls.Delete_Cap_Capability);
+         Rose.System_Calls.Send_Cap (Params, Client.Reset);
+         Rose.System_Calls.Invoke_Capability (Params);
+      end if;
       Client.Is_Open := False;
-      Rose.System_Calls.Initialize_Send
-        (Params,
-         Rose.System_Calls.Delete_Cap_Capability);
-      Rose.System_Calls.Send_Cap (Params, Client.Badge);
-      Rose.System_Calls.Invoke_Capability (Params);
-      Rose.System_Calls.Initialize_Send
-        (Params,
-         Rose.System_Calls.Delete_Cap_Capability);
-      Rose.System_Calls.Send_Cap (Params, Client.Increment);
-      Rose.System_Calls.Invoke_Capability (Params);
-      Rose.System_Calls.Initialize_Send
-        (Params,
-         Rose.System_Calls.Delete_Cap_Capability);
-      Rose.System_Calls.Send_Cap (Params, Client.Value);
-      Rose.System_Calls.Invoke_Capability (Params);
-      Rose.System_Calls.Initialize_Send
-        (Params,
-         Rose.System_Calls.Delete_Cap_Capability);
-      Rose.System_Calls.Send_Cap (Params, Client.Reset);
-      Rose.System_Calls.Invoke_Capability (Params);
+      if Client.Named_Interface_Cap /= Rose.Capabilities.Null_Capability then
+         Rose.System_Calls.Initialize_Send
+           (Params,
+            Rose.System_Calls.Delete_Cap_Capability);
+         Rose.System_Calls.Send_Cap (Params, Client.Named_Interface_Cap);
+         Rose.System_Calls.Invoke_Capability (Params);
+         Client.Named_Interface_Cap := Rose.Capabilities.Null_Capability;
+      end if;
+      if Client.Counter_Interface_Cap /= Rose.Capabilities.Null_Capability then
+         Rose.System_Calls.Initialize_Send
+           (Params,
+            Rose.System_Calls.Delete_Cap_Capability);
+         Rose.System_Calls.Send_Cap (Params, Client.Counter_Interface_Cap);
+         Rose.System_Calls.Invoke_Capability (Params);
+         Client.Counter_Interface_Cap := Rose.Capabilities.Null_Capability;
+      end if;
       Rose.System_Calls.Initialize_Send
         (Params,
          Rose.System_Calls.Delete_Cap_Capability);
@@ -58,23 +82,71 @@ package body Rose.Interfaces.Meter.Client is
       Rose.System_Calls.Invoke_Capability (Params);
    end Close;
 
+   -----------------
+   -- Counter_Cap --
+   -----------------
+
+   overriding function Counter_Cap
+     (Item : in out Meter_Client)
+      return Rose.Capabilities.Capability
+   is
+      use type Rose.Capabilities.Capability;
+      Params : aliased Rose.Invocation.Invocation_Record;
+   begin
+      if Item.Counter_Interface_Cap = Rose.Capabilities.Null_Capability
+        and then Item.Interface_Cap /= Rose.Capabilities.Null_Capability
+      then
+         Rose.System_Calls.Initialize_Send (Params, Item.Interface_Cap);
+         Rose.System_Calls.Send_Word (Params, Natural (2));
+         Rose.System_Calls.Receive_Caps (Params, 1);
+         Rose.System_Calls.Invoke_Capability (Params);
+         if Params.Control.Flags (Rose.Invocation.Error) then
+            raise Rose.Interfaces.Objects.Invocation_Error
+              with "Meter.Counter_Cap";
+         end if;
+         Item.Counter_Interface_Cap := Params.Caps (0);
+      end if;
+      return Item.Counter_Interface_Cap;
+   end Counter_Cap;
+
+   --------------
+   -- From_Cap --
+   --------------
+
+   function From_Cap
+     (Cap : Rose.Capabilities.Capability)
+      return Meter_Client
+   is (Meter_Client'(Interface_Cap => Cap, others => <>));
+
    -------------------
    -- Get_Badge_Cap --
    -------------------
 
    function Get_Badge_Cap
-     (Item : Meter_Client)
+     (Item : in out Meter_Client)
       return Rose.Capabilities.Capability
-   is (Item.Badge);
+   is
+   begin
+      if not Item.Is_Open then
+         Load (Item);
+      end if;
+      return Item.Badge;
+   end Get_Badge_Cap;
 
    -----------------------
    -- Get_Increment_Cap --
    -----------------------
 
    function Get_Increment_Cap
-     (Item : Meter_Client)
+     (Item : in out Meter_Client)
       return Rose.Capabilities.Capability
-   is (Item.Increment);
+   is
+   begin
+      if not Item.Is_Open then
+         Load (Item);
+      end if;
+      return Item.Increment;
+   end Get_Increment_Cap;
 
    -----------------------
    -- Get_Interface_Cap --
@@ -90,18 +162,30 @@ package body Rose.Interfaces.Meter.Client is
    -------------------
 
    function Get_Reset_Cap
-     (Item : Meter_Client)
+     (Item : in out Meter_Client)
       return Rose.Capabilities.Capability
-   is (Item.Reset);
+   is
+   begin
+      if not Item.Is_Open then
+         Load (Item);
+      end if;
+      return Item.Reset;
+   end Get_Reset_Cap;
 
    -------------------
    -- Get_Value_Cap --
    -------------------
 
    function Get_Value_Cap
-     (Item : Meter_Client)
+     (Item : in out Meter_Client)
       return Rose.Capabilities.Capability
-   is (Item.Value);
+   is
+   begin
+      if not Item.Is_Open then
+         Load (Item);
+      end if;
+      return Item.Value;
+   end Get_Value_Cap;
 
    ---------------
    -- Increment --
@@ -113,6 +197,9 @@ package body Rose.Interfaces.Meter.Client is
    is
       Params : aliased Rose.Invocation.Invocation_Record;
    begin
+      if not Item.Is_Open then
+         Load (Item);
+      end if;
       Rose.System_Calls.Initialize_Send (Params, Item.Increment);
       Rose.System_Calls.Send_Word (Params, By);
       Rose.System_Calls.Invoke_Capability (Params);
@@ -122,6 +209,62 @@ package body Rose.Interfaces.Meter.Client is
    end Increment;
 
    ----------
+   -- Load --
+   ----------
+
+   procedure Load (Item : in out Meter_Client) is
+      Params : aliased Rose.Invocation.Invocation_Record;
+   begin
+      Rose.System_Calls.Initialize_Send (Params, Item.Interface_Cap);
+      Rose.System_Calls.Receive_Caps (Params, Subprogram_Count);
+      Rose.System_Calls.Invoke_Capability (Params);
+      if Params.Control.Flags (Rose.Invocation.Error) then
+         raise Rose.Interfaces.Objects.Invocation_Error with "Meter.Open";
+      end if;
+      Item.Badge := Params.Caps (Badge_Index);
+      Item.Increment := Params.Caps (Increment_Index);
+      Item.Value := Params.Caps (Value_Index);
+      Item.Reset := Params.Caps (Reset_Index);
+      Item.Is_Open := True;
+   end Load;
+
+   ---------------
+   -- Meter_Cap --
+   ---------------
+
+   overriding function Meter_Cap
+     (Item : in out Meter_Client)
+      return Rose.Capabilities.Capability
+   is (Item.Interface_Cap);
+
+   ---------------
+   -- Named_Cap --
+   ---------------
+
+   overriding function Named_Cap
+     (Item : in out Meter_Client)
+      return Rose.Capabilities.Capability
+   is
+      use type Rose.Capabilities.Capability;
+      Params : aliased Rose.Invocation.Invocation_Record;
+   begin
+      if Item.Named_Interface_Cap = Rose.Capabilities.Null_Capability
+        and then Item.Interface_Cap /= Rose.Capabilities.Null_Capability
+      then
+         Rose.System_Calls.Initialize_Send (Params, Item.Interface_Cap);
+         Rose.System_Calls.Send_Word (Params, Natural (1));
+         Rose.System_Calls.Receive_Caps (Params, 1);
+         Rose.System_Calls.Invoke_Capability (Params);
+         if Params.Control.Flags (Rose.Invocation.Error) then
+            raise Rose.Interfaces.Objects.Invocation_Error
+              with "Meter.Named_Cap";
+         end if;
+         Item.Named_Interface_Cap := Params.Caps (0);
+      end if;
+      return Item.Named_Interface_Cap;
+   end Named_Cap;
+
+   ----------
    -- Open --
    ----------
 
@@ -129,18 +272,11 @@ package body Rose.Interfaces.Meter.Client is
      (Client        : out Meter_Client;
       Interface_Cap : Rose.Capabilities.Capability)
    is
-      Params : aliased Rose.Invocation.Invocation_Record;
    begin
       Client.Is_Open := False;
       Client.Interface_Cap := Interface_Cap;
-      Rose.System_Calls.Initialize_Send (Params, Interface_Cap);
-      Rose.System_Calls.Receive_Caps (Params, Subprogram_Count);
-      Rose.System_Calls.Invoke_Capability (Params);
-      Client.Badge := Params.Caps (Badge_Index);
-      Client.Increment := Params.Caps (Increment_Index);
-      Client.Value := Params.Caps (Value_Index);
-      Client.Reset := Params.Caps (Reset_Index);
-      Client.Is_Open := True;
+      Client.Named_Interface_Cap := Rose.Capabilities.Null_Capability;
+      Client.Counter_Interface_Cap := Rose.Capabilities.Null_Capability;
    end Open;
 
    ------------------
@@ -169,6 +305,9 @@ package body Rose.Interfaces.Meter.Client is
    overriding procedure Reset (Item : in out Meter_Client) is
       Params : aliased Rose.Invocation.Invocation_Record;
    begin
+      if not Item.Is_Open then
+         Load (Item);
+      end if;
       Rose.System_Calls.Initialize_Send (Params, Item.Reset);
       Rose.System_Calls.Invoke_Capability (Params);
       if Params.Control.Flags (Rose.Invocation.Error) then
@@ -180,9 +319,15 @@ package body Rose.Interfaces.Meter.Client is
    -- Value --
    -----------
 
-   overriding function Value (Item : Meter_Client) return Rose.Words.Word is
+   overriding function Value
+     (Item : in out Meter_Client)
+      return Rose.Words.Word
+   is
       Params : aliased Rose.Invocation.Invocation_Record;
    begin
+      if not Item.Is_Open then
+         Load (Item);
+      end if;
       Rose.System_Calls.Initialize_Send (Params, Item.Value);
       Rose.System_Calls.Receive_Words (Params, 1);
       Rose.System_Calls.Invoke_Capability (Params);

@@ -14,16 +14,24 @@ package Rose.Interfaces.Restorable.Client is
      (Client        : out Restorable_Client;
       Interface_Cap : Rose.Capabilities.Capability);
 
+   function From_Cap
+     (Cap : Rose.Capabilities.Capability)
+      return Restorable_Client;
+
    procedure Close (Client : in out Restorable_Client);
 
    overriding procedure Restored (Item : in out Restorable_Client);
+
+   overriding function Restorable_Cap
+     (Item : in out Restorable_Client)
+      return Rose.Capabilities.Capability;
 
    function Get_Interface_Cap
      (Item : Restorable_Client)
       return Rose.Capabilities.Capability;
 
    function Get_Restored_Cap
-     (Item : Restorable_Client)
+     (Item : in out Restorable_Client)
       return Rose.Capabilities.Capability;
 
 private

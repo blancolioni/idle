@@ -1,3 +1,4 @@
+with Rose.Capabilities;
 with Rose.Objects;
 with Rose.Words;
 
@@ -14,6 +15,10 @@ package Rose.Interfaces.Seekable is
    Subprogram_Count   : constant := 1;
 
    type Seekable_Object is limited interface;
+
+   function Seekable_Cap
+     (Item : in out Seekable_Object)
+      return Rose.Capabilities.Capability is abstract;
 
    procedure Seek
      (Item              : in out Seekable_Object;

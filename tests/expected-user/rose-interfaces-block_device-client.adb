@@ -5,6 +5,17 @@ with Rose.Words;
 
 package body Rose.Interfaces.Block_Device.Client is
 
+   procedure Load (Item : in out Block_Device_Client);
+
+   ----------------------
+   -- Block_Device_Cap --
+   ----------------------
+
+   overriding function Block_Device_Cap
+     (Item : in out Block_Device_Client)
+      return Rose.Capabilities.Capability
+   is (Item.Interface_Cap);
+
    -----------
    -- Close --
    -----------
@@ -12,22 +23,24 @@ package body Rose.Interfaces.Block_Device.Client is
    procedure Close (Client : in out Block_Device_Client) is
       Params : aliased Rose.Invocation.Invocation_Record;
    begin
+      if Client.Is_Open then
+         Rose.System_Calls.Initialize_Send
+           (Params,
+            Rose.System_Calls.Delete_Cap_Capability);
+         Rose.System_Calls.Send_Cap (Params, Client.Get_Parameters);
+         Rose.System_Calls.Invoke_Capability (Params);
+         Rose.System_Calls.Initialize_Send
+           (Params,
+            Rose.System_Calls.Delete_Cap_Capability);
+         Rose.System_Calls.Send_Cap (Params, Client.Read_Blocks);
+         Rose.System_Calls.Invoke_Capability (Params);
+         Rose.System_Calls.Initialize_Send
+           (Params,
+            Rose.System_Calls.Delete_Cap_Capability);
+         Rose.System_Calls.Send_Cap (Params, Client.Write_Blocks);
+         Rose.System_Calls.Invoke_Capability (Params);
+      end if;
       Client.Is_Open := False;
-      Rose.System_Calls.Initialize_Send
-        (Params,
-         Rose.System_Calls.Delete_Cap_Capability);
-      Rose.System_Calls.Send_Cap (Params, Client.Get_Parameters);
-      Rose.System_Calls.Invoke_Capability (Params);
-      Rose.System_Calls.Initialize_Send
-        (Params,
-         Rose.System_Calls.Delete_Cap_Capability);
-      Rose.System_Calls.Send_Cap (Params, Client.Read_Blocks);
-      Rose.System_Calls.Invoke_Capability (Params);
-      Rose.System_Calls.Initialize_Send
-        (Params,
-         Rose.System_Calls.Delete_Cap_Capability);
-      Rose.System_Calls.Send_Cap (Params, Client.Write_Blocks);
-      Rose.System_Calls.Invoke_Capability (Params);
       Rose.System_Calls.Initialize_Send
         (Params,
          Rose.System_Calls.Delete_Cap_Capability);
@@ -35,14 +48,29 @@ package body Rose.Interfaces.Block_Device.Client is
       Rose.System_Calls.Invoke_Capability (Params);
    end Close;
 
+   --------------
+   -- From_Cap --
+   --------------
+
+   function From_Cap
+     (Cap : Rose.Capabilities.Capability)
+      return Block_Device_Client
+   is (Block_Device_Client'(Interface_Cap => Cap, others => <>));
+
    ----------------------------
    -- Get_Get_Parameters_Cap --
    ----------------------------
 
    function Get_Get_Parameters_Cap
-     (Item : Block_Device_Client)
+     (Item : in out Block_Device_Client)
       return Rose.Capabilities.Capability
-   is (Item.Get_Parameters);
+   is
+   begin
+      if not Item.Is_Open then
+         Load (Item);
+      end if;
+      return Item.Get_Parameters;
+   end Get_Get_Parameters_Cap;
 
    -----------------------
    -- Get_Interface_Cap --
@@ -64,6 +92,9 @@ package body Rose.Interfaces.Block_Device.Client is
    is
       Params : aliased Rose.Invocation.Invocation_Record;
    begin
+      if not Item.Is_Open then
+         Load (Item);
+      end if;
       Rose.System_Calls.Initialize_Send (Params, Item.Get_Parameters);
       Rose.System_Calls.Receive_Words (Params, 3);
       Rose.System_Calls.Invoke_Capability (Params);
@@ -84,18 +115,50 @@ package body Rose.Interfaces.Block_Device.Client is
    -------------------------
 
    function Get_Read_Blocks_Cap
-     (Item : Block_Device_Client)
+     (Item : in out Block_Device_Client)
       return Rose.Capabilities.Capability
-   is (Item.Read_Blocks);
+   is
+   begin
+      if not Item.Is_Open then
+         Load (Item);
+      end if;
+      return Item.Read_Blocks;
+   end Get_Read_Blocks_Cap;
 
    --------------------------
    -- Get_Write_Blocks_Cap --
    --------------------------
 
    function Get_Write_Blocks_Cap
-     (Item : Block_Device_Client)
+     (Item : in out Block_Device_Client)
       return Rose.Capabilities.Capability
-   is (Item.Write_Blocks);
+   is
+   begin
+      if not Item.Is_Open then
+         Load (Item);
+      end if;
+      return Item.Write_Blocks;
+   end Get_Write_Blocks_Cap;
+
+   ----------
+   -- Load --
+   ----------
+
+   procedure Load (Item : in out Block_Device_Client) is
+      Params : aliased Rose.Invocation.Invocation_Record;
+   begin
+      Rose.System_Calls.Initialize_Send (Params, Item.Interface_Cap);
+      Rose.System_Calls.Receive_Caps (Params, Subprogram_Count);
+      Rose.System_Calls.Invoke_Capability (Params);
+      if Params.Control.Flags (Rose.Invocation.Error) then
+         raise Rose.Interfaces.Objects.Invocation_Error
+           with "Block_Device.Open";
+      end if;
+      Item.Get_Parameters := Params.Caps (Get_Parameters_Index);
+      Item.Read_Blocks := Params.Caps (Read_Blocks_Index);
+      Item.Write_Blocks := Params.Caps (Write_Blocks_Index);
+      Item.Is_Open := True;
+   end Load;
 
    ----------
    -- Open --
@@ -105,17 +168,9 @@ package body Rose.Interfaces.Block_Device.Client is
      (Client        : out Block_Device_Client;
       Interface_Cap : Rose.Capabilities.Capability)
    is
-      Params : aliased Rose.Invocation.Invocation_Record;
    begin
       Client.Is_Open := False;
       Client.Interface_Cap := Interface_Cap;
-      Rose.System_Calls.Initialize_Send (Params, Interface_Cap);
-      Rose.System_Calls.Receive_Caps (Params, Subprogram_Count);
-      Rose.System_Calls.Invoke_Capability (Params);
-      Client.Get_Parameters := Params.Caps (Get_Parameters_Index);
-      Client.Read_Blocks := Params.Caps (Read_Blocks_Index);
-      Client.Write_Blocks := Params.Caps (Write_Blocks_Index);
-      Client.Is_Open := True;
    end Open;
 
    ------------------
@@ -147,6 +202,9 @@ package body Rose.Interfaces.Block_Device.Client is
    is
       Params : aliased Rose.Invocation.Invocation_Record;
    begin
+      if not Item.Is_Open then
+         Load (Item);
+      end if;
       Rose.System_Calls.Initialize_Send (Params, Item.Read_Blocks);
       Rose.System_Calls.Send_Word (Params, Rose.Words.Word_64 (Start));
       Rose.System_Calls.Send_Word (Params, Count);
@@ -171,6 +229,9 @@ package body Rose.Interfaces.Block_Device.Client is
    is
       Params : aliased Rose.Invocation.Invocation_Record;
    begin
+      if not Item.Is_Open then
+         Load (Item);
+      end if;
       Rose.System_Calls.Initialize_Send (Params, Item.Write_Blocks);
       Rose.System_Calls.Send_Word (Params, Rose.Words.Word_64 (Start));
       Rose.System_Calls.Send_Word (Params, Count);

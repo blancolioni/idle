@@ -1,3 +1,4 @@
+with Rose.Capabilities;
 with Rose.Interfaces.Seekable;
 with Rose.Interfaces.Stream;
 with Rose.Objects;
@@ -39,5 +40,9 @@ package Rose.Interfaces.File is
    type File_Object is limited interface
      and Rose.Interfaces.Stream.Stream_Object
      and Rose.Interfaces.Seekable.Seekable_Object;
+
+   function File_Cap
+     (Item : in out File_Object)
+      return Rose.Capabilities.Capability is abstract;
 
 end Rose.Interfaces.File;

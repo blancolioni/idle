@@ -16,26 +16,34 @@ package Rose.Interfaces.Labelled.Client is
      (Client        : out Labelled_Client;
       Interface_Cap : Rose.Capabilities.Capability);
 
+   function From_Cap
+     (Cap : Rose.Capabilities.Capability)
+      return Labelled_Client;
+
    procedure Close (Client : in out Labelled_Client);
 
    overriding function Badge
-     (Item : Labelled_Client)
+     (Item : in out Labelled_Client)
       return Rose.Capabilities.Capability;
 
    overriding procedure Set_Label
      (Item  : in out Labelled_Client;
       Label : Rose.Words.Word);
 
+   overriding function Labelled_Cap
+     (Item : in out Labelled_Client)
+      return Rose.Capabilities.Capability;
+
    function Get_Interface_Cap
      (Item : Labelled_Client)
       return Rose.Capabilities.Capability;
 
    function Get_Badge_Cap
-     (Item : Labelled_Client)
+     (Item : in out Labelled_Client)
       return Rose.Capabilities.Capability;
 
    function Get_Set_Label_Cap
-     (Item : Labelled_Client)
+     (Item : in out Labelled_Client)
       return Rose.Capabilities.Capability;
 
 private

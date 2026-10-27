@@ -16,6 +16,10 @@ package Rose.Interfaces.Cap_Set.Client is
      (Client        : out Cap_Set_Client;
       Interface_Cap : Rose.Capabilities.Capability);
 
+   function From_Cap
+     (Cap : Rose.Capabilities.Capability)
+      return Cap_Set_Client;
+
    procedure Close (Client : in out Cap_Set_Client);
 
    overriding procedure Append
@@ -23,26 +27,30 @@ package Rose.Interfaces.Cap_Set.Client is
       Caps : Rose.Capabilities.Capability_Array);
 
    overriding function Get_Cap
-     (Item  : Cap_Set_Client;
+     (Item  : in out Cap_Set_Client;
       Index : Positive)
       return Rose.Capabilities.Capability;
 
-   overriding function Length (Item : Cap_Set_Client) return Natural;
+   overriding function Length (Item : in out Cap_Set_Client) return Natural;
+
+   overriding function Cap_Set_Cap
+     (Item : in out Cap_Set_Client)
+      return Rose.Capabilities.Capability;
 
    function Get_Interface_Cap
      (Item : Cap_Set_Client)
       return Rose.Capabilities.Capability;
 
    function Get_Append_Cap
-     (Item : Cap_Set_Client)
+     (Item : in out Cap_Set_Client)
       return Rose.Capabilities.Capability;
 
    function Get_Get_Cap_Cap
-     (Item : Cap_Set_Client)
+     (Item : in out Cap_Set_Client)
       return Rose.Capabilities.Capability;
 
    function Get_Length_Cap
-     (Item : Cap_Set_Client)
+     (Item : in out Cap_Set_Client)
       return Rose.Capabilities.Capability;
 
 private

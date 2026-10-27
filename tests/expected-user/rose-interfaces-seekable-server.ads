@@ -1,4 +1,5 @@
 with Rose.Capabilities;
+with Rose.Objects;
 with Rose.Server;
 
 package Rose.Interfaces.Seekable.Server is
@@ -16,6 +17,12 @@ package Rose.Interfaces.Seekable.Server is
 
    function Interface_Cap
      (Object : not null access Seekable_Interface'Class)
+      return Rose.Capabilities.Capability;
+
+   function Cap_Of
+     (Object       : Seekable_Interface'Class;
+      Interface_Id : Rose.Objects.Endpoint_Id :=
+        Rose.Interfaces.Seekable.Seekable_Interface)
       return Rose.Capabilities.Capability;
 
 end Rose.Interfaces.Seekable.Server;

@@ -1,0 +1,10 @@
+--  A subprogram with the name of a cap function of the object type: its
+--  own, and an ancestor's.
+
+interface Cap_Name : Stream_Writer is
+
+   function Cap_Name_Cap return Capability;
+
+   procedure Stream_Writer_Cap;
+
+end Cap_Name;

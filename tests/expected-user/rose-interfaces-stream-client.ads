@@ -16,6 +16,8 @@ package Rose.Interfaces.Stream.Client is
      (Client        : out Stream_Client;
       Interface_Cap : Rose.Capabilities.Capability);
 
+   function From_Cap (Cap : Rose.Capabilities.Capability) return Stream_Client;
+
    procedure Close (Client : in out Stream_Client);
 
    overriding procedure Read
@@ -27,16 +29,28 @@ package Rose.Interfaces.Stream.Client is
      (Item   : in out Stream_Client;
       Buffer : System.Storage_Elements.Storage_Array);
 
+   overriding function Stream_Cap
+     (Item : in out Stream_Client)
+      return Rose.Capabilities.Capability;
+
+   overriding function Stream_Reader_Cap
+     (Item : in out Stream_Client)
+      return Rose.Capabilities.Capability;
+
+   overriding function Stream_Writer_Cap
+     (Item : in out Stream_Client)
+      return Rose.Capabilities.Capability;
+
    function Get_Interface_Cap
      (Item : Stream_Client)
       return Rose.Capabilities.Capability;
 
    function Get_Read_Cap
-     (Item : Stream_Client)
+     (Item : in out Stream_Client)
       return Rose.Capabilities.Capability;
 
    function Get_Write_Cap
-     (Item : Stream_Client)
+     (Item : in out Stream_Client)
       return Rose.Capabilities.Capability;
 
 private
@@ -44,12 +58,16 @@ private
    type Stream_Client is
      limited new Rose.Interfaces.Stream.Stream_Object
    with record
-      Is_Open       : Boolean := False;
-      Interface_Cap : Rose.Capabilities.Capability :=
+      Is_Open                     : Boolean := False;
+      Interface_Cap               : Rose.Capabilities.Capability :=
         Rose.Capabilities.Null_Capability;
-      Read          : Rose.Capabilities.Capability :=
+      Stream_Reader_Interface_Cap : Rose.Capabilities.Capability :=
         Rose.Capabilities.Null_Capability;
-      Write         : Rose.Capabilities.Capability :=
+      Stream_Writer_Interface_Cap : Rose.Capabilities.Capability :=
+        Rose.Capabilities.Null_Capability;
+      Read                        : Rose.Capabilities.Capability :=
+        Rose.Capabilities.Null_Capability;
+      Write                       : Rose.Capabilities.Capability :=
         Rose.Capabilities.Null_Capability;
    end record;
 

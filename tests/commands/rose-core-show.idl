@@ -1,0 +1,11 @@
+--  An interface argument, a role member that is an interface, and a
+--  system cap (idle#44).
+
+command Rose.Core.Show : Standard_Output, Logging, Delete_Cap
+  with Summary => "Show a file."
+is
+   Source : in File
+     with Help => "the file to show";
+   Count : out Natural
+     with Help => "the number of bytes shown";
+end Rose.Core.Show;

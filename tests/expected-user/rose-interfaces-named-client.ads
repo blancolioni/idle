@@ -14,10 +14,16 @@ package Rose.Interfaces.Named.Client is
      (Client        : out Named_Client;
       Interface_Cap : Rose.Capabilities.Capability);
 
+   function From_Cap (Cap : Rose.Capabilities.Capability) return Named_Client;
+
    procedure Close (Client : in out Named_Client);
 
    overriding function Badge
-     (Item : Named_Client)
+     (Item : in out Named_Client)
+      return Rose.Capabilities.Capability;
+
+   overriding function Named_Cap
+     (Item : in out Named_Client)
       return Rose.Capabilities.Capability;
 
    function Get_Interface_Cap
@@ -25,7 +31,7 @@ package Rose.Interfaces.Named.Client is
       return Rose.Capabilities.Capability;
 
    function Get_Badge_Cap
-     (Item : Named_Client)
+     (Item : in out Named_Client)
       return Rose.Capabilities.Capability;
 
 private

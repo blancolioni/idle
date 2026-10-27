@@ -29,19 +29,27 @@ package Idle.Targets.Kernel is
    --
    --    Rose.Interfaces.<Name>  also declares <Name>_Object, a limited
    --                            interface with an abstract primitive for
-   --                            each subprogram it declares, whose
-   --                            parents are those of its IDL parents
-   --    ...Client               <Name>_Client implements <Name>_Object;
-   --                            a call that fails raises
+   --                            each subprogram it declares, and
+   --                            <Name>_Cap, which gives an object's cap
+   --                            for the interface; its parents are those
+   --                            of its IDL parents
+   --    ...Client               <Name>_Client implements <Name>_Object,
+   --                            and gets its caps on its first call; a
+   --                            call that fails raises
    --                            Rose.Interfaces.Objects.Invocation_Error
    --    ...Server               <Name>_Interface, an interface for an
-   --                            object that the program serves, and
-   --                            Attach, Publish and Interface_Cap
+   --                            object that the program serves; Attach,
+   --                            Publish and Interface_Cap; and Cap_Of,
+   --                            for a served object's cap functions
    --
-   --  The user target does not yet support interface arguments and
-   --  results, string results, or out and in out strings. Its units for a
-   --  command are those of the kernel target, for a command without
-   --  interface arguments or out and in out strings, whose role members
-   --  are standard streams or system caps, and that is not a server.
+   --  An interface argument is an in out object of the interface, and an
+   --  interface result is one too, built in place as a client. An out
+   --  interface is a client that the subprogram opens. The interface
+   --  package names other interfaces through limited with clauses.
+   --
+   --  The user target does not yet support string results, or out and in
+   --  out strings. Its units for a command are those of the kernel target,
+   --  but that the command takes each interface argument, and each role
+   --  member that is an interface, as an in out object of the interface.
 
 end Idle.Targets.Kernel;

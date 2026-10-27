@@ -15,18 +15,26 @@ package Rose.Interfaces.Seekable.Client is
      (Client        : out Seekable_Client;
       Interface_Cap : Rose.Capabilities.Capability);
 
+   function From_Cap
+     (Cap : Rose.Capabilities.Capability)
+      return Seekable_Client;
+
    procedure Close (Client : in out Seekable_Client);
 
    overriding procedure Seek
      (Item              : in out Seekable_Client;
       Offset_From_Start : Rose.Words.Word_64);
 
+   overriding function Seekable_Cap
+     (Item : in out Seekable_Client)
+      return Rose.Capabilities.Capability;
+
    function Get_Interface_Cap
      (Item : Seekable_Client)
       return Rose.Capabilities.Capability;
 
    function Get_Seek_Cap
-     (Item : Seekable_Client)
+     (Item : in out Seekable_Client)
       return Rose.Capabilities.Capability;
 
 private

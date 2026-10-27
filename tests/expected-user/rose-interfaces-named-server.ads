@@ -1,4 +1,5 @@
 with Rose.Capabilities;
+with Rose.Objects;
 with Rose.Server;
 
 package Rose.Interfaces.Named.Server is
@@ -16,6 +17,12 @@ package Rose.Interfaces.Named.Server is
 
    function Interface_Cap
      (Object : not null access Named_Interface'Class)
+      return Rose.Capabilities.Capability;
+
+   function Cap_Of
+     (Object       : Named_Interface'Class;
+      Interface_Id : Rose.Objects.Endpoint_Id :=
+        Rose.Interfaces.Named.Named_Interface)
       return Rose.Capabilities.Capability;
 
 end Rose.Interfaces.Named.Server;

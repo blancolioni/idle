@@ -25,15 +25,19 @@ package Rose.Interfaces.Cap_Set is
 
    type Cap_Set_Object is limited interface;
 
+   function Cap_Set_Cap
+     (Item : in out Cap_Set_Object)
+      return Rose.Capabilities.Capability is abstract;
+
    procedure Append
      (Item : in out Cap_Set_Object;
       Caps : Rose.Capabilities.Capability_Array) is abstract;
 
    function Get_Cap
-     (Item  : Cap_Set_Object;
+     (Item  : in out Cap_Set_Object;
       Index : Positive)
       return Rose.Capabilities.Capability is abstract;
 
-   function Length (Item : Cap_Set_Object) return Natural is abstract;
+   function Length (Item : in out Cap_Set_Object) return Natural is abstract;
 
 end Rose.Interfaces.Cap_Set;

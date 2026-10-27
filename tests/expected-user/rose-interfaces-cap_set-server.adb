@@ -1,6 +1,7 @@
+with Rose.Interfaces.Objects;
 with Rose.Invocation;
-with Rose.Objects;
 with Rose.System_Calls;
+with System;
 
 package body Rose.Interfaces.Cap_Set.Server is
 
@@ -79,6 +80,35 @@ package body Rose.Interfaces.Cap_Set.Server is
            Rose.Objects.Capability_Identifier (Attached_Count));
       Attached_Count := Attached_Count + 1;
    end Attach;
+
+   ------------
+   -- Cap_Of --
+   ------------
+
+   function Cap_Of
+     (Object       : Cap_Set_Interface'Class;
+      Interface_Id : Rose.Objects.Endpoint_Id :=
+        Rose.Interfaces.Cap_Set.Cap_Set_Interface)
+      return Rose.Capabilities.Capability
+   is
+      use type System.Address;
+      use type Rose.Objects.Capability_Identifier;
+      use type Rose.Objects.Endpoint_Id;
+      Identifier : Rose.Objects.Capability_Identifier := 0;
+   begin
+      for Item of Attached loop
+         if Item.Object /= null
+           and then Item.Object.all'Address = Object'Address
+         then
+            if Interface_Id = Rose.Interfaces.Cap_Set.Cap_Set_Interface then
+               return Item.Cap;
+            end if;
+         end if;
+         Identifier := Identifier + 1;
+      end loop;
+      raise Rose.Interfaces.Objects.Not_Served
+        with "Rose.Interfaces.Cap_Set.Server.Cap_Of";
+   end Cap_Of;
 
    ----------
    -- Find --
