@@ -265,7 +265,7 @@ package body Rose.Interfaces.Exchange.Client is
    overriding procedure Partner
      (Item  : in out Exchange_Client;
       Other : in out Exchange_Client;
-      Label : out Rose.Strings.Text)
+      Label : out Rose.Texts.Text)
    is
       Params : aliased Rose.Invocation.Invocation_Record;
    begin
@@ -273,7 +273,7 @@ package body Rose.Interfaces.Exchange.Client is
          Load (Item);
       end if;
       Rose.System_Calls.Initialize_Send (Params, Item.Partner);
-      Rose.System_Calls.Receive_Buffer (Params, Rose.Strings.Max_Text_Length);
+      Rose.System_Calls.Receive_Buffer (Params, Rose.Texts.Max_Length);
       Rose.System_Calls.Receive_Words (Params, 1);
       Rose.System_Calls.Receive_Caps (Params, 1);
       Rose.System_Calls.Invoke_Capability (Params);
@@ -283,7 +283,7 @@ package body Rose.Interfaces.Exchange.Client is
       end if;
       Open (Other, Params.Caps (0));
       declare
-         Received      : String (1 .. Rose.Strings.Max_Text_Length);
+         Received      : String (1 .. Rose.Texts.Max_Length);
          Received_Last : Natural;
       begin
          Rose.System_Calls.Copy_Text
@@ -291,7 +291,7 @@ package body Rose.Interfaces.Exchange.Client is
             Natural (Rose.System_Calls.Get_Word_32 (Params, 0)),
             Received,
             Received_Last);
-         Label := Rose.Strings.To_Text (Received (1 .. Received_Last));
+         Label := Rose.Texts.To_Text (Received (1 .. Received_Last));
       end;
    end Partner;
 
@@ -302,7 +302,7 @@ package body Rose.Interfaces.Exchange.Client is
    overriding procedure Rename
      (Item : in out Exchange_Client;
       Cap  : in out Rose.Capabilities.Capability;
-      Name : in out Rose.Strings.Text)
+      Name : in out Rose.Texts.Text)
    is
       Params : aliased Rose.Invocation.Invocation_Record;
    begin
@@ -311,7 +311,7 @@ package body Rose.Interfaces.Exchange.Client is
       end if;
       Rose.System_Calls.Initialize_Send (Params, Item.Rename);
       Rose.System_Calls.Send_Cap (Params, Cap);
-      Rose.System_Calls.Send_Text (Params, Rose.Strings.To_String (Name));
+      Rose.System_Calls.Send_Text (Params, Rose.Texts.To_String (Name));
       Params.Control.Flags (Rose.Invocation.Writable_Buffer) := True;
       Rose.System_Calls.Receive_Words (Params, 1);
       Rose.System_Calls.Receive_Caps (Params, 1);
@@ -321,7 +321,7 @@ package body Rose.Interfaces.Exchange.Client is
       end if;
       Cap := Params.Caps (0);
       declare
-         Received      : String (1 .. Rose.Strings.Max_Text_Length);
+         Received      : String (1 .. Rose.Texts.Max_Length);
          Received_Last : Natural;
       begin
          Rose.System_Calls.Copy_Text
@@ -329,7 +329,7 @@ package body Rose.Interfaces.Exchange.Client is
             Natural (Rose.System_Calls.Get_Word_32 (Params, 0)),
             Received,
             Received_Last);
-         Name := Rose.Strings.To_Text (Received (1 .. Received_Last));
+         Name := Rose.Texts.To_Text (Received (1 .. Received_Last));
       end;
    end Rename;
 

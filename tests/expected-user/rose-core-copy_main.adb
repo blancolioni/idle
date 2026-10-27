@@ -4,8 +4,8 @@ with Rose.Core.Copy_Metadata;
 with Rose.Interfaces.Directory.Client;
 with Rose.Interfaces.File.Client;
 with Rose.Interfaces.Stream_Writer.Client;
-with Rose.Strings;
 with Rose.System_Calls;
+with Rose.Texts;
 pragma Unreferenced (Rose.Core.Copy_Metadata);
 
 procedure Rose.Core.Copy_Main is
@@ -35,7 +35,7 @@ begin
       Rose.Command_Line.Launch.Cap_Argument (Call, 6));
    Verbose := Rose.Command_Line.Launch.Boolean_Argument (Call, 0);
    Note :=
-     Rose.Strings.To_Text (Rose.Command_Line.Launch.String_Argument (Call, 1));
+     Rose.Texts.To_Text (Rose.Command_Line.Launch.String_Argument (Call, 1));
    Rose.System_Calls.Use_Capabilities
      (Create_Endpoint => Rose.Command_Line.Launch.Cap_Argument (Call, 2),
       Delete_Cap => Rose.Command_Line.Launch.Cap_Argument (Call, 3));
@@ -53,10 +53,10 @@ begin
    Rose.Command_Line.Launch.String_Result
      (Call,
       1,
-      Rose.Strings.To_String (Report));
+      Rose.Texts.To_String (Report));
    Rose.Command_Line.Launch.String_Result
      (Call,
       2,
-      Rose.Strings.To_String (Note));
+      Rose.Texts.To_String (Note));
    Rose.Command_Line.Launch.Complete (Call);
 end Rose.Core.Copy_Main;

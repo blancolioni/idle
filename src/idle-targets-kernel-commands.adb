@@ -214,7 +214,7 @@ package body Idle.Targets.Kernel.Commands is
 
          if Kind = String_Argument and then Target = User_Target then
             --  A text, sent back as a string.
-            Main_Context.Add ("Rose.Strings");
+            Main_Context.Add ("Rose.Texts");
             Spec_Context.Add ("Rose.Command_Line");
             Declarations.Append
               (F.New_Object
@@ -223,7 +223,7 @@ package body Idle.Targets.Kernel.Commands is
                Statements.Append
                  (F.New_Assignment
                     (F.New_Name (Argument_Name),
-                     F.New_Call ("Rose.Strings.To_Text", [Value])));
+                     F.New_Call ("Rose.Texts.To_Text", [Value])));
             end if;
             Arguments.Append
               (F.New_Named (Argument_Name, F.New_Name (Argument_Name)));
@@ -233,7 +233,7 @@ package body Idle.Targets.Kernel.Commands is
                     (Launch & "String_Result",
                      [Call_Node, Literal (Answer.Index),
                       F.New_Call
-                        ("Rose.Strings.To_String",
+                        ("Rose.Texts.To_String",
                          [F.New_Name (Argument_Name)])])));
          elsif Kind = String_Argument then
             Parameters.Append

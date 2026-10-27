@@ -789,7 +789,7 @@ package body Idle.Targets.Kernel is
                         elsif Info.Category = Types.String_Value
                           and then Parameter.Mode /= Idle.Syntax.In_Mode
                         then
-                           Context.Add ("Rose.Strings");
+                           Context.Add ("Rose.Texts");
                            Parameters.Append
                              (F.New_Parameter
                                 (Support.Name (Parameter),

@@ -1,8 +1,8 @@
 with Rose.Interfaces.Exchange.Client;
 with Rose.Interfaces.Objects;
 with Rose.Invocation;
-with Rose.Strings;
 with Rose.System_Calls;
+with Rose.Texts;
 with Rose.Words;
 with System;
 
@@ -310,7 +310,7 @@ package body Rose.Interfaces.Exchange.Server is
       Other        : Rose.Interfaces.Exchange.Client.Exchange_Client;
       Label_Buffer : String (1 .. Natural (Parameters.Buffer_Length))
         with Import, Address => Parameters.Buffer_Address;
-      Label        : Rose.Strings.Text;
+      Label        : Rose.Texts.Text;
       Label_Last   : Natural := 0;
    begin
       if Object = null then
@@ -323,7 +323,7 @@ package body Rose.Interfaces.Exchange.Server is
       Object.Partner (Other, Label);
       Rose.System_Calls.Initialize_Reply (Parameters, Parameters.Reply_Cap);
       Rose.System_Calls.Send_Cap (Parameters, Other.Exchange_Cap);
-      Rose.Strings.Copy (Label, Label_Buffer, Label_Last);
+      Rose.Texts.Copy (Label, Label_Buffer, Label_Last);
       Rose.System_Calls.Send_Word (Parameters, Label_Last);
    end Handle_Partner;
 
@@ -338,7 +338,7 @@ package body Rose.Interfaces.Exchange.Server is
       Cap         : Rose.Capabilities.Capability := Parameters.Caps (0);
       Name_Buffer : String (1 .. Natural (Parameters.Buffer_Length))
         with Import, Address => Parameters.Buffer_Address;
-      Name        : Rose.Strings.Text := Rose.Strings.To_Text (Name_Buffer);
+      Name        : Rose.Texts.Text := Rose.Texts.To_Text (Name_Buffer);
       Name_Last   : Natural := 0;
    begin
       if Object = null then
@@ -351,7 +351,7 @@ package body Rose.Interfaces.Exchange.Server is
       Object.Rename (Cap, Name);
       Rose.System_Calls.Initialize_Reply (Parameters, Parameters.Reply_Cap);
       Rose.System_Calls.Send_Cap (Parameters, Cap);
-      Rose.Strings.Copy (Name, Name_Buffer, Name_Last);
+      Rose.Texts.Copy (Name, Name_Buffer, Name_Last);
       Rose.System_Calls.Send_Word (Parameters, Name_Last);
    end Handle_Rename;
 

@@ -45,7 +45,7 @@ package Idle.Targets.Kernel is
    --  An interface argument is an in out object of the interface, and an
    --  interface result is one too, built in place as a client. An out
    --  interface is a client that the subprogram opens. A string result is
-   --  a String, and an out or in out string a Rose.Strings.Text. The
+   --  a String, and an out or in out string a Rose.Texts.Text. The
    --  interface package names other interfaces through limited with
    --  clauses.
    --

@@ -746,7 +746,7 @@ package body Idle.Targets.Kernel.Client is
                                      and then Parameter.Mode
                                               = Idle.Syntax.In_Out_Mode
                                    then F.New_Call
-                                          ("Rose.Strings.To_String", [Value])
+                                          ("Rose.Texts.To_String", [Value])
                                    else Value)]));
                         if Parameter.Mode = Idle.Syntax.In_Out_Mode then
                            --  The server writes the new text in place.
@@ -772,7 +772,7 @@ package body Idle.Targets.Kernel.Client is
                   Statements.Append
                     (Call (System_Calls & "Receive_Buffer",
                            [Params,
-                            F.New_Name ("Rose.Strings.Max_Text_Length")]));
+                            F.New_Name ("Rose.Texts.Max_Length")]));
                elsif Types.Is_Buffer (Parameter_Info) then
                   Statements.Append
                     (Call (System_Calls & "Receive_Buffer",
@@ -783,7 +783,7 @@ package body Idle.Targets.Kernel.Client is
                  and then Parameter_Info.Category = String_Value
                  and then Parameter.Mode /= Idle.Syntax.In_Mode
                then
-                  Spec_Context.Add ("Rose.Strings");
+                  Spec_Context.Add ("Rose.Texts");
                end if;
 
                if Parameter.Mode /= Idle.Syntax.In_Mode then
@@ -871,7 +871,7 @@ package body Idle.Targets.Kernel.Client is
                                     [F.New_Binary
                                        (F.New_Integer_Literal (1), "..",
                                         F.New_Name
-                                          ("Rose.Strings.Max_Text_Length"))])),
+                                          ("Rose.Texts.Max_Length"))])),
                               F.New_Object
                                 ("Received_Last", F.New_Name ("Natural"))],
                            Statements   =>
@@ -883,7 +883,7 @@ package body Idle.Targets.Kernel.Client is
                               F.New_Assignment
                                 (Value,
                                  F.New_Call
-                                   ("Rose.Strings.To_Text",
+                                   ("Rose.Texts.To_Text",
                                     [F.New_Call
                                        ("Received",
                                         [F.New_Binary

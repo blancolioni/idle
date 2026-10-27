@@ -2,8 +2,8 @@ with Rose.Interfaces.File;
 with Rose.Interfaces.Objects;
 with Rose.Interfaces.Stream_Reader;
 with Rose.Invocation;
-with Rose.Strings;
 with Rose.System_Calls;
+with Rose.Texts;
 with System;
 with System.Storage_Elements;
 
@@ -303,7 +303,7 @@ package body Rose.Interfaces.Directory.Server is
             Rose.Invocation.Invalid_Operation);
          return;
       end if;
-      Rose.Strings.Copy (Object.Directory_Entry_Name (Index), Result, Last);
+      Rose.Texts.Copy (Object.Directory_Entry_Name (Index), Result, Last);
       Rose.System_Calls.Initialize_Reply (Parameters, Parameters.Reply_Cap);
       Rose.System_Calls.Send_Word (Parameters, Last);
    end Handle_Directory_Entry_Name;

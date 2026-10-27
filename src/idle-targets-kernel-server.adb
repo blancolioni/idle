@@ -127,7 +127,7 @@ package body Idle.Targets.Kernel.Server is
                  in Types.String_Value
                and then Parameter.Mode not in Idle.Syntax.In_Mode));
       --  For the user target: True if the handler of Member copies a
-      --  string or text to the buffer with Rose.Strings.Copy.
+      --  string or text to the buffer with Rose.Texts.Copy.
 
       procedure Use_Type
         (Info      : Types.Type_Info;
@@ -941,7 +941,7 @@ package body Idle.Targets.Kernel.Server is
                               (if Parameter.Mode = Idle.Syntax.Out_Mode
                                then null
                                else F.New_Call
-                                      ("Rose.Strings.To_Text",
+                                      ("Rose.Texts.To_Text",
                                        [F.New_Name
                                           (Object_Name & "_Buffer")]))));
                      else
@@ -1013,7 +1013,7 @@ package body Idle.Targets.Kernel.Server is
                elsif Returns_String then
                   --  The string is copied to the buffer, as much as fits.
                   Statements.Append
-                    (Call ("Rose.Strings.Copy",
+                    (Call ("Rose.Texts.Copy",
                            [Value, F.New_Name ("Result"),
                             F.New_Name ("Last")]));
                elsif Subprogram.Is_Function then
@@ -1067,7 +1067,7 @@ package body Idle.Targets.Kernel.Server is
                      when String_Value =>
                         if User then
                            Reply.Append
-                             (Call ("Rose.Strings.Copy",
+                             (Call ("Rose.Texts.Copy",
                                     [F.New_Name (Name (Parameter)),
                                      F.New_Name (Name (Parameter) & "_Buffer"),
                                      F.New_Name
@@ -1423,7 +1423,7 @@ package body Idle.Targets.Kernel.Server is
                   Is_Result => True);
             end if;
             if Uses_Text (Member) then
-               Body_Context.Add ("Rose.Strings");
+               Body_Context.Add ("Rose.Texts");
             end if;
          end loop;
       else

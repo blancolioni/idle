@@ -1,5 +1,5 @@
 with Rose.Capabilities;
-with Rose.Strings;
+with Rose.Texts;
 with Rose.Words;
 
 package Rose.Interfaces.Exchange.Client is
@@ -41,12 +41,12 @@ package Rose.Interfaces.Exchange.Client is
    overriding procedure Rename
      (Item : in out Exchange_Client;
       Cap  : in out Rose.Capabilities.Capability;
-      Name : in out Rose.Strings.Text);
+      Name : in out Rose.Texts.Text);
 
    overriding procedure Partner
      (Item  : in out Exchange_Client;
       Other : in out Exchange_Client;
-      Label : out Rose.Strings.Text);
+      Label : out Rose.Texts.Text);
 
    overriding procedure Gather
      (Item  : in out Exchange_Client;

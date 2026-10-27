@@ -1,6 +1,6 @@
 with Rose.Capabilities;
 with Rose.Objects;
-with Rose.Strings;
+with Rose.Texts;
 with Rose.Words;
 limited with Rose.Interfaces.Exchange.Client;
 
@@ -57,12 +57,12 @@ package Rose.Interfaces.Exchange is
    procedure Rename
      (Item : in out Exchange_Object;
       Cap  : in out Rose.Capabilities.Capability;
-      Name : in out Rose.Strings.Text) is abstract;
+      Name : in out Rose.Texts.Text) is abstract;
 
    procedure Partner
      (Item  : in out Exchange_Object;
       Other : in out Rose.Interfaces.Exchange.Client.Exchange_Client;
-      Label : out Rose.Strings.Text) is abstract;
+      Label : out Rose.Texts.Text) is abstract;
 
    procedure Gather
      (Item  : in out Exchange_Object;
