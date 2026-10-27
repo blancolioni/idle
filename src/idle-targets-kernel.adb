@@ -27,6 +27,13 @@ package body Idle.Targets.Kernel is
    --  Report anything in Item that the kernel target does not support.
    --  True if there was nothing to report.
 
+   function Check_User
+     (Item : Idle.Syntax.Interface_Declaration)
+      return Boolean;
+   --  Report what the user target does not support yet, beyond what
+   --  Check reports, and a constant or type of Item with the name of its
+   --  object type. True if there was nothing to report.
+
    function Constant_Reference
      (Item  : Idle.Syntax.Interface_Declaration;
       Owner : Idle.Syntax.Interface_Declaration;
@@ -55,9 +62,11 @@ package body Idle.Targets.Kernel is
 
    procedure Generate_Interface_Package
      (Item             : Idle.Syntax.Interface_Declaration;
-      Output_Directory : String);
+      Output_Directory : String;
+      Target           : Idle.Targets.Target);
    --  Write the package Rose.Interfaces.<Name>, which holds the endpoint
-   --  ids of the interface and of each of its subprograms.
+   --  ids of the interface and of each of its subprograms, and for the
+   --  user target its object type.
 
    function Is_Integer_Constant
      (Owner : Idle.Syntax.Interface_Declaration;
@@ -429,6 +438,120 @@ package body Idle.Targets.Kernel is
       return OK and then Idle.Diagnostics.Error_Count = Errors_Before;
    end Check;
 
+   ----------------
+   -- Check_User --
+   ----------------
+
+   function Check_User
+     (Item : Idle.Syntax.Interface_Declaration)
+      return Boolean
+   is
+      use all type Types.Category;
+      use type Idle.Syntax.Parameter_Mode;
+
+      Object_Name : constant String :=
+        Object_Type_Name (To_String (Item.Name));
+      OK          : Boolean := True;
+
+      procedure Error
+        (File_Name : Unbounded_String;
+         Position  : Idle.Syntax.Source_Position;
+         Message   : String);
+
+      procedure Unsupported
+        (File_Name : Unbounded_String;
+         Position  : Idle.Syntax.Source_Position;
+         What      : String);
+
+      -----------
+      -- Error --
+      -----------
+
+      procedure Error
+        (File_Name : Unbounded_String;
+         Position  : Idle.Syntax.Source_Position;
+         Message   : String)
+      is
+      begin
+         Idle.Diagnostics.Error
+           (To_String (File_Name), Position.Line, Position.Column, Message);
+         OK := False;
+      end Error;
+
+      -----------------
+      -- Unsupported --
+      -----------------
+
+      procedure Unsupported
+        (File_Name : Unbounded_String;
+         Position  : Idle.Syntax.Source_Position;
+         What      : String)
+      is
+      begin
+         Error (File_Name, Position,
+                What & " are not yet supported by the user target");
+      end Unsupported;
+
+   begin
+      for Declared_Constant of Item.Constants loop
+         if Idle.Names.Key (To_String (Declared_Constant.Name))
+           = Idle.Names.Key (Object_Name)
+         then
+            Error (Item.File_Name, Declared_Constant.Position,
+                   "constant " & To_String (Declared_Constant.Name)
+                   & " has the same name as the object type, which the "
+                   & "interface package declares");
+         end if;
+      end loop;
+
+      for Declared_Type of Item.Types loop
+         if Idle.Names.Key (To_String (Declared_Type.Name))
+           = Idle.Names.Key (Object_Name)
+         then
+            Error (Item.File_Name, Declared_Type.Position,
+                   "type " & To_String (Declared_Type.Name)
+                   & " has the same name as the object type, which the "
+                   & "interface package declares");
+         end if;
+      end loop;
+
+      for Member of Idle.Hierarchy.Members (Item) loop
+         for Parameter of Member.Subprogram.Parameters loop
+            declare
+               Info : constant Types.Type_Info :=
+                 Types.Resolve (Member.Owner, Parameter.Of_Type);
+            begin
+               if Info.Category = Interface_Value then
+                  Unsupported (Member.File_Name, Parameter.Position,
+                               "interface arguments");
+               elsif Info.Category = String_Value
+                 and then Parameter.Mode /= Idle.Syntax.In_Mode
+               then
+                  Unsupported (Member.File_Name, Parameter.Position,
+                               "out and in out strings");
+               end if;
+            end;
+         end loop;
+
+         if Member.Subprogram.Is_Function then
+            case Types.Resolve (Member.Owner, Member.Subprogram.Result)
+              .Category
+            is
+               when Interface_Value =>
+                  Unsupported (Member.File_Name, Member.Subprogram.Position,
+                               "interface results");
+               when String_Value =>
+                  Unsupported (Member.File_Name, Member.Subprogram.Position,
+                               "string results");
+               when others =>
+                  null;
+            end case;
+         end if;
+      end loop;
+
+      return OK;
+   end Check_User;
+
    ------------------------
    -- Constant_Reference --
    ------------------------
@@ -510,18 +633,26 @@ package body Idle.Targets.Kernel is
 
    procedure Generate
      (Item             : Idle.Syntax.Interface_Declaration;
-      Output_Directory : String)
+      Output_Directory : String;
+      Target           : Idle.Targets.Target := Kernel_Target)
    is
    begin
       case Item.Kind is
          when Idle.Syntax.Interface_Unit =>
-            if Check (Item) then
-               Generate_Interface_Package (Item, Output_Directory);
-               Client.Generate (Item, Output_Directory);
-               Server.Generate (Item, Output_Directory);
+            if Check (Item)
+              and then (Target = Kernel_Target or else Check_User (Item))
+            then
+               Generate_Interface_Package (Item, Output_Directory, Target);
+               Client.Generate (Item, Output_Directory, Target);
+               Server.Generate (Item, Output_Directory, Target);
             end if;
          when Idle.Syntax.Command_Unit =>
-            if Idle.Commands.Check (Item) then
+            if Target = User_Target then
+               Idle.Diagnostics.Error
+                 (To_String (Item.File_Name), Item.Position.Line,
+                  Item.Position.Column,
+                  "commands are not yet supported by the user target");
+            elsif Idle.Commands.Check (Item) then
                Commands.Generate_Command (Item, Output_Directory);
             end if;
          when Idle.Syntax.Package_Unit =>
@@ -542,7 +673,8 @@ package body Idle.Targets.Kernel is
 
    procedure Generate_Interface_Package
      (Item             : Idle.Syntax.Interface_Declaration;
-      Output_Directory : String)
+      Output_Directory : String;
+      Target           : Idle.Targets.Target)
    is
       Name : constant String := To_String (Item.Name);
       F    : Syn.Factory.Factory;
@@ -574,8 +706,104 @@ package body Idle.Targets.Kernel is
         Idle.Hierarchy.Members (Item);
       Context : Context_List;
 
+      function Object_Declarations return Syn.Node_Array;
+      --  For the user target: Item's object type, and an abstract
+      --  primitive for each subprogram that Item declares first.
+
       function Types_And_Constants return Syn.Node_Array;
       --  Item's constants and types, in the order they are declared.
+
+      -------------------------
+      -- Object_Declarations --
+      -------------------------
+
+      function Object_Declarations return Syn.Node_Array is
+         use type Idle.Syntax.Parameter_Mode;
+
+         Package_Name : constant String :=
+           "Rose.Interfaces." & Idle.Names.Ada_Name (Name);
+         Object_Name  : constant String := Object_Type_Name (Name);
+         Result       : Node_List;
+
+         function Type_Name (Info : Types.Type_Info) return String;
+         --  The Ada type of Info, after adding its unit to the context.
+
+         ---------------
+         -- Type_Name --
+         ---------------
+
+         function Type_Name (Info : Types.Type_Info) return String is
+            Unit : constant String := To_String (Info.Unit);
+         begin
+            if Unit /= "" and then Unit /= Package_Name then
+               Context.Add (Unit);
+            end if;
+            return To_String (Info.Ada_Name);
+         end Type_Name;
+
+      begin
+         for Parent of Item.Parents loop
+            Context.Add ("Rose.Interfaces." & Idle.Names.Ada_Name (Parent));
+         end loop;
+
+         Result.Append
+           (F.New_Interface_Type
+              (Object_Name,
+               [for Parent of Item.Parents =>
+                  F.New_Name (Object_Type (Parent))],
+               Is_Limited => True));
+
+         for Member of Members loop
+            if Idle.Names.Key (To_String (Member.Declared_In))
+              = Idle.Names.Key (Name)
+            then
+               declare
+                  Subprogram : Idle.Syntax.Subprogram renames
+                    Member.Subprogram;
+                  Parameters : Node_List;
+               begin
+                  Parameters.Append
+                    (F.New_Parameter
+                       ("Item", F.New_Name (Object_Name),
+                        (if Subprogram.Is_Function
+                         then Syn.In_Mode else Syn.In_Out_Mode)));
+                  for Parameter of Subprogram.Parameters loop
+                     Parameters.Append
+                       (F.New_Parameter
+                          (Support.Name (Parameter),
+                           F.New_Name
+                             (Type_Name
+                                (Types.Resolve
+                                   (Member.Owner, Parameter.Of_Type))),
+                           (case Parameter.Mode is
+                               when Idle.Syntax.In_Mode     => Syn.In_Mode,
+                               when Idle.Syntax.Out_Mode    => Syn.Out_Mode,
+                               when Idle.Syntax.In_Out_Mode =>
+                                 Syn.In_Out_Mode)));
+                  end loop;
+
+                  if Subprogram.Is_Function then
+                     Result.Append
+                       (F.New_Function
+                          (Support.Name (Subprogram),
+                           F.New_Name
+                             (Type_Name
+                                (Types.Resolve
+                                   (Member.Owner, Subprogram.Result))),
+                           Parameters.To_Array,
+                           Is_Abstract => True));
+                  else
+                     Result.Append
+                       (F.New_Procedure
+                          (Support.Name (Subprogram), Parameters.To_Array,
+                           Is_Abstract => True));
+                  end if;
+               end;
+            end if;
+         end loop;
+
+         return Result.To_Array;
+      end Object_Declarations;
 
       -------------------------
       -- Types_And_Constants --
@@ -733,6 +961,11 @@ package body Idle.Targets.Kernel is
                   (Long_Long_Long_Integer (Members.Length)),
               Is_Constant   => True)];
 
+      User_Declarations : constant Syn.Node_Array :=
+        (if Target = User_Target
+         then Object_Declarations
+         else Syn.No_Nodes);
+
    begin
       Context.Add ("Rose.Objects");
       Syn.Units.Write
@@ -742,7 +975,7 @@ package body Idle.Targets.Kernel is
               F.New_Package
                 (Name        =>
                    "Rose.Interfaces." & Idle.Names.Ada_Name (Name),
-                 Public_Part => Declarations)),
+                 Public_Part => Declarations & User_Declarations)),
          Output_Directory);
    end Generate_Interface_Package;
 

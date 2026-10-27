@@ -152,6 +152,25 @@ package body Idle.Targets.Kernel.Support is
       return Idle.Names.Ada_Name (To_String (Item.Name));
    end Name;
 
+   -----------------
+   -- Object_Type --
+   -----------------
+
+   function Object_Type (Interface_Name : String) return String is
+   begin
+      return "Rose.Interfaces." & Idle.Names.Ada_Name (Interface_Name) & "."
+        & Object_Type_Name (Interface_Name);
+   end Object_Type;
+
+   ----------------------
+   -- Object_Type_Name --
+   ----------------------
+
+   function Object_Type_Name (Interface_Name : String) return String is
+   begin
+      return Idle.Names.Ada_Name (Interface_Name) & "_Object";
+   end Object_Type_Name;
+
    ----------------------
    -- Standard_Package --
    ----------------------

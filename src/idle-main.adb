@@ -182,11 +182,8 @@ begin
                      List (Item);
                   end if;
                else
-                  case Target is
-                     when Idle.Targets.Kernel_Target =>
-                        Idle.Targets.Kernel.Generate
-                          (Item, To_String (Output_Directory));
-                  end case;
+                  Idle.Targets.Kernel.Generate
+                    (Item, To_String (Output_Directory), Target);
                end if;
             end if;
          end;

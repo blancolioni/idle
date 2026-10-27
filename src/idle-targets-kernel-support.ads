@@ -46,6 +46,14 @@ private package Idle.Targets.Kernel.Support is
    --  The name of the constant that gives the position of the cap of Item
    --  in the reply to the interface cap.
 
+   function Object_Type (Interface_Name : String) return String;
+   --  The full name of the user target's object type for the interface
+   --  Interface_Name, as written in IDL: for File,
+   --  Rose.Interfaces.File.File_Object.
+
+   function Object_Type_Name (Interface_Name : String) return String;
+   --  Its simple name: File_Object.
+
    Count_Name : constant String := "Subprogram_Count";
    --  The name of the constant that gives the number of caps in the
    --  reply to the interface cap.

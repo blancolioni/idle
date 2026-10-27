@@ -7,13 +7,16 @@
 #     DIRECTORY/INTERFACE: rose/ for Rose's interfaces, parents/ for a
 #     small hierarchy. Also list the endpoint ids of some interfaces,
 #     and generate the units for the commands and packages in commands/.
+#     Then the same for the user target, with generated-user.txt and
+#     expected-user/.
 #  3. Run idle on each file in errors/ and compare its diagnostics with
 #     the .txt file of the same name; and the same for the kernel target
 #     with the cases in kernel-errors/, and for --check with Rose's build
-#     list (rose-build.txt) and the cases in check-errors/, and for
-#     commands with the cases in command-errors/.
-#  4. Compile every expected Ada file with GNAT's style checks, as strict
-#     as Rose's build.
+#     list (rose-build.txt) and the cases in check-errors/, for commands
+#     with the cases in command-errors/, and for what the user target
+#     does not support yet with user-errors/.
+#  4. Compile every expected Ada file, of both targets, with GNAT's style
+#     checks, as strict as Rose's build.
 
 cd "$(dirname "$0")" || exit 1
 idle=../bin/idle
@@ -78,7 +81,7 @@ fi
 if $idle --target nonesuch -o output rose/timer.idl \
      2> output/target.txt; then
   fail "unknown target (expected failure)"
-elif grep -q "unknown target nonesuch; the targets are kernel" \
+elif grep -q "unknown target nonesuch; the targets are kernel, user" \
        output/target.txt; then
   pass "unknown target"
 else
@@ -110,6 +113,36 @@ if $idle --target kernel -I rose -o output/commands commands/*.idl; then
   fi
 else
   fail "kernel target for commands"
+fi
+
+# The user target: the same packages, generated for programs built with
+# Rose's userland run-time system.
+
+rm -rf output/user && mkdir output/user
+while read -r entry; do
+  [ -n "$entry" ] || continue
+  name=${entry#*/}
+  if ! $idle --target user -o output/user "$entry.idl"; then
+    fail "user target for $entry"
+    continue
+  fi
+  for file in "rose-interfaces-$name.ads" \
+              "rose-interfaces-$name-client.ads" \
+              "rose-interfaces-$name-client.adb" \
+              "rose-interfaces-$name-server.ads" \
+              "rose-interfaces-$name-server.adb"; do
+    if diff -u "expected-user/$file" "output/user/$file"; then
+      pass "user $file"
+    else
+      fail "user $file"
+    fi
+  done
+done < generated-user.txt
+
+if [ "$(ls output/user)" = "$(ls expected-user)" ]; then
+  pass "files generated for the user target"
+else
+  fail "files generated for the user target"
 fi
 
 # 3. Diagnostics
@@ -174,11 +207,25 @@ else
   fail "command errors"
 fi
 
+# What the user target does not support yet: out interfaces and strings
+# (modes/exchange), string and interface results (rose/directory), a type
+# with the name of the object type, and commands.
+
+if $idle --target user -I commands -I rose -o output \
+     modes/exchange.idl user-errors/clash.idl rose/directory.idl \
+     commands/rose-core-echo.idl 2> output/diagnostics.txt; then
+  fail "user target errors (expected errors)"
+elif diff -u user-errors/expected.txt output/diagnostics.txt; then
+  pass "user target errors"
+else
+  fail "user target errors"
+fi
+
 # 4. Style of expected output
 
 work=$(mktemp -d) || exit 1
 trap 'rm -rf "$work"' EXIT
-for file in expected/*.ad[sb]; do
+for file in expected/*.ad[sb] expected-user/*.ad[sb]; do
   if (cd "$work" && gcc -c -gnats -gnat2022 -gnatyabcefhiklmnoprst -gnaty3 \
         -gnatwe "$OLDPWD/$file"); then
     pass "style of $file"

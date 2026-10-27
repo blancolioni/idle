@@ -23,8 +23,12 @@ package body Idle.Targets.Kernel.Client is
 
    procedure Generate
      (Item             : Idle.Syntax.Interface_Declaration;
-      Output_Directory : String)
+      Output_Directory : String;
+      Target           : Idle.Targets.Target)
    is
+      User         : constant Boolean := Target = User_Target;
+      --  The user target, whose client type implements the interface's
+      --  object type, and raises an exception when a call fails.
       Ada_Name     : constant String :=
         Idle.Names.Ada_Name (To_String (Item.Name));
       Package_Name : constant String :=
@@ -60,10 +64,21 @@ package body Idle.Targets.Kernel.Client is
       --  The Ada type of Info in the client: the type itself, or for an
       --  interface its client type.
 
+      function Client_Components return Syn.Node_Array;
+      --  The components of the client type: whether it is open, its
+      --  interface cap, and a cap for each subprogram.
+
       function Client_Parameter
         (Mode : Syn.Parameter_Mode := Syn.In_Mode)
          return not null Syn.Node_Access;
       --  The client object as the first parameter of a subprogram.
+
+      function Item_Parameter
+        (Is_Function : Boolean)
+         return not null Syn.Node_Access;
+      --  The client object as the first parameter of the subprogram of a
+      --  member: Item, or for the user target an in out Item if it is a
+      --  procedure, as the object type declares it.
 
       procedure Add_Close;
       procedure Add_Error_Functions;
@@ -332,7 +347,7 @@ package body Idle.Targets.Kernel.Client is
          end Profile;
 
          Parameters : constant Syn.Node_Array :=
-           [Client_Parameter]
+           [Item_Parameter (Subprogram.Is_Function)]
            & Profile
            & (if Returns_String
               then [F.New_Parameter
@@ -341,13 +356,18 @@ package body Idle.Targets.Kernel.Client is
                       ("Last", F.New_Name ("Natural"), Syn.Out_Mode)]
               else Syn.No_Nodes);
 
+         Indicator     : constant Syn.Overriding_Kind :=
+           (if User then Syn.Is_Overriding else Syn.No_Indicator);
+
          Specification : constant not null Syn.Node_Access :=
            (if Subprogram.Is_Function and then not Returns_String
             then F.New_Function
                    (Subprogram_Name,
                     F.New_Name (Client_Type_Of (Result)),
-                    Parameters)
-            else F.New_Procedure (Subprogram_Name, Parameters));
+                    Parameters,
+                    Indicator => Indicator)
+            else F.New_Procedure
+                   (Subprogram_Name, Parameters, Indicator => Indicator));
 
          Statements  : Node_List;
          Reply_Words : Natural := 0;
@@ -474,18 +494,33 @@ package body Idle.Targets.Kernel.Client is
 
          Statements.Append
            (Call (System_Calls & "Invoke_Capability", [Params]));
-         Statements.Append
-           (F.New_Assignment
-              (F.New_Name ("Last_Error"), F.New_Name ("Rose.Invocation.OK")));
-         Statements.Append
-           (F.New_If
-              (Condition =>
-                 F.New_Call ("Params.Control.Flags",
-                             [F.New_Name ("Rose.Invocation.Error")]),
-               Then_Part =>
-                 [F.New_Assignment
-                    (F.New_Name ("Last_Error"),
-                     F.New_Name ("Params.Error"))]));
+         if User then
+            Statements.Append
+              (F.New_If
+                 (Condition =>
+                    F.New_Call ("Params.Control.Flags",
+                                [F.New_Name ("Rose.Invocation.Error")]),
+                  Then_Part =>
+                    [F.New_Raise
+                       (F.New_Name
+                          ("Rose.Interfaces.Objects.Invocation_Error"),
+                        F.New_String_Literal
+                          (Ada_Name & "." & Subprogram_Name))]));
+         else
+            Statements.Append
+              (F.New_Assignment
+                 (F.New_Name ("Last_Error"),
+                  F.New_Name ("Rose.Invocation.OK")));
+            Statements.Append
+              (F.New_If
+                 (Condition =>
+                    F.New_Call ("Params.Control.Flags",
+                                [F.New_Name ("Rose.Invocation.Error")]),
+                  Then_Part =>
+                    [F.New_Assignment
+                       (F.New_Name ("Last_Error"),
+                        F.New_Name ("Params.Error"))]));
+         end if;
 
          for Parameter of Subprogram.Parameters loop
             if Parameter.Mode /= Idle.Syntax.In_Mode then
@@ -618,6 +653,20 @@ package body Idle.Targets.Kernel.Client is
          end if;
       end Call;
 
+      -----------------------
+      -- Client_Components --
+      -----------------------
+
+      function Client_Components return Syn.Node_Array is
+      begin
+         return [F.New_Component
+                   ("Is_Open", F.New_Name ("Boolean"), F.New_Name ("False")),
+                 F.New_Component
+                   ("Interface_Cap", F.New_Name (Capability_Name),
+                    F.New_Name ("Rose.Capabilities.Null_Capability"))]
+           & Components.To_Array;
+      end Client_Components;
+
       --------------------
       -- Client_Package --
       --------------------
@@ -661,6 +710,23 @@ package body Idle.Targets.Kernel.Client is
             return To_String (Info.Ada_Name);
          end if;
       end Client_Type_Of;
+
+      --------------------
+      -- Item_Parameter --
+      --------------------
+
+      function Item_Parameter
+        (Is_Function : Boolean)
+         return not null Syn.Node_Access
+      is
+      begin
+         if User and then not Is_Function then
+            return F.New_Parameter
+              ("Item", F.New_Name (Client_Type), Syn.In_Out_Mode);
+         else
+            return Client_Parameter;
+         end if;
+      end Item_Parameter;
 
       --------------
       -- Use_Type --
@@ -803,7 +869,14 @@ package body Idle.Targets.Kernel.Client is
       end Write_Conversions;
 
    begin
-      Public_Part.Append (F.New_Private_Type (Client_Type));
+      if User then
+         Public_Part.Append
+           (F.New_Private_Extension
+              (Client_Type, F.New_Name (Object_Type (To_String (Item.Name))),
+               Is_Limited => True));
+      else
+         Public_Part.Append (F.New_Private_Type (Client_Type));
+      end if;
       Spec_Context.Add ("Rose.Capabilities");
 
       Add_Open_Cap_Set;
@@ -813,9 +886,15 @@ package body Idle.Targets.Kernel.Client is
          Add_Subprogram (Member);
       end loop;
       Add_Getters;
-      Add_Error_Functions;
+      if not User then
+         Add_Error_Functions;
+      end if;
 
       Body_Context.Add ("Rose.System_Calls");
+      if User then
+         Body_Context.Add ("Rose.Interfaces.Objects");
+         Body_Context.Add ("Rose.Invocation");
+      end if;
       if Uses_Words and then not Spec_Context.Contains ("Rose.Words") then
          Body_Context.Add ("Rose.Words");
       end if;
@@ -828,15 +907,14 @@ package body Idle.Targets.Kernel.Client is
                 (Name         => Package_Name,
                  Public_Part  => Public_Part.To_Array,
                  Private_Part =>
-                   [F.New_Record_Type
-                      (Client_Type,
-                       [F.New_Component
-                          ("Is_Open", F.New_Name ("Boolean"),
-                           F.New_Name ("False")),
-                        F.New_Component
-                          ("Interface_Cap", F.New_Name (Capability_Name),
-                           F.New_Name ("Rose.Capabilities.Null_Capability"))]
-                       & Components.To_Array)])),
+                   [(if User
+                     then F.New_Record_Extension
+                            (Client_Type,
+                             F.New_Name (Object_Type (To_String (Item.Name))),
+                             Components => Client_Components,
+                             Is_Limited => True)
+                     else F.New_Record_Type
+                            (Client_Type, Client_Components))])),
          Output_Directory);
 
       Syn.Units.Write
@@ -846,16 +924,20 @@ package body Idle.Targets.Kernel.Client is
               F.New_Package_Body
                 (Name         => Package_Name,
                  Declarations =>
-                   [F.New_Use ("Rose.Invocation.Invocation_Error",
-                               Use_Type => True),
-                    F.New_Object
-                      ("Last_Error",
-                       F.New_Name ("Rose.Invocation.Invocation_Error"),
-                       F.New_Name ("Rose.Invocation.OK"))]
+                   (if User
+                    then Syn.No_Nodes
+                    else [F.New_Use ("Rose.Invocation.Invocation_Error",
+                                     Use_Type => True),
+                          F.New_Object
+                            ("Last_Error",
+                             F.New_Name ("Rose.Invocation.Invocation_Error"),
+                             F.New_Name ("Rose.Invocation.OK"))])
                    & Bodies.To_Array)),
          Output_Directory);
 
-      Write_Conversions;
+      if not User then
+         Write_Conversions;
+      end if;
    end Generate;
 
 end Idle.Targets.Kernel.Client;

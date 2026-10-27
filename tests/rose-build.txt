@@ -33,3 +33,4 @@ heap
 receiver
 kernel_process
 kernel_log
+restorable

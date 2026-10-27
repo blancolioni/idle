@@ -26,7 +26,8 @@ package body Idle.Targets is
 
    function Name (Item : Target) return String
    is (case Item is
-          when Kernel_Target => "kernel");
+          when Kernel_Target => "kernel",
+          when User_Target   => "user");
 
    -----------
    -- Names --
