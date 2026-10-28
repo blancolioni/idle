@@ -234,16 +234,9 @@ package body Idle.Targets.Kernel.Client is
            F.New_Procedure ("Close", [Client_Parameter (Syn.In_Out_Mode)]);
 
          function Delete (Cap : String) return Syn.Node_Array
-         is ([Call (System_Calls & "Initialize_Send",
-                    [F.New_Name ("Params"),
-                     F.New_Name (System_Calls & "Delete_Cap_Capability")]),
-              Call (System_Calls & "Send_Cap",
-                    [F.New_Name ("Params"), F.New_Name ("Client." & Cap)]),
-              Call (System_Calls & "Invoke_Capability",
-                    [F.New_Name ("Params")])]);
-         --  Delete the cap Client.Cap. The invocation is made here, and not
-         --  through Rose.System_Calls.Delete_Cap, whose call to
-         --  Invoke_Capability can be inlined, which breaks the invocation.
+         is ([Call (System_Calls & "Delete_Cap",
+                    [F.New_Name ("Client." & Cap)])]);
+         --  Delete the cap Client.Cap.
 
          Statements : Node_List;
          Own_Caps   : Node_List;
@@ -319,10 +312,7 @@ package body Idle.Targets.Kernel.Client is
                  (if User and then (Resource or else not Ancestors.Is_Empty)
                   then [F.New_Use ("Rose.Capabilities.Capability",
                                    Use_Type => True)]
-                  else Syn.No_Nodes)
-                 & [F.New_Object
-                      ("Params", F.New_Name (Record_Name),
-                       Is_Aliased => True)],
+                  else Syn.No_Nodes),
                Statements    => Statements.To_Array));
       end Add_Close;
 

@@ -11,49 +11,16 @@ package body Rose.Interfaces.Directory.Client is
    -----------
 
    procedure Close (Client : in out Directory_Client) is
-      Params : aliased Rose.Invocation.Invocation_Record;
    begin
       Client.Is_Open := False;
-      Rose.System_Calls.Initialize_Send
-        (Params,
-         Rose.System_Calls.Delete_Cap_Capability);
-      Rose.System_Calls.Send_Cap (Params, Client.Directory_Entry_Count);
-      Rose.System_Calls.Invoke_Capability (Params);
-      Rose.System_Calls.Initialize_Send
-        (Params,
-         Rose.System_Calls.Delete_Cap_Capability);
-      Rose.System_Calls.Send_Cap (Params, Client.Directory_Entry_Name);
-      Rose.System_Calls.Invoke_Capability (Params);
-      Rose.System_Calls.Initialize_Send
-        (Params,
-         Rose.System_Calls.Delete_Cap_Capability);
-      Rose.System_Calls.Send_Cap (Params, Client.Directory_Entry_Kind);
-      Rose.System_Calls.Invoke_Capability (Params);
-      Rose.System_Calls.Initialize_Send
-        (Params,
-         Rose.System_Calls.Delete_Cap_Capability);
-      Rose.System_Calls.Send_Cap (Params, Client.Directory_Entry_Size);
-      Rose.System_Calls.Invoke_Capability (Params);
-      Rose.System_Calls.Initialize_Send
-        (Params,
-         Rose.System_Calls.Delete_Cap_Capability);
-      Rose.System_Calls.Send_Cap (Params, Client.Find_Entry);
-      Rose.System_Calls.Invoke_Capability (Params);
-      Rose.System_Calls.Initialize_Send
-        (Params,
-         Rose.System_Calls.Delete_Cap_Capability);
-      Rose.System_Calls.Send_Cap (Params, Client.Get_Ordinary_File);
-      Rose.System_Calls.Invoke_Capability (Params);
-      Rose.System_Calls.Initialize_Send
-        (Params,
-         Rose.System_Calls.Delete_Cap_Capability);
-      Rose.System_Calls.Send_Cap (Params, Client.Get_Directory);
-      Rose.System_Calls.Invoke_Capability (Params);
-      Rose.System_Calls.Initialize_Send
-        (Params,
-         Rose.System_Calls.Delete_Cap_Capability);
-      Rose.System_Calls.Send_Cap (Params, Client.Interface_Cap);
-      Rose.System_Calls.Invoke_Capability (Params);
+      Rose.System_Calls.Delete_Cap (Client.Directory_Entry_Count);
+      Rose.System_Calls.Delete_Cap (Client.Directory_Entry_Name);
+      Rose.System_Calls.Delete_Cap (Client.Directory_Entry_Kind);
+      Rose.System_Calls.Delete_Cap (Client.Directory_Entry_Size);
+      Rose.System_Calls.Delete_Cap (Client.Find_Entry);
+      Rose.System_Calls.Delete_Cap (Client.Get_Ordinary_File);
+      Rose.System_Calls.Delete_Cap (Client.Get_Directory);
+      Rose.System_Calls.Delete_Cap (Client.Interface_Cap);
    end Close;
 
    ---------------------------

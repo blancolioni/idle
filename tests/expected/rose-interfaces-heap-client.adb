@@ -11,24 +11,11 @@ package body Rose.Interfaces.Heap.Client is
    -----------
 
    procedure Close (Client : in out Heap_Client) is
-      Params : aliased Rose.Invocation.Invocation_Record;
    begin
       Client.Is_Open := False;
-      Rose.System_Calls.Initialize_Send
-        (Params,
-         Rose.System_Calls.Delete_Cap_Capability);
-      Rose.System_Calls.Send_Cap (Params, Client.Current_Bound);
-      Rose.System_Calls.Invoke_Capability (Params);
-      Rose.System_Calls.Initialize_Send
-        (Params,
-         Rose.System_Calls.Delete_Cap_Capability);
-      Rose.System_Calls.Send_Cap (Params, Client.Request_New_Bound);
-      Rose.System_Calls.Invoke_Capability (Params);
-      Rose.System_Calls.Initialize_Send
-        (Params,
-         Rose.System_Calls.Delete_Cap_Capability);
-      Rose.System_Calls.Send_Cap (Params, Client.Interface_Cap);
-      Rose.System_Calls.Invoke_Capability (Params);
+      Rose.System_Calls.Delete_Cap (Client.Current_Bound);
+      Rose.System_Calls.Delete_Cap (Client.Request_New_Bound);
+      Rose.System_Calls.Delete_Cap (Client.Interface_Cap);
    end Close;
 
    -------------------

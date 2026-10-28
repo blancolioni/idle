@@ -35,10 +35,6 @@ package body Rose.Interfaces.File_Reader.Server is
 
    procedure Detach (Identifier : Rose.Objects.Capability_Identifier);
 
-   procedure Send_Cap_To
-     (Target : Rose.Capabilities.Capability;
-      Cap    : Rose.Capabilities.Capability);
-
    procedure Handle_Get_Stream_Reader_Interface
      (Parameters : in out Rose.Invocation.Invocation_Record);
 
@@ -166,17 +162,14 @@ package body Rose.Interfaces.File_Reader.Server is
       then
          Attached (Natural (Identifier)).Retired := True;
       else
-         Send_Cap_To
-           (Rose.System_Calls.Rescind_Cap_Capability,
-            Attached (Natural (Identifier)).Cap);
+         Rose.System_Calls.Rescind_Cap (Attached (Natural (Identifier)).Cap);
          if Rose.Server.Has_Instance
            (Server_Instance,
             Read_Endpoint,
             Identifier)
          then
-            Send_Cap_To
-              (Rose.System_Calls.Rescind_Cap_Capability,
-               Rose.Server.Get_Instance_Cap
+            Rose.System_Calls.Rescind_Cap
+              (Rose.Server.Get_Instance_Cap
                  (Server_Instance,
                   Read_Endpoint,
                   Identifier));
@@ -186,9 +179,8 @@ package body Rose.Interfaces.File_Reader.Server is
             Release_Endpoint,
             Identifier)
          then
-            Send_Cap_To
-              (Rose.System_Calls.Rescind_Cap_Capability,
-               Rose.Server.Get_Instance_Cap
+            Rose.System_Calls.Rescind_Cap
+              (Rose.Server.Get_Instance_Cap
                  (Server_Instance,
                   Release_Endpoint,
                   Identifier));
@@ -198,9 +190,8 @@ package body Rose.Interfaces.File_Reader.Server is
             Rose.Interfaces.File_Reader.Stream_Reader_Interface,
             Identifier)
          then
-            Send_Cap_To
-              (Rose.System_Calls.Rescind_Cap_Capability,
-               Rose.Server.Get_Instance_Cap
+            Rose.System_Calls.Rescind_Cap
+              (Rose.Server.Get_Instance_Cap
                  (Server_Instance,
                   Rose.Interfaces.File_Reader.Stream_Reader_Interface,
                   Identifier));
@@ -210,9 +201,8 @@ package body Rose.Interfaces.File_Reader.Server is
             Rose.Interfaces.File_Reader.Resource_Interface,
             Identifier)
          then
-            Send_Cap_To
-              (Rose.System_Calls.Rescind_Cap_Capability,
-               Rose.Server.Get_Instance_Cap
+            Rose.System_Calls.Rescind_Cap
+              (Rose.Server.Get_Instance_Cap
                  (Server_Instance,
                   Rose.Interfaces.File_Reader.Resource_Interface,
                   Identifier));
@@ -222,18 +212,15 @@ package body Rose.Interfaces.File_Reader.Server is
             Rose.Interfaces.File_Reader.File_Reader_Interface,
             Identifier)
          then
-            Send_Cap_To
-              (Rose.System_Calls.Rescind_Cap_Capability,
-               Rose.Server.Get_Instance_Cap
+            Rose.System_Calls.Rescind_Cap
+              (Rose.Server.Get_Instance_Cap
                  (Server_Instance,
                   Rose.Interfaces.File_Reader.File_Reader_Interface,
                   Identifier));
          end if;
       end if;
       Rose.Server.Remove_Instance (Server_Instance, Identifier);
-      Send_Cap_To
-        (Rose.System_Calls.Delete_Cap_Capability,
-         Attached (Natural (Identifier)).Cap);
+      Rose.System_Calls.Delete_Cap (Attached (Natural (Identifier)).Cap);
       Attached (Natural (Identifier)).Object := null;
       Attached (Natural (Identifier)).Cap := Rose.Capabilities.Null_Capability;
    end Detach;
@@ -511,20 +498,5 @@ package body Rose.Interfaces.File_Reader.Server is
       Attach (Server_Context, Object);
       Rose.Server.Publish_Interface (Interface_Cap (Object));
    end Publish;
-
-   -----------------
-   -- Send_Cap_To --
-   -----------------
-
-   procedure Send_Cap_To
-     (Target : Rose.Capabilities.Capability;
-      Cap    : Rose.Capabilities.Capability)
-   is
-      Params : aliased Rose.Invocation.Invocation_Record;
-   begin
-      Rose.System_Calls.Initialize_Send (Params, Target);
-      Rose.System_Calls.Send_Cap (Params, Cap);
-      Rose.System_Calls.Invoke_Capability (Params);
-   end Send_Cap_To;
 
 end Rose.Interfaces.File_Reader.Server;

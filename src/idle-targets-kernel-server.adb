@@ -1322,7 +1322,9 @@ package body Idle.Targets.Kernel.Server is
       --  an object that has been released. Detach rescinds the object's
       --  caps, so that no copy of them reaches whatever is attached in
       --  the slot next. Without the rescind cap, it retires the slot
-      --  instead, so that it is not used again.
+      --  instead, so that it is not used again. It deletes and rescinds
+      --  through Rose.System_Calls, which does nothing if the program
+      --  has no cap to do it with.
 
       procedure Add_Release_Support is
          Free_Slot : constant not null Syn.Node_Access :=
@@ -1333,12 +1335,6 @@ package body Idle.Targets.Kernel.Server is
               [F.New_Parameter
                  ("Identifier",
                   F.New_Name ("Rose.Objects.Capability_Identifier"))]);
-         Send_Cap_To : constant not null Syn.Node_Access :=
-           F.New_Procedure
-             ("Send_Cap_To",
-              [F.New_Parameter ("Target", F.New_Name (Capability_Name)),
-               F.New_Parameter ("Cap", F.New_Name (Capability_Name))]);
-
          Slot     : constant String := "Attached (Natural (Identifier))";
          Rescind  : constant not null Syn.Node_Access :=
            F.New_Name (System_Calls & "Rescind_Cap_Capability");
@@ -1355,9 +1351,8 @@ package body Idle.Targets.Kernel.Server is
                       F.New_Name (Endpoint),
                       F.New_Name ("Identifier")]),
                 Then_Part =>
-                  [Call ("Send_Cap_To",
-                         [Rescind,
-                          F.New_Call
+                  [Call (System_Calls & "Rescind_Cap",
+                         [F.New_Call
                             (Server & "Get_Instance_Cap",
                              [F.New_Name ("Server_Instance"),
                               F.New_Name (Endpoint),
@@ -1368,7 +1363,7 @@ package body Idle.Targets.Kernel.Server is
 
       begin
          Rescinds.Append
-           (Call ("Send_Cap_To", [Rescind, F.New_Name (Slot & ".Cap")]));
+           (Call (System_Calls & "Rescind_Cap", [F.New_Name (Slot & ".Cap")]));
          for Subprogram of Subprograms loop
             Rescinds.Append (Rescind_Instance (Endpoint_Name (Subprogram)));
          end loop;
@@ -1378,7 +1373,6 @@ package body Idle.Targets.Kernel.Server is
 
          Handler_Specs.Append (Free_Slot);
          Handler_Specs.Append (Detach);
-         Handler_Specs.Append (Send_Cap_To);
 
          Bodies.Add
            ("Free_Slot",
@@ -1431,32 +1425,11 @@ package body Idle.Targets.Kernel.Server is
                   Call (Server & "Remove_Instance",
                         [F.New_Name ("Server_Instance"),
                          F.New_Name ("Identifier")]),
-                  Call ("Send_Cap_To",
-                        [F.New_Name (System_Calls & "Delete_Cap_Capability"),
-                         F.New_Name (Slot & ".Cap")]),
+                  Call (System_Calls & "Delete_Cap",
+                        [F.New_Name (Slot & ".Cap")]),
                   F.New_Assignment
                     (F.New_Name (Slot & ".Object"), F.New_Name ("null")),
                   F.New_Assignment (F.New_Name (Slot & ".Cap"), Null_Cap)]));
-
-         --  The invocation is made here, and not through
-         --  Rose.System_Calls.Rescind_Cap or Delete_Cap, whose call to
-         --  Invoke_Capability can be inlined, which breaks the invocation.
-
-         Bodies.Add
-           ("Send_Cap_To",
-            F.New_Subprogram_Body
-              (Specification => Send_Cap_To,
-               Declarations  =>
-                 [F.New_Object
-                    ("Params", F.New_Name (Record_Name),
-                     Is_Aliased => True)],
-               Statements    =>
-                 [Call (System_Calls & "Initialize_Send",
-                        [F.New_Name ("Params"), F.New_Name ("Target")]),
-                  Call (System_Calls & "Send_Cap",
-                        [F.New_Name ("Params"), F.New_Name ("Cap")]),
-                  Call (System_Calls & "Invoke_Capability",
-                        [F.New_Name ("Params")])]));
       end Add_Release_Support;
 
       ------------------------
