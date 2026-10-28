@@ -27,6 +27,9 @@ package body Rose.Interfaces.Timer.Server is
 
    Registered      : Boolean := False;
 
+   subtype Cap_Object_Class is
+     Rose.Interfaces.Cap.Cap_Object'Class;
+
    function Find
      (Identifier : Rose.Objects.Capability_Identifier)
       return Object_Access;
@@ -58,8 +61,7 @@ package body Rose.Interfaces.Timer.Server is
          Registered := True;
       end if;
       if Attached_Count = Max_Attached then
-         raise Constraint_Error
-           with "Rose.Interfaces.Timer.Server: too many objects";
+         raise Constraint_Error with "Timer.Server: too many objects";
       end if;
       Attached (Attached_Count).Object := Object_Access (Object);
       Attached (Attached_Count).Cap :=
@@ -166,8 +168,7 @@ package body Rose.Interfaces.Timer.Server is
          return;
       end if;
       declare
-         Result : Rose.Interfaces.Cap.Cap_Object'Class :=
-           Object.Set_Timer (Milliseconds, Cap);
+         Result : Cap_Object_Class := Object.Set_Timer (Milliseconds, Cap);
       begin
          Rose.System_Calls.Initialize_Reply (Parameters, Parameters.Reply_Cap);
          Rose.System_Calls.Send_Cap (Parameters, Result.Cap_Cap);

@@ -15,6 +15,3 @@
 16#ECDE_34C4_3D46_477B#  rose.interfaces.directory.find_entry(in string) return natural
 16#20D5_30E6_B1E4_F50A#  rose.interfaces.directory.get_ordinary_file(in positive) return interface rose.interfaces.file
 16#1A5A_45A6_6CB5_6E1D#  rose.interfaces.directory.get_directory(in positive) return interface rose.interfaces.directory
-16#EB8A_CB9A_A7B9_FD83#  rose.interfaces.directory.read_file(in positive) return interface rose.interfaces.stream_reader
-16#A869_05E0_FF03_B268#  rose.interfaces.directory.create_directory(in string) return interface rose.interfaces.directory
-16#3451_684E_97FB_9A2A#  rose.interfaces.directory.create_file(in string) return interface rose.interfaces.file

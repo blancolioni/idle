@@ -1,6 +1,5 @@
 with Rose.Interfaces.File.Client;
 with Rose.Interfaces.Objects;
-with Rose.Interfaces.Stream_Reader.Client;
 with Rose.Invocation;
 with Rose.System_Calls;
 
@@ -51,21 +50,6 @@ package body Rose.Interfaces.Directory.Client is
             Rose.System_Calls.Delete_Cap_Capability);
          Rose.System_Calls.Send_Cap (Params, Client.Get_Directory);
          Rose.System_Calls.Invoke_Capability (Params);
-         Rose.System_Calls.Initialize_Send
-           (Params,
-            Rose.System_Calls.Delete_Cap_Capability);
-         Rose.System_Calls.Send_Cap (Params, Client.Read_File);
-         Rose.System_Calls.Invoke_Capability (Params);
-         Rose.System_Calls.Initialize_Send
-           (Params,
-            Rose.System_Calls.Delete_Cap_Capability);
-         Rose.System_Calls.Send_Cap (Params, Client.Create_Directory);
-         Rose.System_Calls.Invoke_Capability (Params);
-         Rose.System_Calls.Initialize_Send
-           (Params,
-            Rose.System_Calls.Delete_Cap_Capability);
-         Rose.System_Calls.Send_Cap (Params, Client.Create_File);
-         Rose.System_Calls.Invoke_Capability (Params);
       end if;
       Client.Is_Open := False;
       Rose.System_Calls.Initialize_Send
@@ -74,56 +58,6 @@ package body Rose.Interfaces.Directory.Client is
       Rose.System_Calls.Send_Cap (Params, Client.Interface_Cap);
       Rose.System_Calls.Invoke_Capability (Params);
    end Close;
-
-   ----------------------
-   -- Create_Directory --
-   ----------------------
-
-   overriding function Create_Directory
-     (Item : in out Directory_Client;
-      Name : String)
-      return Rose.Interfaces.Directory.Directory_Object'Class
-   is
-      Params : aliased Rose.Invocation.Invocation_Record;
-   begin
-      if not Item.Is_Open then
-         Load (Item);
-      end if;
-      Rose.System_Calls.Initialize_Send (Params, Item.Create_Directory);
-      Rose.System_Calls.Send_Text (Params, Name);
-      Rose.System_Calls.Receive_Caps (Params, 1);
-      Rose.System_Calls.Invoke_Capability (Params);
-      if Params.Control.Flags (Rose.Invocation.Error) then
-         raise Rose.Interfaces.Objects.Invocation_Error
-           with "Directory.Create_Directory";
-      end if;
-      return From_Cap (Params.Caps (0));
-   end Create_Directory;
-
-   -----------------
-   -- Create_File --
-   -----------------
-
-   overriding function Create_File
-     (Item : in out Directory_Client;
-      Name : String)
-      return Rose.Interfaces.File.File_Object'Class
-   is
-      Params : aliased Rose.Invocation.Invocation_Record;
-   begin
-      if not Item.Is_Open then
-         Load (Item);
-      end if;
-      Rose.System_Calls.Initialize_Send (Params, Item.Create_File);
-      Rose.System_Calls.Send_Text (Params, Name);
-      Rose.System_Calls.Receive_Caps (Params, 1);
-      Rose.System_Calls.Invoke_Capability (Params);
-      if Params.Control.Flags (Rose.Invocation.Error) then
-         raise Rose.Interfaces.Objects.Invocation_Error
-           with "Directory.Create_File";
-      end if;
-      return Rose.Interfaces.File.Client.From_Cap (Params.Caps (0));
-   end Create_File;
 
    -------------------
    -- Directory_Cap --
@@ -275,36 +209,6 @@ package body Rose.Interfaces.Directory.Client is
      (Cap : Rose.Capabilities.Capability)
       return Directory_Client
    is (Directory_Client'(Interface_Cap => Cap, others => <>));
-
-   ------------------------------
-   -- Get_Create_Directory_Cap --
-   ------------------------------
-
-   function Get_Create_Directory_Cap
-     (Item : in out Directory_Client)
-      return Rose.Capabilities.Capability
-   is
-   begin
-      if not Item.Is_Open then
-         Load (Item);
-      end if;
-      return Item.Create_Directory;
-   end Get_Create_Directory_Cap;
-
-   -------------------------
-   -- Get_Create_File_Cap --
-   -------------------------
-
-   function Get_Create_File_Cap
-     (Item : in out Directory_Client)
-      return Rose.Capabilities.Capability
-   is
-   begin
-      if not Item.Is_Open then
-         Load (Item);
-      end if;
-      return Item.Create_File;
-   end Get_Create_File_Cap;
 
    -------------------
    -- Get_Directory --
@@ -470,21 +374,6 @@ package body Rose.Interfaces.Directory.Client is
       return Rose.Interfaces.File.Client.From_Cap (Params.Caps (0));
    end Get_Ordinary_File;
 
-   -----------------------
-   -- Get_Read_File_Cap --
-   -----------------------
-
-   function Get_Read_File_Cap
-     (Item : in out Directory_Client)
-      return Rose.Capabilities.Capability
-   is
-   begin
-      if not Item.Is_Open then
-         Load (Item);
-      end if;
-      return Item.Read_File;
-   end Get_Read_File_Cap;
-
    ----------
    -- Load --
    ----------
@@ -505,9 +394,6 @@ package body Rose.Interfaces.Directory.Client is
       Item.Find_Entry := Params.Caps (Find_Entry_Index);
       Item.Get_Ordinary_File := Params.Caps (Get_Ordinary_File_Index);
       Item.Get_Directory := Params.Caps (Get_Directory_Index);
-      Item.Read_File := Params.Caps (Read_File_Index);
-      Item.Create_Directory := Params.Caps (Create_Directory_Index);
-      Item.Create_File := Params.Caps (Create_File_Index);
       Item.Is_Open := True;
    end Load;
 
@@ -536,10 +422,7 @@ package body Rose.Interfaces.Directory.Client is
       Directory_Entry_Size  : Rose.Capabilities.Capability;
       Find_Entry            : Rose.Capabilities.Capability;
       Get_Ordinary_File     : Rose.Capabilities.Capability;
-      Get_Directory         : Rose.Capabilities.Capability;
-      Read_File             : Rose.Capabilities.Capability;
-      Create_Directory      : Rose.Capabilities.Capability;
-      Create_File           : Rose.Capabilities.Capability)
+      Get_Directory         : Rose.Capabilities.Capability)
    is
    begin
       Client.Directory_Entry_Count := Directory_Entry_Count;
@@ -549,35 +432,7 @@ package body Rose.Interfaces.Directory.Client is
       Client.Find_Entry := Find_Entry;
       Client.Get_Ordinary_File := Get_Ordinary_File;
       Client.Get_Directory := Get_Directory;
-      Client.Read_File := Read_File;
-      Client.Create_Directory := Create_Directory;
-      Client.Create_File := Create_File;
       Client.Is_Open := True;
    end Open_Cap_Set;
-
-   ---------------
-   -- Read_File --
-   ---------------
-
-   overriding function Read_File
-     (Item  : in out Directory_Client;
-      Index : Positive)
-      return Rose.Interfaces.Stream_Reader.Stream_Reader_Object'Class
-   is
-      Params : aliased Rose.Invocation.Invocation_Record;
-   begin
-      if not Item.Is_Open then
-         Load (Item);
-      end if;
-      Rose.System_Calls.Initialize_Send (Params, Item.Read_File);
-      Rose.System_Calls.Send_Word (Params, Index);
-      Rose.System_Calls.Receive_Caps (Params, 1);
-      Rose.System_Calls.Invoke_Capability (Params);
-      if Params.Control.Flags (Rose.Invocation.Error) then
-         raise Rose.Interfaces.Objects.Invocation_Error
-           with "Directory.Read_File";
-      end if;
-      return Rose.Interfaces.Stream_Reader.Client.From_Cap (Params.Caps (0));
-   end Read_File;
 
 end Rose.Interfaces.Directory.Client;

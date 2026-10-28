@@ -2,6 +2,7 @@ with Rose.Capabilities;
 with Rose.Interfaces.Launch;
 with Rose.Interfaces.Process;
 with Rose.Interfaces.Stream_Reader;
+with Rose.Interfaces.Stream_Writer;
 with System.Storage_Elements;
 
 package Rose.Interfaces.Exec.Client is
@@ -11,9 +12,12 @@ package Rose.Interfaces.Exec.Client is
      with private;
 
    procedure Open_Cap_Set
-     (Client  : out Exec_Client;
-      Launch  : Rose.Capabilities.Capability;
-      Install : Rose.Capabilities.Capability);
+     (Client              : out Exec_Client;
+      Launch              : Rose.Capabilities.Capability;
+      Launch_Command      : Rose.Capabilities.Capability;
+      Metadata            : Rose.Capabilities.Capability;
+      Install             : Rose.Capabilities.Capability;
+      Set_Standard_Output : Rose.Capabilities.Capability);
 
    procedure Open
      (Client        : out Exec_Client;
@@ -29,6 +33,13 @@ package Rose.Interfaces.Exec.Client is
       Environment : System.Storage_Elements.Storage_Array)
       return Rose.Interfaces.Process.Process_Object'Class;
 
+   overriding function Launch_Command
+     (Item : in out Exec_Client;
+      Caps : Rose.Capabilities.Capability_Array)
+      return Rose.Capabilities.Capability;
+
+   overriding function Metadata (Item : in out Exec_Client) return String;
+
    overriding function Install
      (Item         : in out Exec_Client;
       Executable   : in out
@@ -36,6 +47,11 @@ package Rose.Interfaces.Exec.Client is
       Name         : String;
       Install_Caps : Rose.Capabilities.Capability_Array)
       return Rose.Interfaces.Launch.Launch_Object'Class;
+
+   overriding procedure Set_Standard_Output
+     (Item   : in out Exec_Client;
+      Output : in out
+        Rose.Interfaces.Stream_Writer.Stream_Writer_Object'Class);
 
    overriding function Exec_Cap
      (Item : in out Exec_Client)
@@ -53,7 +69,19 @@ package Rose.Interfaces.Exec.Client is
      (Item : in out Exec_Client)
       return Rose.Capabilities.Capability;
 
+   function Get_Launch_Command_Cap
+     (Item : in out Exec_Client)
+      return Rose.Capabilities.Capability;
+
+   function Get_Metadata_Cap
+     (Item : in out Exec_Client)
+      return Rose.Capabilities.Capability;
+
    function Get_Install_Cap
+     (Item : in out Exec_Client)
+      return Rose.Capabilities.Capability;
+
+   function Get_Set_Standard_Output_Cap
      (Item : in out Exec_Client)
       return Rose.Capabilities.Capability;
 
@@ -67,7 +95,13 @@ private
         Rose.Capabilities.Null_Capability;
       Launch               : Rose.Capabilities.Capability :=
         Rose.Capabilities.Null_Capability;
+      Launch_Command       : Rose.Capabilities.Capability :=
+        Rose.Capabilities.Null_Capability;
+      Metadata             : Rose.Capabilities.Capability :=
+        Rose.Capabilities.Null_Capability;
       Install              : Rose.Capabilities.Capability :=
+        Rose.Capabilities.Null_Capability;
+      Set_Standard_Output  : Rose.Capabilities.Capability :=
         Rose.Capabilities.Null_Capability;
    end record;
 

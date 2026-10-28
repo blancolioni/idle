@@ -56,8 +56,7 @@ package body Rose.Interfaces.Named.Server is
          Registered := True;
       end if;
       if Attached_Count = Max_Attached then
-         raise Constraint_Error
-           with "Rose.Interfaces.Named.Server: too many objects";
+         raise Constraint_Error with "Named.Server: too many objects";
       end if;
       Attached (Attached_Count).Object := Object_Access (Object);
       Attached (Attached_Count).Cap :=

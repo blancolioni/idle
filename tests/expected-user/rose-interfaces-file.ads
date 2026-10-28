@@ -1,48 +1,49 @@
 with Rose.Capabilities;
-with Rose.Interfaces.Seekable;
-with Rose.Interfaces.Stream;
 with Rose.Objects;
+with System.Storage_Elements;
+limited with Rose.Interfaces.File_Reader;
+limited with Rose.Interfaces.Seekable_File_Reader;
 
 package Rose.Interfaces.File is
 
-   Stream_Reader_Interface : constant Rose.Objects.Endpoint_Id :=
-     16#51A3_D80D_A576_BBEA#;
-
-   Stream_Writer_Interface : constant Rose.Objects.Endpoint_Id :=
-     16#346F_D760_8A40_95B7#;
-
-   Stream_Interface        : constant Rose.Objects.Endpoint_Id :=
-     16#262_BF61_DEA8_A9FC#;
-
-   Seekable_Interface      : constant Rose.Objects.Endpoint_Id :=
-     16#6496_B9FE_93A9_D452#;
-
-   File_Interface          : constant Rose.Objects.Endpoint_Id :=
+   File_Interface                : constant Rose.Objects.Endpoint_Id :=
      16#7D9D_DE97_9C08_C7C9#;
 
-   Read_Endpoint           : constant Rose.Objects.Endpoint_Id :=
-     16#9175_845E_31B1_857C#;
+   Size_Endpoint                 : constant Rose.Objects.Endpoint_Id :=
+     16#F6D0_973E_DEDA_8E48#;
 
-   Write_Endpoint          : constant Rose.Objects.Endpoint_Id :=
-     16#C5CD_0953_4A8B_BC37#;
+   Open_Reader_Endpoint          : constant Rose.Objects.Endpoint_Id :=
+     16#CDF7_65AA_4E7F_CF7F#;
 
-   Seek_Endpoint           : constant Rose.Objects.Endpoint_Id :=
-     16#61A2_A8A5_DB58_B9E9#;
+   Open_Seekable_Reader_Endpoint : constant Rose.Objects.Endpoint_Id :=
+     16#E29C_C755_27E1_0E80#;
 
-   Read_Index              : constant := 0;
+   Size_Index                    : constant := 0;
 
-   Write_Index             : constant := 1;
+   Open_Reader_Index             : constant := 1;
 
-   Seek_Index              : constant := 2;
+   Open_Seekable_Reader_Index    : constant := 2;
 
-   Subprogram_Count        : constant := 3;
+   Subprogram_Count              : constant := 3;
 
-   type File_Object is limited interface
-     and Rose.Interfaces.Stream.Stream_Object
-     and Rose.Interfaces.Seekable.Seekable_Object;
+   type File_Object is limited interface;
 
    function File_Cap
      (Item : in out File_Object)
       return Rose.Capabilities.Capability is abstract;
+
+   function Size
+     (Item : in out File_Object)
+      return System.Storage_Elements.Storage_Count is abstract;
+
+   function Open_Reader
+     (Item : in out File_Object)
+      return Rose.Interfaces.File_Reader.File_Reader_Object'Class is abstract;
+
+   function Open_Seekable_Reader
+     (Item : in out File_Object)
+      return
+        Rose.Interfaces.Seekable_File_Reader.Seekable_File_Reader_Object'Class
+   is abstract;
 
 end Rose.Interfaces.File;

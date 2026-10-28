@@ -1,6 +1,5 @@
 with Rose.Capabilities;
 with Rose.Interfaces.File.Client;
-with Rose.Interfaces.Stream_Reader.Client;
 with Rose.Invocation;
 with System.Storage_Elements;
 
@@ -16,10 +15,7 @@ package Rose.Interfaces.Directory.Client is
       Directory_Entry_Size  : Rose.Capabilities.Capability;
       Find_Entry            : Rose.Capabilities.Capability;
       Get_Ordinary_File     : Rose.Capabilities.Capability;
-      Get_Directory         : Rose.Capabilities.Capability;
-      Read_File             : Rose.Capabilities.Capability;
-      Create_Directory      : Rose.Capabilities.Capability;
-      Create_File           : Rose.Capabilities.Capability);
+      Get_Directory         : Rose.Capabilities.Capability);
 
    procedure Open
      (Client        : out Directory_Client;
@@ -57,21 +53,6 @@ package Rose.Interfaces.Directory.Client is
       Index : Positive)
       return Directory_Client;
 
-   function Read_File
-     (Item  : Directory_Client;
-      Index : Positive)
-      return Rose.Interfaces.Stream_Reader.Client.Stream_Reader_Client;
-
-   function Create_Directory
-     (Item : Directory_Client;
-      Name : String)
-      return Directory_Client;
-
-   function Create_File
-     (Item : Directory_Client;
-      Name : String)
-      return Rose.Interfaces.File.Client.File_Client;
-
    function Get_Interface_Cap
      (Item : Directory_Client)
       return Rose.Capabilities.Capability;
@@ -104,18 +85,6 @@ package Rose.Interfaces.Directory.Client is
      (Item : Directory_Client)
       return Rose.Capabilities.Capability;
 
-   function Get_Read_File_Cap
-     (Item : Directory_Client)
-      return Rose.Capabilities.Capability;
-
-   function Get_Create_Directory_Cap
-     (Item : Directory_Client)
-      return Rose.Capabilities.Capability;
-
-   function Get_Create_File_Cap
-     (Item : Directory_Client)
-      return Rose.Capabilities.Capability;
-
    function Has_Error return Boolean;
 
    function Get_Last_Error return Rose.Invocation.Invocation_Error;
@@ -139,12 +108,6 @@ private
       Get_Ordinary_File     : Rose.Capabilities.Capability :=
         Rose.Capabilities.Null_Capability;
       Get_Directory         : Rose.Capabilities.Capability :=
-        Rose.Capabilities.Null_Capability;
-      Read_File             : Rose.Capabilities.Capability :=
-        Rose.Capabilities.Null_Capability;
-      Create_Directory      : Rose.Capabilities.Capability :=
-        Rose.Capabilities.Null_Capability;
-      Create_File           : Rose.Capabilities.Capability :=
         Rose.Capabilities.Null_Capability;
    end record;
 

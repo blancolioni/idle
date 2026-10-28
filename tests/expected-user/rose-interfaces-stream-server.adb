@@ -78,8 +78,7 @@ package body Rose.Interfaces.Stream.Server is
          Registered := True;
       end if;
       if Attached_Count = Max_Attached then
-         raise Constraint_Error
-           with "Rose.Interfaces.Stream.Server: too many objects";
+         raise Constraint_Error with "Stream.Server: too many objects";
       end if;
       Attached (Attached_Count).Object := Object_Access (Object);
       Attached (Attached_Count).Cap :=

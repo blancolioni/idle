@@ -1,6 +1,5 @@
 with Rose.Interfaces.File;
 with Rose.Interfaces.Objects;
-with Rose.Interfaces.Stream_Reader;
 with Rose.Invocation;
 with Rose.System_Calls;
 with Rose.Texts;
@@ -29,6 +28,12 @@ package body Rose.Interfaces.Directory.Server is
 
    Registered      : Boolean := False;
 
+   subtype File_Object_Class is
+     Rose.Interfaces.File.File_Object'Class;
+
+   subtype Directory_Object_Class is
+     Rose.Interfaces.Directory.Directory_Object'Class;
+
    function Find
      (Identifier : Rose.Objects.Capability_Identifier)
       return Object_Access;
@@ -55,15 +60,6 @@ package body Rose.Interfaces.Directory.Server is
      (Parameters : in out Rose.Invocation.Invocation_Record);
 
    procedure Handle_Get_Directory
-     (Parameters : in out Rose.Invocation.Invocation_Record);
-
-   procedure Handle_Read_File
-     (Parameters : in out Rose.Invocation.Invocation_Record);
-
-   procedure Handle_Create_Directory
-     (Parameters : in out Rose.Invocation.Invocation_Record);
-
-   procedure Handle_Create_File
      (Parameters : in out Rose.Invocation.Invocation_Record);
 
    ------------
@@ -108,23 +104,10 @@ package body Rose.Interfaces.Directory.Server is
            (Server_Context,
             Get_Directory_Endpoint,
             Handle_Get_Directory'Access);
-         Rose.Server.Register_Handler
-           (Server_Context,
-            Read_File_Endpoint,
-            Handle_Read_File'Access);
-         Rose.Server.Register_Handler
-           (Server_Context,
-            Create_Directory_Endpoint,
-            Handle_Create_Directory'Access);
-         Rose.Server.Register_Handler
-           (Server_Context,
-            Create_File_Endpoint,
-            Handle_Create_File'Access);
          Registered := True;
       end if;
       if Attached_Count = Max_Attached then
-         raise Constraint_Error
-           with "Rose.Interfaces.Directory.Server: too many objects";
+         raise Constraint_Error with "Directory.Server: too many objects";
       end if;
       Attached (Attached_Count).Object := Object_Access (Object);
       Attached (Attached_Count).Cap :=
@@ -179,60 +162,6 @@ package body Rose.Interfaces.Directory.Server is
       end if;
       return Attached (Natural (Identifier)).Object;
    end Find;
-
-   -----------------------------
-   -- Handle_Create_Directory --
-   -----------------------------
-
-   procedure Handle_Create_Directory
-     (Parameters : in out Rose.Invocation.Invocation_Record)
-   is
-      Object : constant Object_Access := Find (Parameters.Identifier);
-      Name   : String (1 .. Natural (Parameters.Buffer_Length))
-        with Import, Address => Parameters.Buffer_Address;
-   begin
-      if Object = null then
-         Rose.System_Calls.Initialize_Reply (Parameters, Parameters.Reply_Cap);
-         Rose.System_Calls.Send_Error
-           (Parameters,
-            Rose.Invocation.Invalid_Operation);
-         return;
-      end if;
-      declare
-         Result : Rose.Interfaces.Directory.Directory_Object'Class :=
-           Object.Create_Directory (Name);
-      begin
-         Rose.System_Calls.Initialize_Reply (Parameters, Parameters.Reply_Cap);
-         Rose.System_Calls.Send_Cap (Parameters, Result.Directory_Cap);
-      end;
-   end Handle_Create_Directory;
-
-   ------------------------
-   -- Handle_Create_File --
-   ------------------------
-
-   procedure Handle_Create_File
-     (Parameters : in out Rose.Invocation.Invocation_Record)
-   is
-      Object : constant Object_Access := Find (Parameters.Identifier);
-      Name   : String (1 .. Natural (Parameters.Buffer_Length))
-        with Import, Address => Parameters.Buffer_Address;
-   begin
-      if Object = null then
-         Rose.System_Calls.Initialize_Reply (Parameters, Parameters.Reply_Cap);
-         Rose.System_Calls.Send_Error
-           (Parameters,
-            Rose.Invocation.Invalid_Operation);
-         return;
-      end if;
-      declare
-         Result : Rose.Interfaces.File.File_Object'Class :=
-           Object.Create_File (Name);
-      begin
-         Rose.System_Calls.Initialize_Reply (Parameters, Parameters.Reply_Cap);
-         Rose.System_Calls.Send_Cap (Parameters, Result.File_Cap);
-      end;
-   end Handle_Create_File;
 
    ----------------------------------
    -- Handle_Directory_Entry_Count --
@@ -375,8 +304,7 @@ package body Rose.Interfaces.Directory.Server is
          return;
       end if;
       declare
-         Result : Rose.Interfaces.Directory.Directory_Object'Class :=
-           Object.Get_Directory (Index);
+         Result : Directory_Object_Class := Object.Get_Directory (Index);
       begin
          Rose.System_Calls.Initialize_Reply (Parameters, Parameters.Reply_Cap);
          Rose.System_Calls.Send_Cap (Parameters, Result.Directory_Cap);
@@ -524,59 +452,6 @@ package body Rose.Interfaces.Directory.Server is
            Get_Directory_Endpoint,
            Identifier);
       Rose.System_Calls.Send_Cap (Parameters, Cap);
-      if not Rose.Server.Has_Instance
-        (Server_Instance,
-         Read_File_Endpoint,
-         Identifier)
-      then
-         Rose.Server.Set_Instance_Cap
-           (Server_Instance,
-            Read_File_Endpoint,
-            Identifier,
-            Rose.Server.Create_Endpoint (Read_File_Endpoint, Identifier));
-      end if;
-      Cap :=
-        Rose.Server.Get_Instance_Cap
-          (Server_Instance,
-           Read_File_Endpoint,
-           Identifier);
-      Rose.System_Calls.Send_Cap (Parameters, Cap);
-      if not Rose.Server.Has_Instance
-        (Server_Instance,
-         Create_Directory_Endpoint,
-         Identifier)
-      then
-         Rose.Server.Set_Instance_Cap
-           (Server_Instance,
-            Create_Directory_Endpoint,
-            Identifier,
-            Rose.Server.Create_Endpoint
-              (Create_Directory_Endpoint,
-               Identifier));
-      end if;
-      Cap :=
-        Rose.Server.Get_Instance_Cap
-          (Server_Instance,
-           Create_Directory_Endpoint,
-           Identifier);
-      Rose.System_Calls.Send_Cap (Parameters, Cap);
-      if not Rose.Server.Has_Instance
-        (Server_Instance,
-         Create_File_Endpoint,
-         Identifier)
-      then
-         Rose.Server.Set_Instance_Cap
-           (Server_Instance,
-            Create_File_Endpoint,
-            Identifier,
-            Rose.Server.Create_Endpoint (Create_File_Endpoint, Identifier));
-      end if;
-      Cap :=
-        Rose.Server.Get_Instance_Cap
-          (Server_Instance,
-           Create_File_Endpoint,
-           Identifier);
-      Rose.System_Calls.Send_Cap (Parameters, Cap);
    end Handle_Get_Directory_Interface;
 
    ------------------------------
@@ -598,40 +473,12 @@ package body Rose.Interfaces.Directory.Server is
          return;
       end if;
       declare
-         Result : Rose.Interfaces.File.File_Object'Class :=
-           Object.Get_Ordinary_File (Index);
+         Result : File_Object_Class := Object.Get_Ordinary_File (Index);
       begin
          Rose.System_Calls.Initialize_Reply (Parameters, Parameters.Reply_Cap);
          Rose.System_Calls.Send_Cap (Parameters, Result.File_Cap);
       end;
    end Handle_Get_Ordinary_File;
-
-   ----------------------
-   -- Handle_Read_File --
-   ----------------------
-
-   procedure Handle_Read_File
-     (Parameters : in out Rose.Invocation.Invocation_Record)
-   is
-      Object : constant Object_Access := Find (Parameters.Identifier);
-      Index  : constant Positive :=
-        Positive (Rose.System_Calls.Get_Word_32 (Parameters, 0));
-   begin
-      if Object = null then
-         Rose.System_Calls.Initialize_Reply (Parameters, Parameters.Reply_Cap);
-         Rose.System_Calls.Send_Error
-           (Parameters,
-            Rose.Invocation.Invalid_Operation);
-         return;
-      end if;
-      declare
-         Result : Rose.Interfaces.Stream_Reader.Stream_Reader_Object'Class :=
-           Object.Read_File (Index);
-      begin
-         Rose.System_Calls.Initialize_Reply (Parameters, Parameters.Reply_Cap);
-         Rose.System_Calls.Send_Cap (Parameters, Result.Stream_Reader_Cap);
-      end;
-   end Handle_Read_File;
 
    -------------------
    -- Interface_Cap --

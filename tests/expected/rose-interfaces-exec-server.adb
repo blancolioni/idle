@@ -3,19 +3,34 @@ with Rose.System_Calls;
 
 package body Rose.Interfaces.Exec.Server is
 
-   Server_Instance : Rose.Server.Server_Instance;
+   Server_Instance           : Rose.Server.Server_Instance;
 
-   Local_Launch    : Launch_Handler;
+   Local_Launch              : Launch_Handler;
 
-   Launch_Cap      : Rose.Capabilities.Capability :=
+   Launch_Cap                : Rose.Capabilities.Capability :=
      Rose.Capabilities.Null_Capability;
 
-   Local_Install   : Install_Handler;
+   Local_Launch_Command      : Launch_Command_Handler;
 
-   Install_Cap     : Rose.Capabilities.Capability :=
+   Launch_Command_Cap        : Rose.Capabilities.Capability :=
      Rose.Capabilities.Null_Capability;
 
-   Published_Cap   : Rose.Capabilities.Capability :=
+   Local_Metadata            : Metadata_Handler;
+
+   Metadata_Cap              : Rose.Capabilities.Capability :=
+     Rose.Capabilities.Null_Capability;
+
+   Local_Install             : Install_Handler;
+
+   Install_Cap               : Rose.Capabilities.Capability :=
+     Rose.Capabilities.Null_Capability;
+
+   Local_Set_Standard_Output : Set_Standard_Output_Handler;
+
+   Set_Standard_Output_Cap   : Rose.Capabilities.Capability :=
+     Rose.Capabilities.Null_Capability;
+
+   Published_Cap             : Rose.Capabilities.Capability :=
      Rose.Capabilities.Null_Capability;
 
    procedure Handle_Get_Launch_Interface
@@ -27,7 +42,16 @@ package body Rose.Interfaces.Exec.Server is
    procedure Handle_Launch
      (Parameters : in out Rose.Invocation.Invocation_Record);
 
+   procedure Handle_Launch_Command
+     (Parameters : in out Rose.Invocation.Invocation_Record);
+
+   procedure Handle_Metadata
+     (Parameters : in out Rose.Invocation.Invocation_Record);
+
    procedure Handle_Install
+     (Parameters : in out Rose.Invocation.Invocation_Record);
+
+   procedure Handle_Set_Standard_Output
      (Parameters : in out Rose.Invocation.Invocation_Record);
 
    ----------------------
@@ -35,14 +59,20 @@ package body Rose.Interfaces.Exec.Server is
    ----------------------
 
    procedure Attach_Interface
-     (Server_Context : in out Rose.Server.Server_Context;
-      Launch         : Launch_Handler;
-      Install        : Install_Handler;
-      Instanced      : Boolean := False)
+     (Server_Context      : in out Rose.Server.Server_Context;
+      Launch              : Launch_Handler;
+      Launch_Command      : Launch_Command_Handler;
+      Metadata            : Metadata_Handler;
+      Install             : Install_Handler;
+      Set_Standard_Output : Set_Standard_Output_Handler;
+      Instanced           : Boolean := False)
    is
    begin
       Local_Launch := Launch;
+      Local_Launch_Command := Launch_Command;
+      Local_Metadata := Metadata;
       Local_Install := Install;
+      Local_Set_Standard_Output := Set_Standard_Output;
       Rose.Server.Register_Handler
         (Server_Context,
          Launch_Interface,
@@ -53,7 +83,12 @@ package body Rose.Interfaces.Exec.Server is
          Handle_Get_Exec_Interface'Access);
       if not Instanced then
          Launch_Cap := Rose.Server.Create_Endpoint (Launch_Endpoint);
+         Launch_Command_Cap :=
+           Rose.Server.Create_Endpoint (Launch_Command_Endpoint);
+         Metadata_Cap := Rose.Server.Create_Endpoint (Metadata_Endpoint);
          Install_Cap := Rose.Server.Create_Endpoint (Install_Endpoint);
+         Set_Standard_Output_Cap :=
+           Rose.Server.Create_Endpoint (Set_Standard_Output_Endpoint);
          Rose.Server.Create_Anonymous_Endpoint (Launch_Interface);
          Rose.Server.Create_Anonymous_Endpoint (Exec_Interface);
       end if;
@@ -63,8 +98,20 @@ package body Rose.Interfaces.Exec.Server is
          Handle_Launch'Access);
       Rose.Server.Register_Handler
         (Server_Context,
+         Launch_Command_Endpoint,
+         Handle_Launch_Command'Access);
+      Rose.Server.Register_Handler
+        (Server_Context,
+         Metadata_Endpoint,
+         Handle_Metadata'Access);
+      Rose.Server.Register_Handler
+        (Server_Context,
          Install_Endpoint,
          Handle_Install'Access);
+      Rose.Server.Register_Handler
+        (Server_Context,
+         Set_Standard_Output_Endpoint,
+         Handle_Set_Standard_Output'Access);
    end Attach_Interface;
 
    -------------------
@@ -72,13 +119,23 @@ package body Rose.Interfaces.Exec.Server is
    -------------------
 
    procedure Create_Server
-     (Server_Context : in out Rose.Server.Server_Context;
-      Launch         : Launch_Handler;
-      Install        : Install_Handler;
-      Instanced      : Boolean := False)
+     (Server_Context      : in out Rose.Server.Server_Context;
+      Launch              : Launch_Handler;
+      Launch_Command      : Launch_Command_Handler;
+      Metadata            : Metadata_Handler;
+      Install             : Install_Handler;
+      Set_Standard_Output : Set_Standard_Output_Handler;
+      Instanced           : Boolean := False)
    is
    begin
-      Attach_Interface (Server_Context, Launch, Install, Instanced);
+      Attach_Interface
+        (Server_Context,
+         Launch,
+         Launch_Command,
+         Metadata,
+         Install,
+         Set_Standard_Output,
+         Instanced);
    end Create_Server;
 
    ---------------------
@@ -94,6 +151,30 @@ package body Rose.Interfaces.Exec.Server is
    --------------------
 
    function Get_Launch_Cap return Rose.Capabilities.Capability is (Launch_Cap);
+
+   ----------------------------
+   -- Get_Launch_Command_Cap --
+   ----------------------------
+
+   function Get_Launch_Command_Cap
+      return Rose.Capabilities.Capability
+   is (Launch_Command_Cap);
+
+   ----------------------
+   -- Get_Metadata_Cap --
+   ----------------------
+
+   function Get_Metadata_Cap
+      return Rose.Capabilities.Capability
+   is (Metadata_Cap);
+
+   ---------------------------------
+   -- Get_Set_Standard_Output_Cap --
+   ---------------------------------
+
+   function Get_Set_Standard_Output_Cap
+      return Rose.Capabilities.Capability
+   is (Set_Standard_Output_Cap);
 
    -------------------------------
    -- Handle_Get_Exec_Interface --
@@ -134,6 +215,50 @@ package body Rose.Interfaces.Exec.Server is
             Cap := Launch_Cap;
          end if;
          Rose.System_Calls.Send_Cap (Parameters, Cap);
+         if Launch_Command_Cap = Rose.Capabilities.Null_Capability then
+            if not Rose.Server.Has_Instance
+              (Server_Instance,
+               Launch_Command_Endpoint,
+               Identifier)
+            then
+               Rose.Server.Set_Instance_Cap
+                 (Server_Instance,
+                  Launch_Command_Endpoint,
+                  Identifier,
+                  Rose.Server.Create_Endpoint
+                    (Launch_Command_Endpoint,
+                     Identifier));
+            end if;
+            Cap :=
+              Rose.Server.Get_Instance_Cap
+                (Server_Instance,
+                 Launch_Command_Endpoint,
+                 Identifier);
+         else
+            Cap := Launch_Command_Cap;
+         end if;
+         Rose.System_Calls.Send_Cap (Parameters, Cap);
+         if Metadata_Cap = Rose.Capabilities.Null_Capability then
+            if not Rose.Server.Has_Instance
+              (Server_Instance,
+               Metadata_Endpoint,
+               Identifier)
+            then
+               Rose.Server.Set_Instance_Cap
+                 (Server_Instance,
+                  Metadata_Endpoint,
+                  Identifier,
+                  Rose.Server.Create_Endpoint (Metadata_Endpoint, Identifier));
+            end if;
+            Cap :=
+              Rose.Server.Get_Instance_Cap
+                (Server_Instance,
+                 Metadata_Endpoint,
+                 Identifier);
+         else
+            Cap := Metadata_Cap;
+         end if;
+         Rose.System_Calls.Send_Cap (Parameters, Cap);
          if Install_Cap = Rose.Capabilities.Null_Capability then
             if not Rose.Server.Has_Instance
               (Server_Instance,
@@ -153,6 +278,29 @@ package body Rose.Interfaces.Exec.Server is
                  Identifier);
          else
             Cap := Install_Cap;
+         end if;
+         Rose.System_Calls.Send_Cap (Parameters, Cap);
+         if Set_Standard_Output_Cap = Rose.Capabilities.Null_Capability then
+            if not Rose.Server.Has_Instance
+              (Server_Instance,
+               Set_Standard_Output_Endpoint,
+               Identifier)
+            then
+               Rose.Server.Set_Instance_Cap
+                 (Server_Instance,
+                  Set_Standard_Output_Endpoint,
+                  Identifier,
+                  Rose.Server.Create_Endpoint
+                    (Set_Standard_Output_Endpoint,
+                     Identifier));
+            end if;
+            Cap :=
+              Rose.Server.Get_Instance_Cap
+                (Server_Instance,
+                 Set_Standard_Output_Endpoint,
+                 Identifier);
+         else
+            Cap := Set_Standard_Output_Cap;
          end if;
          Rose.System_Calls.Send_Cap (Parameters, Cap);
       else
@@ -216,6 +364,50 @@ package body Rose.Interfaces.Exec.Server is
          Cap := Launch_Cap;
       end if;
       Rose.System_Calls.Send_Cap (Parameters, Cap);
+      if Launch_Command_Cap = Rose.Capabilities.Null_Capability then
+         if not Rose.Server.Has_Instance
+           (Server_Instance,
+            Launch_Command_Endpoint,
+            Identifier)
+         then
+            Rose.Server.Set_Instance_Cap
+              (Server_Instance,
+               Launch_Command_Endpoint,
+               Identifier,
+               Rose.Server.Create_Endpoint
+                 (Launch_Command_Endpoint,
+                  Identifier));
+         end if;
+         Cap :=
+           Rose.Server.Get_Instance_Cap
+             (Server_Instance,
+              Launch_Command_Endpoint,
+              Identifier);
+      else
+         Cap := Launch_Command_Cap;
+      end if;
+      Rose.System_Calls.Send_Cap (Parameters, Cap);
+      if Metadata_Cap = Rose.Capabilities.Null_Capability then
+         if not Rose.Server.Has_Instance
+           (Server_Instance,
+            Metadata_Endpoint,
+            Identifier)
+         then
+            Rose.Server.Set_Instance_Cap
+              (Server_Instance,
+               Metadata_Endpoint,
+               Identifier,
+               Rose.Server.Create_Endpoint (Metadata_Endpoint, Identifier));
+         end if;
+         Cap :=
+           Rose.Server.Get_Instance_Cap
+             (Server_Instance,
+              Metadata_Endpoint,
+              Identifier);
+      else
+         Cap := Metadata_Cap;
+      end if;
+      Rose.System_Calls.Send_Cap (Parameters, Cap);
    end Handle_Get_Launch_Interface;
 
    --------------------
@@ -268,20 +460,78 @@ package body Rose.Interfaces.Exec.Server is
       Rose.System_Calls.Send_Cap (Parameters, Result);
    end Handle_Launch;
 
+   ---------------------------
+   -- Handle_Launch_Command --
+   ---------------------------
+
+   procedure Handle_Launch_Command
+     (Parameters : in out Rose.Invocation.Invocation_Record)
+   is
+      Caps       : Rose.Capabilities.Capability_Array
+        (1 .. Rose.Invocation.Max_Capabilities);
+      Caps_Count : constant Natural :=
+        Rose.System_Calls.Copy_Received_Caps (Parameters, 0, Caps);
+      Result     : constant Rose.Capabilities.Capability :=
+        Local_Launch_Command (Parameters.Identifier, Caps (1 .. Caps_Count));
+   begin
+      Rose.System_Calls.Initialize_Reply (Parameters, Parameters.Reply_Cap);
+      Rose.System_Calls.Send_Cap (Parameters, Result);
+   end Handle_Launch_Command;
+
+   ---------------------
+   -- Handle_Metadata --
+   ---------------------
+
+   procedure Handle_Metadata
+     (Parameters : in out Rose.Invocation.Invocation_Record)
+   is
+      Last   : Natural := 0;
+      Result : String (1 .. Natural (Parameters.Buffer_Length))
+        with Import, Address => Parameters.Buffer_Address;
+   begin
+      Local_Metadata (Parameters.Identifier, Result, Last);
+      Rose.System_Calls.Initialize_Reply (Parameters, Parameters.Reply_Cap);
+      Rose.System_Calls.Send_Word (Parameters, Last);
+   end Handle_Metadata;
+
+   --------------------------------
+   -- Handle_Set_Standard_Output --
+   --------------------------------
+
+   procedure Handle_Set_Standard_Output
+     (Parameters : in out Rose.Invocation.Invocation_Record)
+   is
+      Output : constant Rose.Capabilities.Capability := Parameters.Caps (0);
+   begin
+      Local_Set_Standard_Output (Parameters.Identifier, Output);
+      Rose.System_Calls.Initialize_Reply (Parameters, Parameters.Reply_Cap);
+   end Handle_Set_Standard_Output;
+
    -----------------------
    -- Publish_Interface --
    -----------------------
 
    procedure Publish_Interface
-     (Server_Context : in out Rose.Server.Server_Context;
-      Launch         : Launch_Handler;
-      Install        : Install_Handler)
+     (Server_Context      : in out Rose.Server.Server_Context;
+      Launch              : Launch_Handler;
+      Launch_Command      : Launch_Command_Handler;
+      Metadata            : Metadata_Handler;
+      Install             : Install_Handler;
+      Set_Standard_Output : Set_Standard_Output_Handler)
    is
    begin
       Local_Launch := Launch;
+      Local_Launch_Command := Launch_Command;
+      Local_Metadata := Metadata;
       Local_Install := Install;
+      Local_Set_Standard_Output := Set_Standard_Output;
       Launch_Cap := Rose.Server.Create_Endpoint (Launch_Endpoint);
+      Launch_Command_Cap :=
+        Rose.Server.Create_Endpoint (Launch_Command_Endpoint);
+      Metadata_Cap := Rose.Server.Create_Endpoint (Metadata_Endpoint);
       Install_Cap := Rose.Server.Create_Endpoint (Install_Endpoint);
+      Set_Standard_Output_Cap :=
+        Rose.Server.Create_Endpoint (Set_Standard_Output_Endpoint);
       Published_Cap := Rose.Server.Create_Endpoint (Exec_Interface);
       Rose.Server.Register_Handler
         (Server_Context,
@@ -297,8 +547,20 @@ package body Rose.Interfaces.Exec.Server is
          Handle_Launch'Access);
       Rose.Server.Register_Handler
         (Server_Context,
+         Launch_Command_Endpoint,
+         Handle_Launch_Command'Access);
+      Rose.Server.Register_Handler
+        (Server_Context,
+         Metadata_Endpoint,
+         Handle_Metadata'Access);
+      Rose.Server.Register_Handler
+        (Server_Context,
          Install_Endpoint,
          Handle_Install'Access);
+      Rose.Server.Register_Handler
+        (Server_Context,
+         Set_Standard_Output_Endpoint,
+         Handle_Set_Standard_Output'Access);
       Rose.Server.Publish_Interface (Published_Cap);
    end Publish_Interface;
 

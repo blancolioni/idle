@@ -52,6 +52,9 @@ package body Idle.Targets.Kernel.Server is
       --  True if the body converts values to Rose.Words types.
       Public_Part    : Node_List;
       Objects        : Node_List;
+      Result_Types   : Context_List;
+      --  For the user target, the interfaces of the results that have a
+      --  subtype for their class-wide object type (see Result_Subtype).
       Handler_Specs  : Node_List;
       Bodies         : Body_List;
 
@@ -131,6 +134,11 @@ package body Idle.Targets.Kernel.Server is
                and then Parameter.Mode not in Idle.Syntax.In_Mode));
       --  For the user target: True if the handler of Member copies a
       --  string or text to the buffer with Rose.Texts.Copy.
+
+      function Result_Subtype (Info : Types.Type_Info) return String;
+      --  For the user target: a subtype, declared in the body, for the
+      --  class-wide object type of the interface result Info, whose name
+      --  can be too long for a line with the local that holds it.
 
       procedure Use_Type
         (Info      : Types.Type_Info;
@@ -389,7 +397,7 @@ package body Idle.Targets.Kernel.Server is
                           [F.New_Raise
                              (F.New_Name ("Constraint_Error"),
                               F.New_String_Literal
-                                (Package_Name & ": too many objects"))]),
+                                (Ada_Name & ".Server: too many objects"))]),
                      F.New_Assignment
                        (F.New_Name ("Attached (" & Slot & ").Object"),
                         F.New_Call
@@ -1169,7 +1177,7 @@ package body Idle.Targets.Kernel.Server is
               (F.New_Block
                  (Declarations =>
                     [F.New_Object
-                       ("Result", F.New_Name (Types.Object_Class (Result)),
+                       ("Result", F.New_Name (Result_Subtype (Result)),
                         Result_Call)],
                   Statements   => Reply.To_Array));
          end if;
@@ -1567,6 +1575,24 @@ package body Idle.Targets.Kernel.Server is
                 Register (Endpoint_Name (Subprogram), Handle (Subprogram))]
            & Extra.To_Array;
       end Registrations;
+
+      --------------------
+      -- Result_Subtype --
+      --------------------
+
+      function Result_Subtype (Info : Types.Type_Info) return String is
+         Name : constant String :=
+           To_String (Info.Interface_Name) & "_Object_Class";
+      begin
+         if not Result_Types.Contains (Name) then
+            Result_Types.Add (Name);
+            Objects.Append
+              (F.New_Raw
+                 ("subtype " & Name & " is" & ASCII.LF
+                  & "  " & Types.Object_Class (Info) & ";"));
+         end if;
+         return Name;
+      end Result_Subtype;
 
       --------------
       -- Use_Type --

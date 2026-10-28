@@ -11,10 +11,5 @@ interface Directory is
    
    function Get_Ordinary_File (Index : Positive) return interface File;
    function Get_Directory (Index : Positive) return interface Directory;
-   
-   function Read_File (Index : Positive) return interface Stream_Reader;
 
-   function Create_Directory (Name : String) return interface Directory;
-   function Create_File (Name : String) return interface File;
-   
 end Directory;
