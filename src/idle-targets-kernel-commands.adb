@@ -188,9 +188,6 @@ package body Idle.Targets.Kernel.Commands is
             end case;
          end if;
 
-         --  Ada allows a default only for an in parameter; the shell
-         --  supplies the default of an in out argument.
-
          Parameters.Append
            (F.New_Parameter
               (Argument_Name, F.New_Name (Ada_Type), Mode,
@@ -207,10 +204,8 @@ package body Idle.Targets.Kernel.Commands is
             return;
          end if;
 
-         --  An out or in out value is a local of the main, passed to the
-         --  command and then sent back in the reply. An in out value is set
-         --  after the launch invocation is received, so not in the
-         --  local's declaration.
+         --  An out value is a local of the main, passed to the command and
+         --  then sent back in the reply.
 
          if Kind = String_Argument and then Target = User_Target then
             --  A text, sent back as a string.
@@ -219,12 +214,6 @@ package body Idle.Targets.Kernel.Commands is
             Declarations.Append
               (F.New_Object
                  (Argument_Name, F.New_Name ("Rose.Command_Line.Text")));
-            if Argument.Mode = In_Out_Mode then
-               Statements.Append
-                 (F.New_Assignment
-                    (F.New_Name (Argument_Name),
-                     F.New_Call ("Rose.Texts.To_Text", [Value])));
-            end if;
             Arguments.Append
               (F.New_Named (Argument_Name, F.New_Name (Argument_Name)));
             Results.Append
@@ -249,22 +238,6 @@ package body Idle.Targets.Kernel.Commands is
                          F.New_Name (Launch & "Max_Result_Length"))])));
             Declarations.Append
               (F.New_Object (Last_Name, F.New_Name ("Natural")));
-            if Argument.Mode = In_Out_Mode then
-               Statements.Append
-                 (F.New_Block
-                    (Declarations =>
-                       [F.New_Object
-                          (Argument_Name & "_Value", F.New_Name ("String"),
-                           Value, Is_Constant => True)],
-                     Statements   =>
-                       [F.New_Assignment
-                          (F.New_Name (Last_Name),
-                           F.New_Attribute
-                             (F.New_Name (Argument_Name & "_Value"),
-                              "Length")),
-                        F.New_Assignment
-                          (Text, F.New_Name (Argument_Name & "_Value"))]));
-            end if;
             Arguments.Append
               (F.New_Named (Argument_Name, F.New_Name (Argument_Name)));
             Arguments.Append
@@ -277,10 +250,6 @@ package body Idle.Targets.Kernel.Commands is
          else
             Declarations.Append
               (F.New_Object (Argument_Name, F.New_Name (Ada_Type)));
-            if Argument.Mode = In_Out_Mode then
-               Statements.Append
-                 (F.New_Assignment (F.New_Name (Argument_Name), Value));
-            end if;
             Arguments.Append
               (F.New_Named (Argument_Name, F.New_Name (Argument_Name)));
             Results.Append
@@ -347,6 +316,9 @@ package body Idle.Targets.Kernel.Commands is
             Idle.Commands.Aspect
               (Item.Aspects, "Summary", Name & " (no summary)"));
       Line ("description", Idle.Commands.Aspect (Item.Aspects, "Description"));
+      if Idle.Commands.Is_Live (Item) then
+         Line ("live", "true");
+      end if;
       for Parent of Item.Parents loop
          Line ("role", Parent);
       end loop;
@@ -497,10 +469,13 @@ package body Idle.Targets.Kernel.Commands is
                      (if Placed.Kind = Interface_Argument
                       then "interface " & Type_Name
                       else Type_Name));
-               if Argument.Mode /= In_Mode then
-                  Line ("mode",
-                        (if Argument.Mode = Out_Mode then "out"
-                         else "in out"));
+               if Argument.Mode = Out_Mode then
+                  Line ("mode", "out");
+               elsif Placed.Kind = Interface_Argument
+                 and then Idle.Commands.Is_Versioned (Item, Argument)
+               then
+                  --  The shell versions it, unless the command is live.
+                  Line ("versioned", "true");
                end if;
                if Where.Kind /= No_Place then
                   Line ("place",
@@ -547,8 +522,8 @@ package body Idle.Targets.Kernel.Commands is
                then
                   Return_Cap;
                elsif Placed.Kind = Interface_Argument then
-                  --  The mode is the right that the shell grants to the
-                  --  cap, so the command takes the client as in.
+                  --  An in interface: the command takes a client, and
+                  --  what it can do is the client's interface.
                   Use_Client;
                else
                   Add_Value (Placed);

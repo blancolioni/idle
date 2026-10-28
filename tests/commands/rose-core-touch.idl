@@ -1,0 +1,12 @@
+--  A live command, which changes its directory as it runs (Rose ADR 0012,
+--  section 3).
+
+command Rose.Core.Touch
+  with Summary => "Create an empty file.",
+       Live
+is
+   Name : String
+     with Help => "the name of the new file";
+   Directory : in Writable_Directory
+     with Help => "the directory to create it in";
+end Rose.Core.Touch;

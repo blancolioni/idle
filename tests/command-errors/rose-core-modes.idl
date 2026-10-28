@@ -1,6 +1,10 @@
-command Rose.Core.Modes is
+command Rose.Core.Modes
+  with Live => Sometimes,
+       Server
+is
    Total : out Natural := 3;
-   Files : in out String_List;
+   Files : out String_List;
    Input : File := Nothing;
    Who : in out Named;
+   Count : in out Natural;
 end Rose.Core.Modes;

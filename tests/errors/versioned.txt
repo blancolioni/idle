@@ -1,0 +1,2 @@
+errors/versioned.idl:2:18: error: Versioned has no value
+errors/versioned.idl:6:20: error: Versioned is an aspect of an interface, not of a subprogram
