@@ -55,11 +55,14 @@ package body Idle.Commands is
         (Aspects : Idle.Syntax.Aspect_Vectors.Vector;
          Strings : String;
          Names   : String;
+         Flags   : String;
          What    : String);
-      --  Report an aspect in Aspects that is neither one of the
-      --  string-valued aspects Strings nor one of Names, a string aspect
-      --  whose value is not a string, and an aspect given twice. What
-      --  names the declaration, as in "a command".
+      --  Report an aspect in Aspects that is not one of the string-valued
+      --  aspects Strings, one of Names or one of the Boolean aspects
+      --  Flags; a string aspect whose value is not a string; a flag whose
+      --  value is not True or False; any other aspect without a value;
+      --  and an aspect given twice. What names the declaration, as in "a
+      --  command".
 
       procedure Check_Arguments;
       procedure Check_Members;
@@ -106,6 +109,14 @@ package body Idle.Commands is
                          & " --version itself");
                end if;
 
+               if Argument.Mode = In_Out_Mode then
+                  Error (Argument.Position,
+                         "a command argument is in or out, not in out:"
+                         & " a value the command changes is an in and an"
+                         & " out, and an object it changes is an in of a"
+                         & " type that can change it");
+               end if;
+
                if Argument.Mode = Out_Mode and then Argument.Has_Default
                then
                   Error (Argument.Default.Position,
@@ -125,17 +136,8 @@ package body Idle.Commands is
                         Error (Argument.Default.Position,
                                "an interface argument has no default");
                      end if;
-                     if Argument.Mode = In_Out_Mode
-                       and then not Grants_Right (Item, Argument)
-                     then
-                        Error (Argument.Position,
-                               "an in out argument is a file or a"
-                               & " directory: "
-                               & To_String (Argument.Of_Type.Name)
-                               & " has no right to grant");
-                     end if;
                   when String_List_Argument =>
-                     if Argument.Mode /= In_Mode then
+                     if Argument.Mode = Out_Mode then
                         Error (Argument.Position,
                                "a String_List argument is always in");
                      end if;
@@ -214,7 +216,7 @@ package body Idle.Commands is
                end if;
 
                Check_Aspects
-                 (Argument.Aspects, "Help", "Short_Name Short_Value",
+                 (Argument.Aspects, "Help", "Short_Name Short_Value", "",
                   "an argument");
 
                for Aspect of Argument.Aspects loop
@@ -267,6 +269,7 @@ package body Idle.Commands is
         (Aspects : Idle.Syntax.Aspect_Vectors.Vector;
          Strings : String;
          Names   : String;
+         Flags   : String;
          What    : String)
       is
          Seen : Idle.Syntax.String_Vectors.Vector;
@@ -281,14 +284,29 @@ package body Idle.Commands is
                end if;
                Seen.Append (Idle.Names.Key (Name));
 
-               if Is_One_Of (Name, Strings) then
-                  if Aspect.Value.Kind /= Idle.Syntax.String_Value then
+               if Is_One_Of (Name, Flags) then
+                  if Aspect.Value.Kind /= Idle.Syntax.Name_Value
+                    or else not Is_One_Of
+                                  (To_String (Aspect.Value.Text),
+                                   "true false")
+                  then
                      Error (Aspect.Value.Position,
-                            "the value of " & Name & " is a string");
+                            "the value of " & Name & " is True or False,"
+                            & " or " & Name & " alone means True");
                   end if;
-               elsif not Is_One_Of (Name, Names) then
+               elsif not Is_One_Of (Name, Strings)
+                 and then not Is_One_Of (Name, Names)
+               then
                   Error (Aspect.Position,
                          "unknown aspect " & Name & " of " & What);
+               elsif not Aspect.Has_Value then
+                  Error (Aspect.Position,
+                         "the aspect " & Name & " needs a value");
+               elsif Is_One_Of (Name, Strings)
+                 and then Aspect.Value.Kind /= Idle.Syntax.String_Value
+               then
+                  Error (Aspect.Value.Position,
+                         "the value of " & Name & " is a string");
                end if;
             end;
          end loop;
@@ -385,13 +403,13 @@ package body Idle.Commands is
             Check_Aspects
               (Item.Aspects,
                "Summary Description Name Authors Version Copyright",
-               "Server", "a command");
+               "Server", "Live", "a command");
             Check_Arguments;
          when Package_Unit =>
             Check_Aspects
               (Item.Aspects,
                "Title Version Copyright Authors Summary License Help_Footer",
-               "", "a package");
+               "", "", "a package");
          when Role_Unit =>
             Check_Roles;
             Check_Members;
@@ -447,34 +465,6 @@ package body Idle.Commands is
       return "";
    end Detail;
 
-   ------------------
-   -- Grants_Right --
-   ------------------
-
-   function Grants_Right
-     (Near : Idle.Syntax.Interface_Declaration;
-      Item : Idle.Syntax.Argument)
-      return Boolean
-   is
-      Name  : constant String := To_String (Item.Of_Type.Name);
-      Found : Idle.Syntax.Interface_Declaration;
-
-      function Is_Right_Type (Type_Name : String) return Boolean
-      is (Same (Type_Name, "File") or else Same (Type_Name, "Directory"));
-
-   begin
-      if Is_Right_Type (Name) then
-         return True;
-      elsif Idle.Hierarchy.Find (Near, Name, Found) then
-         for Ancestor of Idle.Hierarchy.Ancestors (Found) loop
-            if Is_Right_Type (To_String (Ancestor.Name)) then
-               return True;
-            end if;
-         end loop;
-      end if;
-      return False;
-   end Grants_Right;
-
    ----------------
    -- Has_Aspect --
    ----------------
@@ -484,6 +474,13 @@ package body Idle.Commands is
       Name    : String)
       return Boolean
    is (for some Item of Aspects => Same (To_String (Item.Name), Name));
+
+   -------------
+   -- Is_Live --
+   -------------
+
+   function Is_Live (Item : Idle.Syntax.Interface_Declaration) return Boolean
+   is (Same (Aspect (Item.Aspects, "Live", "False"), "True"));
 
    ---------------
    -- Is_One_Of --
@@ -508,6 +505,29 @@ package body Idle.Commands is
       end loop;
       return False;
    end Is_One_Of;
+
+   ------------------
+   -- Is_Versioned --
+   ------------------
+
+   function Is_Versioned
+     (Near : Idle.Syntax.Interface_Declaration;
+      Item : Idle.Syntax.Argument)
+      return Boolean
+   is
+      use all type Idle.Syntax.Unit_Kind;
+      Found : Idle.Syntax.Interface_Declaration;
+   begin
+      if not Idle.Hierarchy.Find (Near, To_String (Item.Of_Type.Name), Found)
+        or else Found.Kind /= Interface_Unit
+      then
+         return False;
+      end if;
+
+      return Found.Versioned
+        or else (for some Ancestor of Idle.Hierarchy.Ancestors (Found) =>
+                   Ancestor.Versioned);
+   end Is_Versioned;
 
    ------------------
    -- Package_Name --
@@ -602,11 +622,6 @@ package body Idle.Commands is
                      Where := (Cap_Place, Next_Cap, 0);
                      Next_Cap := Next_Cap + 1;
                end case;
-            elsif Kind = Interface_Argument
-              and then Grants_Right (Item, Argument)
-            then
-               Where := (Cap_Place, Next_Cap, 0);
-               Next_Cap := Next_Cap + 1;
             end if;
 
             if Argument.Mode /= In_Mode then
@@ -620,10 +635,8 @@ package body Idle.Commands is
                      Answer := (Item_Place, Next_Result_Item, 0);
                      Next_Result_Item := Next_Result_Item + 1;
                   when Interface_Argument =>
-                     if not Grants_Right (Item, Argument) then
-                        Answer := (Cap_Place, Next_Result_Cap, 0);
-                        Next_Result_Cap := Next_Result_Cap + 1;
-                     end if;
+                     Answer := (Cap_Place, Next_Result_Cap, 0);
+                     Next_Result_Cap := Next_Result_Cap + 1;
                   when String_List_Argument | Other_Argument =>
                      null;
                end case;

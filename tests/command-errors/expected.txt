@@ -25,9 +25,13 @@ command-errors/nowhere-thing.idl:1:1: error: package Nowhere not found: no comma
 command-errors/bad_role.idl:1:1: error: Stream_Writer is not a role, so it cannot be inherited by a role
 command-errors/bad_role.idl:3:4: error: there is more than one member called log
 command-errors/bad_role.idl:4:4: error: unknown interface Nonesuch
-command-errors/rose-core-modes.idl:2:27: error: an out argument has no default
-command-errors/rose-core-modes.idl:3:4: error: a String_List argument is always in
-command-errors/rose-core-modes.idl:4:20: error: an interface argument has no default
-command-errors/rose-core-modes.idl:5:4: error: an in out argument is a file or a directory: Named has no right to grant
+command-errors/rose-core-modes.idl:2:16: error: the value of Live is True or False, or Live alone means True
+command-errors/rose-core-modes.idl:3:8: error: the aspect Server needs a value
+command-errors/rose-core-modes.idl:5:27: error: an out argument has no default
+command-errors/rose-core-modes.idl:6:4: error: a String_List argument is always in
+command-errors/rose-core-modes.idl:7:20: error: an interface argument has no default
+command-errors/rose-core-modes.idl:8:4: error: a command argument is in or out, not in out: a value the command changes is an in and an out, and an object it changes is an in of a type that can change it
+command-errors/rose-core-modes.idl:9:4: error: a command argument is in or out, not in out: a value the command changes is an in and an out, and an object it changes is an in of a type that can change it
+command-errors/rose-core-modes.idl:9:4: error: a positional argument cannot follow the String_List argument, which takes the remaining words
 command-errors/rose-core.idl:2:19: error: the value of Version is a string
 command-errors/rose-core.idl:3:8: error: unknown aspect Colour of a package

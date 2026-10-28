@@ -97,9 +97,12 @@ package Idle.Syntax is
    --  A character is the character itself.
 
    type Aspect is record
-      Name     : Unbounded_String;
-      Value    : Aspect_Value;
-      Position : Source_Position;
+      Name      : Unbounded_String;
+      Value     : Aspect_Value;
+      Has_Value : Boolean := True;
+      --  False for an aspect given without a value, whose Value is the
+      --  name True.
+      Position  : Source_Position;
    end record;
 
    package Aspect_Vectors is
@@ -132,6 +135,10 @@ package Idle.Syntax is
       Arguments   : Argument_Vectors.Vector;
       Pinned_Id   : Long_Long_Long_Integer := 0;
       --  The id given by an Endpoint_Id aspect, or zero if it has none.
+      Versioned   : Boolean := False;
+      --  True for an interface with the Versioned aspect, whose objects
+      --  the shell can version and commit (Rose ADR 0012). Its
+      --  descendants are versioned too: see Idle.Commands.Is_Versioned.
       Position    : Source_Position;
    end record;
    --  The unit an IDL file declares, which despite the name can be any

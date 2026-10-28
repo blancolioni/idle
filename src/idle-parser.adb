@@ -31,10 +31,14 @@ package body Idle.Parser is
    procedure Parse_Constant (Item : in out Interface_Declaration);
    procedure Parse_Declarations (Item : in out Interface_Declaration);
    procedure Parse_Parameters (Into : in out Subprogram);
-   procedure Parse_Aspects (Pinned_Id : in out Long_Long_Long_Integer);
-   --  An aspect specification, if there is one: "with" and a list of
-   --  aspects. Endpoint_Id, an integer literal, is the only aspect, and
-   --  sets Pinned_Id.
+   procedure Parse_Aspects
+     (Pinned_Id    : in out Long_Long_Long_Integer;
+      Versioned    : in out Boolean;
+      On_Interface : Boolean);
+   --  An aspect specification of an interface or a subprogram, if there
+   --  is one: "with" and a list of aspects. Endpoint_Id, an integer
+   --  literal, sets Pinned_Id. Versioned, which has no value and is
+   --  allowed only On_Interface, sets Versioned (Rose ADR 0012).
 
    procedure Parse_Subprogram (Item : in out Interface_Declaration);
 
@@ -42,7 +46,8 @@ package body Idle.Parser is
    --  An argument of a command.
 
    procedure Parse_Aspect_List (Into : in out Aspect_Vectors.Vector);
-   --  "with" and a list of aspects, if there is one.
+   --  "with" and a list of aspects, if there is one. An aspect given
+   --  without a value, such as Live, has the value True.
 
    procedure Parse_Command (Item : in out Interface_Declaration);
    procedure Parse_Interface (Item : in out Interface_Declaration);
@@ -128,8 +133,17 @@ package body Idle.Parser is
          begin
             Result.Position := Current_Position;
             Result.Name := Parse_Name ("aspect name");
-            Expect (Tok_Arrow, [Tok_Comma, Tok_Semicolon, Tok_Is]);
-            Result.Value := Parse_Value;
+            if Tok = Tok_Arrow then
+               Scan;
+               Result.Value := Parse_Value;
+            else
+               --  An aspect without a value, such as Live, is True.
+               Result.Has_Value := False;
+               Result.Value :=
+                 (Kind     => Name_Value,
+                  Text     => To_Unbounded_String ("True"),
+                  Position => Result.Position);
+            end if;
             Into.Append (Result);
          end;
          exit when Tok /= Tok_Comma;
@@ -141,7 +155,11 @@ package body Idle.Parser is
    -- Parse_Aspects --
    -------------------
 
-   procedure Parse_Aspects (Pinned_Id : in out Long_Long_Long_Integer) is
+   procedure Parse_Aspects
+     (Pinned_Id    : in out Long_Long_Long_Integer;
+      Versioned    : in out Boolean;
+      On_Interface : Boolean)
+   is
    begin
       if Tok /= Tok_With then
          return;
@@ -153,28 +171,50 @@ package body Idle.Parser is
             Name  : constant String := To_String (Parse_Name ("aspect name"));
             Value : Long_Long_Long_Integer;
          begin
-            Expect (Tok_Arrow, [Tok_Comma, Tok_Semicolon, Tok_Is]);
-            if not Same_Name (Name, "Endpoint_Id") then
-               Error ("unknown aspect " & Name
-                      & "; the only aspect is Endpoint_Id");
-               if Tok in Tok_Integer_Literal | Tok_Identifier then
-                  Scan;
+            if Same_Name (Name, "Versioned") then
+               if On_Interface then
+                  Versioned := True;
+               else
+                  Error ("Versioned is an aspect of an interface, not of a"
+                         & " subprogram");
                end if;
-            elsif Tok /= Tok_Integer_Literal then
-               Error ("missing endpoint id (an integer literal)");
-               if Tok = Tok_Identifier then
+               if Tok = Tok_Arrow then
+                  if On_Interface then
+                     Error ("Versioned has no value");
+                  end if;
                   Scan;
+                  if Tok in Tok_Integer_Literal | Tok_Identifier then
+                     Scan;
+                  end if;
                end if;
             else
-               if Idle.Literals.Value (Tok_Text, Value, 2 ** 64 - 1)
-                 and then Value /= 0
-               then
-                  Pinned_Id := Value;
+               Expect (Tok_Arrow, [Tok_Comma, Tok_Semicolon, Tok_Is]);
+               if not Same_Name (Name, "Endpoint_Id") then
+                  Error ("unknown aspect " & Name
+                         & (if On_Interface
+                            then "; the aspects of an interface are"
+                                 & " Endpoint_Id and Versioned"
+                            else "; the only aspect of a subprogram is"
+                                 & " Endpoint_Id"));
+                  if Tok in Tok_Integer_Literal | Tok_Identifier then
+                     Scan;
+                  end if;
+               elsif Tok /= Tok_Integer_Literal then
+                  Error ("missing endpoint id (an integer literal)");
+                  if Tok = Tok_Identifier then
+                     Scan;
+                  end if;
                else
-                  Error ("an endpoint id must be a non-zero integer that"
-                         & " fits in 64 bits");
+                  if Idle.Literals.Value (Tok_Text, Value, 2 ** 64 - 1)
+                    and then Value /= 0
+                  then
+                     Pinned_Id := Value;
+                  else
+                     Error ("an endpoint id must be a non-zero integer"
+                            & " that fits in 64 bits");
+                  end if;
+                  Scan;
                end if;
-               Scan;
             end if;
          end;
          exit when Tok /= Tok_Comma;
@@ -328,7 +368,7 @@ package body Idle.Parser is
       Expect (Tok_Interface, [Tok_Identifier]);
       Item.Name := Parse_Name ("interface name");
       Parse_Parents (Item);
-      Parse_Aspects (Item.Pinned_Id);
+      Parse_Aspects (Item.Pinned_Id, Item.Versioned, On_Interface => True);
       Expect (Tok_Is, Declaration_Start);
       Parse_Declarations (Item);
       Expect (Tok_End, [Tok_Semicolon]);
@@ -536,7 +576,12 @@ package body Idle.Parser is
          Error ("missing 'return' and result type");
       end if;
 
-      Parse_Aspects (Result.Pinned_Id);
+      declare
+         Versioned : Boolean := False;
+         --  Not an aspect of a subprogram, so never set.
+      begin
+         Parse_Aspects (Result.Pinned_Id, Versioned, On_Interface => False);
+      end;
       Expect (Tok_Semicolon, Declaration_Start);
       Item.Subprograms.Append (Result);
    end Parse_Subprogram;

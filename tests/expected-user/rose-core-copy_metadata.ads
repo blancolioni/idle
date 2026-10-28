@@ -51,9 +51,9 @@ package Rose.Core.Copy_Metadata is
      & ASCII.LF
      & "argument Target"
      & ASCII.LF
-     & "type interface File"
+     & "type interface Writable_File"
      & ASCII.LF
-     & "mode out"
+     & "versioned true"
      & ASCII.LF
      & "place cap 5"
      & ASCII.LF
@@ -61,13 +61,23 @@ package Rose.Core.Copy_Metadata is
      & ASCII.LF
      & "argument Root"
      & ASCII.LF
-     & "type interface Directory"
+     & "type interface Writable_Directory"
      & ASCII.LF
-     & "mode in out"
+     & "versioned true"
      & ASCII.LF
      & "place cap 6"
      & ASCII.LF
      & "help where the new file goes"
+     & ASCII.LF
+     & "argument Copied"
+     & ASCII.LF
+     & "type interface Writable_File"
+     & ASCII.LF
+     & "mode out"
+     & ASCII.LF
+     & "result cap 0"
+     & ASCII.LF
+     & "help the copy"
      & ASCII.LF
      & "argument Count"
      & ASCII.LF
@@ -83,11 +93,7 @@ package Rose.Core.Copy_Metadata is
      & ASCII.LF
      & "type Boolean"
      & ASCII.LF
-     & "mode in out"
-     & ASCII.LF
      & "place word 0"
-     & ASCII.LF
-     & "result word 2"
      & ASCII.LF
      & "default False"
      & ASCII.LF
@@ -109,15 +115,11 @@ package Rose.Core.Copy_Metadata is
      & ASCII.LF
      & "type String"
      & ASCII.LF
-     & "mode in out"
-     & ASCII.LF
      & "place item 1"
-     & ASCII.LF
-     & "result item 2"
      & ASCII.LF
      & "default none"
      & ASCII.LF
-     & "help a note, which the copy may change"
+     & "help a note"
      & ASCII.LF
      with Linker_Section => ".rose_command";
 

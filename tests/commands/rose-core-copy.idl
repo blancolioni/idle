@@ -1,22 +1,26 @@
---  Interface arguments, out and in out arguments, and roles whose members
---  are not standard streams (idle#27).
+--  Interface arguments, out arguments, and roles whose members are not
+--  standard streams (idle#27). Target and Root are versioned, since the
+--  command is not live, and Copied is a writable cap the command returns
+--  (Rose ADR 0012).
 
 command Rose.Core.Copy : Standard_Error, Logging, Create_Endpoint, Delete_Cap
   with Summary => "Copy a file."
 is
    Source : in File
      with Help => "the file to copy";
-   Target : out File
+   Target : in Writable_File
      with Help => "the new file";
-   Root : in out Directory
+   Root : in Writable_Directory
      with Help => "where the new file goes";
+   Copied : out Writable_File
+     with Help => "the copy";
    Count : out Natural
      with Help => "the number of bytes copied";
-   Verbose : in out Boolean := False
+   Verbose : Boolean := False
      with Short_Name => 'v',
           Help       => "report progress";
    Report : out String
      with Help => "a summary of the copy";
-   Note : in out String := "none"
-     with Help => "a note, which the copy may change";
+   Note : String := "none"
+     with Help => "a note";
 end Rose.Core.Copy;

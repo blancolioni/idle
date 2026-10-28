@@ -45,22 +45,29 @@ package Idle.Commands is
    --  arguments first, in declaration order, then a list's. An out
    --  argument has no place in the invocation (No_Place).
    --
-   --  Where a result is in the reply to the launch invocation: out and in
-   --  out scalars are data words from 1, after the completion word, out
-   --  and in out strings are buffer items from 1, and out interfaces that
-   --  are not files or directories are caps from 0 (Cap_Place), each in
-   --  declaration order. A file or directory has no result: its mode is
-   --  the right that the shell grants to the cap (see Grants_Right).
+   --  Where a result is in the reply to the launch invocation: out
+   --  scalars are data words from 1, after the completion word, out
+   --  strings are buffer items from 1, and out interfaces are caps from 0
+   --  (Cap_Place), each in declaration order.
+   --
+   --  An argument is in or out (Rose ADR 0012, section 1): the mode is
+   --  only the direction. What a command can do with an interface is its
+   --  type, and whether the shell commits its changes is the command's
+   --  (Is_Live).
 
-   function Grants_Right
+   function Is_Versioned
      (Near : Idle.Syntax.Interface_Declaration;
       Item : Idle.Syntax.Argument)
       return Boolean;
-   --  True if the mode of the interface argument Item, declared by Near,
-   --  is the right that the shell grants to its cap (ADR 0002, section
-   --  1): its type is File or Directory, or inherits from one. An out
-   --  argument of any other interface is a result, which the command
-   --  returns as a cap.
+   --  True if Item, an argument declared by Near, is an interface whose
+   --  objects the shell can version and commit: the interface has the
+   --  Versioned aspect, or inherits from one that has.
+
+   function Is_Live (Item : Idle.Syntax.Interface_Declaration) return Boolean;
+   --  True if the command Item has the Live aspect: the shell passes it
+   --  its own caps, not versions of its Versioned arguments, and the
+   --  command's changes take effect as it makes them (Rose ADR 0012,
+   --  section 3).
 
    type Stream is (No_Stream, Input_Stream, Output_Stream, Error_Stream);
 

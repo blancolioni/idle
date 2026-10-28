@@ -1,0 +1,8 @@
+interface Versioned_Errors
+  with Versioned => True
+is
+
+   procedure Commit
+     with Versioned;
+
+end Versioned_Errors;
