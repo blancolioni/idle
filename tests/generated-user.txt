@@ -18,3 +18,5 @@ rose/exec
 modes/partner
 rose/directory
 modes/exchange
+parents/resource
+parents/lease

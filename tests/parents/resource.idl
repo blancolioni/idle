@@ -1,0 +1,8 @@
+--  An object that holds something until it is released (Rose ADR 0010):
+--  a copy of Rose's interfaces/resource.idl.
+
+interface Resource is
+
+   procedure Release;
+
+end Resource;

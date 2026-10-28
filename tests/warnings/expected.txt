@@ -1,0 +1,1 @@
+warnings/unreleased.idl:6:4: warning: Unreleased declares Release, but is not a Resource, so the Close of its clients does not call it

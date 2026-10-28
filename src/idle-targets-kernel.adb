@@ -50,6 +50,10 @@ package body Idle.Targets.Kernel is
       return Boolean;
    --  True if Left comes before Right in a file.
 
+   procedure Warn_Unreleased (Item : Idle.Syntax.Interface_Declaration);
+   --  Warn if Item declares a Release of its own, but is not a Resource:
+   --  the Close of its clients does not call it (Rose ADR 0010).
+
    function Find_Constant
      (Item   : Idle.Syntax.Interface_Declaration;
       Name   : String;
@@ -608,12 +612,15 @@ package body Idle.Targets.Kernel is
    begin
       case Item.Kind is
          when Idle.Syntax.Interface_Unit =>
-            if Check (Item)
-              and then (Target = Kernel_Target or else Check_User (Item))
-            then
-               Generate_Interface_Package (Item, Output_Directory, Target);
-               Client.Generate (Item, Output_Directory, Target);
-               Server.Generate (Item, Output_Directory, Target);
+            if Check (Item) then
+               --  After Check, which reports an interface that is its own
+               --  ancestor, since the warning looks at the ancestors.
+               Warn_Unreleased (Item);
+               if Target = Kernel_Target or else Check_User (Item) then
+                  Generate_Interface_Package (Item, Output_Directory, Target);
+                  Client.Generate (Item, Output_Directory, Target);
+                  Server.Generate (Item, Output_Directory, Target);
+               end if;
             end if;
          when Idle.Syntax.Command_Unit =>
             if Idle.Commands.Check (Item) then
@@ -1035,5 +1042,27 @@ package body Idle.Targets.Kernel is
           (Find_Constant (Owner, Value, Item.Position, Next_Owner, Next)
            and then Is_Integer_Constant (Next_Owner, Next));
    end Is_Integer_Constant;
+
+   ---------------------
+   -- Warn_Unreleased --
+   ---------------------
+
+   procedure Warn_Unreleased (Item : Idle.Syntax.Interface_Declaration) is
+   begin
+      if Is_Resource (Item) then
+         return;
+      end if;
+      for Subprogram of Item.Subprograms loop
+         if Idle.Names.Key (To_String (Subprogram.Name))
+           = Idle.Names.Key ("Release")
+         then
+            Idle.Diagnostics.Warning
+              (To_String (Item.File_Name), Subprogram.Position.Line,
+               Subprogram.Position.Column,
+               To_String (Item.Name) & " declares Release, but is not a "
+               & "Resource, so the Close of its clients does not call it");
+         end if;
+      end loop;
+   end Warn_Unreleased;
 
 end Idle.Targets.Kernel;

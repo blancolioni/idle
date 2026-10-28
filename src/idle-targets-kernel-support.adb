@@ -1,12 +1,14 @@
 with Ada.Characters.Handling;
 with Ada.Strings.Unbounded;
 
-with Idle.Hierarchy;
 with Idle.Names;
 
 package body Idle.Targets.Kernel.Support is
 
    use Ada.Strings.Unbounded;
+
+   Resource_Name : constant String := "Resource";
+   Release_Name  : constant String := "Release";
 
    procedure Find_Standard
      (Name     : String;
@@ -154,6 +156,37 @@ package body Idle.Targets.Kernel.Support is
    begin
       return Idle.Names.Ada_Name (To_String (Item.Name)) & "_Interface";
    end Interface_Name;
+
+   ----------------
+   -- Is_Release --
+   ----------------
+
+   function Is_Release (Member : Idle.Hierarchy.Member) return Boolean is
+   begin
+      return Idle.Names.Key (To_String (Member.Declared_In))
+          = Idle.Names.Key (Resource_Name)
+        and then Idle.Names.Key (To_String (Member.Subprogram.Name))
+          = Idle.Names.Key (Release_Name);
+   end Is_Release;
+
+   -----------------
+   -- Is_Resource --
+   -----------------
+
+   function Is_Resource
+     (Item : Idle.Syntax.Interface_Declaration)
+      return Boolean
+   is
+      function Is_Named_Resource
+        (Declaration : Idle.Syntax.Interface_Declaration)
+         return Boolean
+      is (Idle.Names.Key (To_String (Declaration.Name))
+          = Idle.Names.Key (Resource_Name));
+   begin
+      return Is_Named_Resource (Item)
+        or else (for some Ancestor of Idle.Hierarchy.Ancestors (Item) =>
+                   Is_Named_Resource (Ancestor));
+   end Is_Resource;
 
    ----------
    -- Name --

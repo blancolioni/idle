@@ -83,6 +83,8 @@ package body Idle.Targets.Kernel.Server is
       --  Item, so it names the ids by their package.
 
       Interface_Type : constant String := Ada_Name & "_Interface";
+      Resource       : constant Boolean := Is_Resource (Item);
+      --  True if Item's objects are released (Rose ADR 0010).
       --  For the user target, the interface that a served object
       --  implements.
       --  The procedure that replies to an invocation of the interface id
@@ -103,6 +105,7 @@ package body Idle.Targets.Kernel.Server is
 
       procedure Add_Attach;
       procedure Add_Attached_Objects;
+      procedure Add_Release_Support;
       procedure Add_Get_Interface
         (For_Interface : Idle.Syntax.Interface_Declaration);
       procedure Add_Getters;
@@ -316,7 +319,12 @@ package body Idle.Targets.Kernel.Server is
                [F.New_Component ("Object", F.New_Name ("Object_Access")),
                 F.New_Component
                   ("Cap", F.New_Name (Capability_Name),
-                   F.New_Name ("Rose.Capabilities.Null_Capability"))]));
+                   F.New_Name ("Rose.Capabilities.Null_Capability"))]
+               & (if Resource
+                  then [F.New_Component
+                          ("Retired", F.New_Name ("Boolean"),
+                           F.New_Name ("False"))]
+                  else Syn.No_Nodes)));
          Objects.Append
            (F.New_Object
               ("Max_Attached", Initial_Value => F.New_Integer_Literal (16),
@@ -342,41 +350,70 @@ package body Idle.Targets.Kernel.Server is
 
          Handler_Specs.Append (Find);
 
-         Bodies.Add
-           ("Attach",
-            F.New_Subprogram_Body
-              (Specification => Attach,
-               Statements    =>
-                 [F.New_If
-                    (Condition =>
-                       F.New_Unary ("not", F.New_Name ("Registered")),
-                     Then_Part =>
-                       Registrations
-                       & [F.New_Assignment
-                            (F.New_Name ("Registered"),
-                             F.New_Name ("True"))]),
-                  F.New_If
-                    (Condition =>
-                       F.New_Binary (Count, "=", F.New_Name ("Max_Attached")),
-                     Then_Part =>
-                       [F.New_Raise
-                          (F.New_Name ("Constraint_Error"),
-                           F.New_String_Literal
-                             (Package_Name & ": too many objects"))]),
-                  F.New_Assignment
-                    (F.New_Name ("Attached (Attached_Count).Object"),
-                     F.New_Call ("Object_Access", [F.New_Name ("Object")])),
-                  F.New_Assignment
-                    (F.New_Name ("Attached (Attached_Count).Cap"),
-                     F.New_Call
-                       (Server & "Create_Endpoint",
-                        [F.New_Name (Id (Item)),
-                         F.New_Call
-                           ("Rose.Objects.Capability_Identifier",
-                            [Count])])),
-                  F.New_Assignment
-                    (Count,
-                     F.New_Binary (Count, "+", F.New_Integer_Literal (1)))]));
+         --  An object is attached at the next slot, or for a resource at
+         --  the first free one, since a released object frees its slot.
+
+         declare
+            Slot     : constant String :=
+              (if Resource then "Slot" else "Attached_Count");
+            Next     : constant not null Syn.Node_Access :=
+              F.New_Assignment
+                (Count, F.New_Binary (Count, "+", F.New_Integer_Literal (1)));
+         begin
+            Bodies.Add
+              ("Attach",
+               F.New_Subprogram_Body
+                 (Specification => Attach,
+                  Declarations  =>
+                    (if Resource
+                     then [F.New_Object
+                             ("Slot", F.New_Name ("Natural"),
+                              F.New_Name ("Free_Slot"),
+                              Is_Constant => True)]
+                     else Syn.No_Nodes),
+                  Statements    =>
+                    [F.New_If
+                       (Condition =>
+                          F.New_Unary ("not", F.New_Name ("Registered")),
+                        Then_Part =>
+                          Registrations
+                          & [F.New_Assignment
+                               (F.New_Name ("Registered"),
+                                F.New_Name ("True"))]),
+                     F.New_If
+                       (Condition =>
+                          F.New_Binary
+                            (F.New_Name (Slot), "=",
+                             F.New_Name ("Max_Attached")),
+                        Then_Part =>
+                          [F.New_Raise
+                             (F.New_Name ("Constraint_Error"),
+                              F.New_String_Literal
+                                (Package_Name & ": too many objects"))]),
+                     F.New_Assignment
+                       (F.New_Name ("Attached (" & Slot & ").Object"),
+                        F.New_Call
+                          ("Object_Access", [F.New_Name ("Object")])),
+                     F.New_Assignment
+                       (F.New_Name ("Attached (" & Slot & ").Cap"),
+                        F.New_Call
+                          (Server & "Create_Endpoint",
+                           [F.New_Name (Id (Item)),
+                            F.New_Call
+                              ("Rose.Objects.Capability_Identifier",
+                               [F.New_Name (Slot)])])),
+                     (if Resource
+                      then F.New_If
+                             (Condition =>
+                                F.New_Binary
+                                  (F.New_Name ("Slot"), "=", Count),
+                              Then_Part => [Next])
+                      else Next)]));
+         end;
+
+         if Resource then
+            Add_Release_Support;
+         end if;
 
          --  Cap_Of gives an object's cap for the interface, or for one of
          --  its ancestors, for the cap functions of a served object. It
@@ -1024,6 +1061,12 @@ package body Idle.Targets.Kernel.Server is
                     (F.New_Assignment (F.New_Name ("Result"), Value));
                else
                   Statements.Append (F.New_Call_Statement (Value));
+                  if Is_Release (Member) then
+                     --  The object is gone: free its slot (Rose ADR 0010).
+                     Statements.Append
+                       (Call ("Detach",
+                              [F.New_Name ("Parameters.Identifier")]));
+                  end if;
                end if;
             end;
          elsif Subprogram.Is_Function and then not Returns_String then
@@ -1036,6 +1079,13 @@ package body Idle.Targets.Kernel.Server is
          else
             Statements.Append
               (Call (Local (Subprogram), Arguments.To_Array));
+            if Is_Release (Member) then
+               --  The object is gone: delete its caps (Rose ADR 0010).
+               Statements.Append
+                 (Call (Server & "Remove_Instance",
+                        [F.New_Name ("Server_Instance"),
+                         F.New_Name ("Parameters.Identifier")]));
+            end if;
          end if;
 
          Reply.Append
@@ -1254,6 +1304,152 @@ package body Idle.Targets.Kernel.Server is
                  & [Call (Server & "Publish_Interface",
                           [F.New_Name ("Published_Cap")])]));
       end Add_Publish;
+
+      -------------------------
+      -- Add_Release_Support --
+      -------------------------
+
+      --  For the user target, when Item is a resource (Rose ADR 0010):
+      --  Free_Slot finds a slot for Attach, and Detach frees the slot of
+      --  an object that has been released. Detach rescinds the object's
+      --  caps, so that no copy of them reaches whatever is attached in
+      --  the slot next. Without the rescind cap, it retires the slot
+      --  instead, so that it is not used again.
+
+      procedure Add_Release_Support is
+         Free_Slot : constant not null Syn.Node_Access :=
+           F.New_Function ("Free_Slot", F.New_Name ("Natural"));
+         Detach    : constant not null Syn.Node_Access :=
+           F.New_Procedure
+             ("Detach",
+              [F.New_Parameter
+                 ("Identifier",
+                  F.New_Name ("Rose.Objects.Capability_Identifier"))]);
+         Send_Cap_To : constant not null Syn.Node_Access :=
+           F.New_Procedure
+             ("Send_Cap_To",
+              [F.New_Parameter ("Target", F.New_Name (Capability_Name)),
+               F.New_Parameter ("Cap", F.New_Name (Capability_Name))]);
+
+         Slot     : constant String := "Attached (Natural (Identifier))";
+         Rescind  : constant not null Syn.Node_Access :=
+           F.New_Name (System_Calls & "Rescind_Cap_Capability");
+         Null_Cap : constant not null Syn.Node_Access :=
+           F.New_Name ("Rose.Capabilities.Null_Capability");
+
+         function Rescind_Instance (Endpoint : String)
+           return not null Syn.Node_Access
+         is (F.New_If
+               (Condition =>
+                  F.New_Call
+                    (Server & "Has_Instance",
+                     [F.New_Name ("Server_Instance"),
+                      F.New_Name (Endpoint),
+                      F.New_Name ("Identifier")]),
+                Then_Part =>
+                  [Call ("Send_Cap_To",
+                         [Rescind,
+                          F.New_Call
+                            (Server & "Get_Instance_Cap",
+                             [F.New_Name ("Server_Instance"),
+                              F.New_Name (Endpoint),
+                              F.New_Name ("Identifier")])])]));
+         --  Rescind the cap of Endpoint for the object, if one was made.
+
+         Rescinds : Node_List;
+
+      begin
+         Rescinds.Append
+           (Call ("Send_Cap_To", [Rescind, F.New_Name (Slot & ".Cap")]));
+         for Subprogram of Subprograms loop
+            Rescinds.Append (Rescind_Instance (Endpoint_Name (Subprogram)));
+         end loop;
+         for For_Interface of Interfaces loop
+            Rescinds.Append (Rescind_Instance (Id (For_Interface)));
+         end loop;
+
+         Handler_Specs.Append (Free_Slot);
+         Handler_Specs.Append (Detach);
+         Handler_Specs.Append (Send_Cap_To);
+
+         Bodies.Add
+           ("Free_Slot",
+            F.New_Subprogram_Body
+              (Specification => Free_Slot,
+               Declarations  =>
+                 [F.New_Object
+                    ("Index", F.New_Name ("Natural"),
+                     F.New_Integer_Literal (0))],
+               Statements    =>
+                 [F.New_For_Of_Loop
+                    ("Item", F.New_Name ("Attached"),
+                     [F.New_If
+                        (Condition =>
+                           F.New_Binary
+                             (F.New_Binary
+                                (F.New_Binary
+                                   (F.New_Name ("Index"), "<",
+                                    F.New_Name ("Attached_Count")),
+                                 "and then",
+                                 F.New_Binary
+                                   (F.New_Name ("Item.Object"), "=",
+                                    F.New_Name ("null"))),
+                              "and then",
+                              F.New_Unary
+                                ("not", F.New_Name ("Item.Retired"))),
+                         Then_Part => [F.New_Return (F.New_Name ("Index"))]),
+                      F.New_Assignment
+                        (F.New_Name ("Index"),
+                         F.New_Binary
+                           (F.New_Name ("Index"), "+",
+                            F.New_Integer_Literal (1)))]),
+                  F.New_Return (F.New_Name ("Attached_Count"))]));
+
+         Bodies.Add
+           ("Detach",
+            F.New_Subprogram_Body
+              (Specification => Detach,
+               Declarations  =>
+                 [F.New_Use ("Rose.Capabilities.Capability",
+                             Use_Type => True)],
+               Statements    =>
+                 [F.New_If
+                    (Condition => F.New_Binary (Rescind, "=", Null_Cap),
+                     Then_Part =>
+                       [F.New_Assignment
+                          (F.New_Name (Slot & ".Retired"),
+                           F.New_Name ("True"))],
+                     Else_Part => Rescinds.To_Array),
+                  Call (Server & "Remove_Instance",
+                        [F.New_Name ("Server_Instance"),
+                         F.New_Name ("Identifier")]),
+                  Call ("Send_Cap_To",
+                        [F.New_Name (System_Calls & "Delete_Cap_Capability"),
+                         F.New_Name (Slot & ".Cap")]),
+                  F.New_Assignment
+                    (F.New_Name (Slot & ".Object"), F.New_Name ("null")),
+                  F.New_Assignment (F.New_Name (Slot & ".Cap"), Null_Cap)]));
+
+         --  The invocation is made here, and not through
+         --  Rose.System_Calls.Rescind_Cap or Delete_Cap, whose call to
+         --  Invoke_Capability can be inlined, which breaks the invocation.
+
+         Bodies.Add
+           ("Send_Cap_To",
+            F.New_Subprogram_Body
+              (Specification => Send_Cap_To,
+               Declarations  =>
+                 [F.New_Object
+                    ("Params", F.New_Name (Record_Name),
+                     Is_Aliased => True)],
+               Statements    =>
+                 [Call (System_Calls & "Initialize_Send",
+                        [F.New_Name ("Params"), F.New_Name ("Target")]),
+                  Call (System_Calls & "Send_Cap",
+                        [F.New_Name ("Params"), F.New_Name ("Cap")]),
+                  Call (System_Calls & "Invoke_Capability",
+                        [F.New_Name ("Params")])]));
+      end Add_Release_Support;
 
       ------------------------
       -- Add_Remove_Instance --

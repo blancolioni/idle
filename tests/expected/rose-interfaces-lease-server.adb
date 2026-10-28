@@ -1,0 +1,713 @@
+with Rose.Invocation;
+with Rose.System_Calls;
+
+package body Rose.Interfaces.Lease.Server is
+
+   Server_Instance : Rose.Server.Server_Instance;
+
+   Local_Badge     : Badge_Handler;
+
+   Badge_Cap       : Rose.Capabilities.Capability :=
+     Rose.Capabilities.Null_Capability;
+
+   Local_Increment : Increment_Handler;
+
+   Increment_Cap   : Rose.Capabilities.Capability :=
+     Rose.Capabilities.Null_Capability;
+
+   Local_Value     : Value_Handler;
+
+   Value_Cap       : Rose.Capabilities.Capability :=
+     Rose.Capabilities.Null_Capability;
+
+   Local_Release   : Release_Handler;
+
+   Release_Cap     : Rose.Capabilities.Capability :=
+     Rose.Capabilities.Null_Capability;
+
+   Local_Remaining : Remaining_Handler;
+
+   Remaining_Cap   : Rose.Capabilities.Capability :=
+     Rose.Capabilities.Null_Capability;
+
+   Published_Cap   : Rose.Capabilities.Capability :=
+     Rose.Capabilities.Null_Capability;
+
+   procedure Handle_Get_Named_Interface
+     (Parameters : in out Rose.Invocation.Invocation_Record);
+
+   procedure Handle_Get_Counter_Interface
+     (Parameters : in out Rose.Invocation.Invocation_Record);
+
+   procedure Handle_Get_Resource_Interface
+     (Parameters : in out Rose.Invocation.Invocation_Record);
+
+   procedure Handle_Get_Lease_Interface
+     (Parameters : in out Rose.Invocation.Invocation_Record);
+
+   procedure Handle_Badge
+     (Parameters : in out Rose.Invocation.Invocation_Record);
+
+   procedure Handle_Increment
+     (Parameters : in out Rose.Invocation.Invocation_Record);
+
+   procedure Handle_Value
+     (Parameters : in out Rose.Invocation.Invocation_Record);
+
+   procedure Handle_Release
+     (Parameters : in out Rose.Invocation.Invocation_Record);
+
+   procedure Handle_Remaining
+     (Parameters : in out Rose.Invocation.Invocation_Record);
+
+   ----------------------
+   -- Attach_Interface --
+   ----------------------
+
+   procedure Attach_Interface
+     (Server_Context : in out Rose.Server.Server_Context;
+      Badge          : Badge_Handler;
+      Increment      : Increment_Handler;
+      Value          : Value_Handler;
+      Release        : Release_Handler;
+      Remaining      : Remaining_Handler;
+      Instanced      : Boolean := False)
+   is
+   begin
+      Local_Badge := Badge;
+      Local_Increment := Increment;
+      Local_Value := Value;
+      Local_Release := Release;
+      Local_Remaining := Remaining;
+      Rose.Server.Register_Handler
+        (Server_Context,
+         Named_Interface,
+         Handle_Get_Named_Interface'Access);
+      Rose.Server.Register_Handler
+        (Server_Context,
+         Counter_Interface,
+         Handle_Get_Counter_Interface'Access);
+      Rose.Server.Register_Handler
+        (Server_Context,
+         Resource_Interface,
+         Handle_Get_Resource_Interface'Access);
+      Rose.Server.Register_Handler
+        (Server_Context,
+         Lease_Interface,
+         Handle_Get_Lease_Interface'Access);
+      if not Instanced then
+         Badge_Cap := Rose.Server.Create_Endpoint (Badge_Endpoint);
+         Increment_Cap := Rose.Server.Create_Endpoint (Increment_Endpoint);
+         Value_Cap := Rose.Server.Create_Endpoint (Value_Endpoint);
+         Release_Cap := Rose.Server.Create_Endpoint (Release_Endpoint);
+         Remaining_Cap := Rose.Server.Create_Endpoint (Remaining_Endpoint);
+         Rose.Server.Create_Anonymous_Endpoint (Named_Interface);
+         Rose.Server.Create_Anonymous_Endpoint (Counter_Interface);
+         Rose.Server.Create_Anonymous_Endpoint (Resource_Interface);
+         Rose.Server.Create_Anonymous_Endpoint (Lease_Interface);
+      end if;
+      Rose.Server.Register_Handler
+        (Server_Context,
+         Badge_Endpoint,
+         Handle_Badge'Access);
+      Rose.Server.Register_Handler
+        (Server_Context,
+         Increment_Endpoint,
+         Handle_Increment'Access);
+      Rose.Server.Register_Handler
+        (Server_Context,
+         Value_Endpoint,
+         Handle_Value'Access);
+      Rose.Server.Register_Handler
+        (Server_Context,
+         Release_Endpoint,
+         Handle_Release'Access);
+      Rose.Server.Register_Handler
+        (Server_Context,
+         Remaining_Endpoint,
+         Handle_Remaining'Access);
+   end Attach_Interface;
+
+   -------------------
+   -- Create_Server --
+   -------------------
+
+   procedure Create_Server
+     (Server_Context : in out Rose.Server.Server_Context;
+      Badge          : Badge_Handler;
+      Increment      : Increment_Handler;
+      Value          : Value_Handler;
+      Release        : Release_Handler;
+      Remaining      : Remaining_Handler;
+      Instanced      : Boolean := False)
+   is
+   begin
+      Attach_Interface
+        (Server_Context,
+         Badge,
+         Increment,
+         Value,
+         Release,
+         Remaining,
+         Instanced);
+   end Create_Server;
+
+   -------------------
+   -- Get_Badge_Cap --
+   -------------------
+
+   function Get_Badge_Cap return Rose.Capabilities.Capability is (Badge_Cap);
+
+   -----------------------
+   -- Get_Increment_Cap --
+   -----------------------
+
+   function Get_Increment_Cap
+      return Rose.Capabilities.Capability
+   is (Increment_Cap);
+
+   ---------------------
+   -- Get_Release_Cap --
+   ---------------------
+
+   function Get_Release_Cap
+      return Rose.Capabilities.Capability
+   is (Release_Cap);
+
+   -----------------------
+   -- Get_Remaining_Cap --
+   -----------------------
+
+   function Get_Remaining_Cap
+      return Rose.Capabilities.Capability
+   is (Remaining_Cap);
+
+   -------------------
+   -- Get_Value_Cap --
+   -------------------
+
+   function Get_Value_Cap return Rose.Capabilities.Capability is (Value_Cap);
+
+   ------------------
+   -- Handle_Badge --
+   ------------------
+
+   procedure Handle_Badge
+     (Parameters : in out Rose.Invocation.Invocation_Record)
+   is
+      Result : constant Rose.Capabilities.Capability :=
+        Local_Badge (Parameters.Identifier);
+   begin
+      Rose.System_Calls.Initialize_Reply (Parameters, Parameters.Reply_Cap);
+      Rose.System_Calls.Send_Cap (Parameters, Result);
+   end Handle_Badge;
+
+   ----------------------------------
+   -- Handle_Get_Counter_Interface --
+   ----------------------------------
+
+   procedure Handle_Get_Counter_Interface
+     (Parameters : in out Rose.Invocation.Invocation_Record)
+   is
+      use type Rose.Capabilities.Capability;
+      Cap        : Rose.Capabilities.Capability;
+      Identifier : constant Rose.Objects.Capability_Identifier :=
+        Parameters.Identifier;
+      Ancestor   : Natural := 0;
+   begin
+      if Parameters.Control.Flags (Rose.Invocation.Send_Words) then
+         Ancestor := Natural (Parameters.Data (0));
+      end if;
+      Rose.System_Calls.Initialize_Reply (Parameters, Parameters.Reply_Cap);
+      if Ancestor = 0 then
+         if Badge_Cap = Rose.Capabilities.Null_Capability then
+            if not Rose.Server.Has_Instance
+              (Server_Instance,
+               Badge_Endpoint,
+               Identifier)
+            then
+               Rose.Server.Set_Instance_Cap
+                 (Server_Instance,
+                  Badge_Endpoint,
+                  Identifier,
+                  Rose.Server.Create_Endpoint (Badge_Endpoint, Identifier));
+            end if;
+            Cap :=
+              Rose.Server.Get_Instance_Cap
+                (Server_Instance,
+                 Badge_Endpoint,
+                 Identifier);
+         else
+            Cap := Badge_Cap;
+         end if;
+         Rose.System_Calls.Send_Cap (Parameters, Cap);
+         if Increment_Cap = Rose.Capabilities.Null_Capability then
+            if not Rose.Server.Has_Instance
+              (Server_Instance,
+               Increment_Endpoint,
+               Identifier)
+            then
+               Rose.Server.Set_Instance_Cap
+                 (Server_Instance,
+                  Increment_Endpoint,
+                  Identifier,
+                  Rose.Server.Create_Endpoint
+                    (Increment_Endpoint,
+                     Identifier));
+            end if;
+            Cap :=
+              Rose.Server.Get_Instance_Cap
+                (Server_Instance,
+                 Increment_Endpoint,
+                 Identifier);
+         else
+            Cap := Increment_Cap;
+         end if;
+         Rose.System_Calls.Send_Cap (Parameters, Cap);
+         if Value_Cap = Rose.Capabilities.Null_Capability then
+            if not Rose.Server.Has_Instance
+              (Server_Instance,
+               Value_Endpoint,
+               Identifier)
+            then
+               Rose.Server.Set_Instance_Cap
+                 (Server_Instance,
+                  Value_Endpoint,
+                  Identifier,
+                  Rose.Server.Create_Endpoint (Value_Endpoint, Identifier));
+            end if;
+            Cap :=
+              Rose.Server.Get_Instance_Cap
+                (Server_Instance,
+                 Value_Endpoint,
+                 Identifier);
+         else
+            Cap := Value_Cap;
+         end if;
+         Rose.System_Calls.Send_Cap (Parameters, Cap);
+      else
+         if Ancestor = 1 then
+            if not Rose.Server.Has_Instance
+              (Server_Instance,
+               Named_Interface,
+               Identifier)
+            then
+               Rose.Server.Set_Instance_Cap
+                 (Server_Instance,
+                  Named_Interface,
+                  Identifier,
+                  Rose.Server.Create_Endpoint (Named_Interface, Identifier));
+            end if;
+            Rose.System_Calls.Send_Cap
+              (Parameters,
+               Rose.Server.Get_Instance_Cap
+                 (Server_Instance,
+                  Named_Interface,
+                  Identifier));
+         else
+            Rose.System_Calls.Send_Error
+              (Parameters,
+               Rose.Invocation.Invalid_Operation);
+         end if;
+      end if;
+   end Handle_Get_Counter_Interface;
+
+   --------------------------------
+   -- Handle_Get_Lease_Interface --
+   --------------------------------
+
+   procedure Handle_Get_Lease_Interface
+     (Parameters : in out Rose.Invocation.Invocation_Record)
+   is
+      use type Rose.Capabilities.Capability;
+      Cap        : Rose.Capabilities.Capability;
+      Identifier : constant Rose.Objects.Capability_Identifier :=
+        Parameters.Identifier;
+      Ancestor   : Natural := 0;
+   begin
+      if Parameters.Control.Flags (Rose.Invocation.Send_Words) then
+         Ancestor := Natural (Parameters.Data (0));
+      end if;
+      Rose.System_Calls.Initialize_Reply (Parameters, Parameters.Reply_Cap);
+      if Ancestor = 0 then
+         if Badge_Cap = Rose.Capabilities.Null_Capability then
+            if not Rose.Server.Has_Instance
+              (Server_Instance,
+               Badge_Endpoint,
+               Identifier)
+            then
+               Rose.Server.Set_Instance_Cap
+                 (Server_Instance,
+                  Badge_Endpoint,
+                  Identifier,
+                  Rose.Server.Create_Endpoint (Badge_Endpoint, Identifier));
+            end if;
+            Cap :=
+              Rose.Server.Get_Instance_Cap
+                (Server_Instance,
+                 Badge_Endpoint,
+                 Identifier);
+         else
+            Cap := Badge_Cap;
+         end if;
+         Rose.System_Calls.Send_Cap (Parameters, Cap);
+         if Increment_Cap = Rose.Capabilities.Null_Capability then
+            if not Rose.Server.Has_Instance
+              (Server_Instance,
+               Increment_Endpoint,
+               Identifier)
+            then
+               Rose.Server.Set_Instance_Cap
+                 (Server_Instance,
+                  Increment_Endpoint,
+                  Identifier,
+                  Rose.Server.Create_Endpoint
+                    (Increment_Endpoint,
+                     Identifier));
+            end if;
+            Cap :=
+              Rose.Server.Get_Instance_Cap
+                (Server_Instance,
+                 Increment_Endpoint,
+                 Identifier);
+         else
+            Cap := Increment_Cap;
+         end if;
+         Rose.System_Calls.Send_Cap (Parameters, Cap);
+         if Value_Cap = Rose.Capabilities.Null_Capability then
+            if not Rose.Server.Has_Instance
+              (Server_Instance,
+               Value_Endpoint,
+               Identifier)
+            then
+               Rose.Server.Set_Instance_Cap
+                 (Server_Instance,
+                  Value_Endpoint,
+                  Identifier,
+                  Rose.Server.Create_Endpoint (Value_Endpoint, Identifier));
+            end if;
+            Cap :=
+              Rose.Server.Get_Instance_Cap
+                (Server_Instance,
+                 Value_Endpoint,
+                 Identifier);
+         else
+            Cap := Value_Cap;
+         end if;
+         Rose.System_Calls.Send_Cap (Parameters, Cap);
+         if Release_Cap = Rose.Capabilities.Null_Capability then
+            if not Rose.Server.Has_Instance
+              (Server_Instance,
+               Release_Endpoint,
+               Identifier)
+            then
+               Rose.Server.Set_Instance_Cap
+                 (Server_Instance,
+                  Release_Endpoint,
+                  Identifier,
+                  Rose.Server.Create_Endpoint (Release_Endpoint, Identifier));
+            end if;
+            Cap :=
+              Rose.Server.Get_Instance_Cap
+                (Server_Instance,
+                 Release_Endpoint,
+                 Identifier);
+         else
+            Cap := Release_Cap;
+         end if;
+         Rose.System_Calls.Send_Cap (Parameters, Cap);
+         if Remaining_Cap = Rose.Capabilities.Null_Capability then
+            if not Rose.Server.Has_Instance
+              (Server_Instance,
+               Remaining_Endpoint,
+               Identifier)
+            then
+               Rose.Server.Set_Instance_Cap
+                 (Server_Instance,
+                  Remaining_Endpoint,
+                  Identifier,
+                  Rose.Server.Create_Endpoint
+                    (Remaining_Endpoint,
+                     Identifier));
+            end if;
+            Cap :=
+              Rose.Server.Get_Instance_Cap
+                (Server_Instance,
+                 Remaining_Endpoint,
+                 Identifier);
+         else
+            Cap := Remaining_Cap;
+         end if;
+         Rose.System_Calls.Send_Cap (Parameters, Cap);
+      else
+         if Ancestor = 1 then
+            if not Rose.Server.Has_Instance
+              (Server_Instance,
+               Named_Interface,
+               Identifier)
+            then
+               Rose.Server.Set_Instance_Cap
+                 (Server_Instance,
+                  Named_Interface,
+                  Identifier,
+                  Rose.Server.Create_Endpoint (Named_Interface, Identifier));
+            end if;
+            Rose.System_Calls.Send_Cap
+              (Parameters,
+               Rose.Server.Get_Instance_Cap
+                 (Server_Instance,
+                  Named_Interface,
+                  Identifier));
+         else
+            if Ancestor = 2 then
+               if not Rose.Server.Has_Instance
+                 (Server_Instance,
+                  Counter_Interface,
+                  Identifier)
+               then
+                  Rose.Server.Set_Instance_Cap
+                    (Server_Instance,
+                     Counter_Interface,
+                     Identifier,
+                     Rose.Server.Create_Endpoint
+                       (Counter_Interface,
+                        Identifier));
+               end if;
+               Rose.System_Calls.Send_Cap
+                 (Parameters,
+                  Rose.Server.Get_Instance_Cap
+                    (Server_Instance,
+                     Counter_Interface,
+                     Identifier));
+            else
+               if Ancestor = 3 then
+                  if not Rose.Server.Has_Instance
+                    (Server_Instance,
+                     Resource_Interface,
+                     Identifier)
+                  then
+                     Rose.Server.Set_Instance_Cap
+                       (Server_Instance,
+                        Resource_Interface,
+                        Identifier,
+                        Rose.Server.Create_Endpoint
+                          (Resource_Interface,
+                           Identifier));
+                  end if;
+                  Rose.System_Calls.Send_Cap
+                    (Parameters,
+                     Rose.Server.Get_Instance_Cap
+                       (Server_Instance,
+                        Resource_Interface,
+                        Identifier));
+               else
+                  Rose.System_Calls.Send_Error
+                    (Parameters,
+                     Rose.Invocation.Invalid_Operation);
+               end if;
+            end if;
+         end if;
+      end if;
+   end Handle_Get_Lease_Interface;
+
+   --------------------------------
+   -- Handle_Get_Named_Interface --
+   --------------------------------
+
+   procedure Handle_Get_Named_Interface
+     (Parameters : in out Rose.Invocation.Invocation_Record)
+   is
+      use type Rose.Capabilities.Capability;
+      Cap        : Rose.Capabilities.Capability;
+      Identifier : constant Rose.Objects.Capability_Identifier :=
+        Parameters.Identifier;
+   begin
+      Rose.System_Calls.Initialize_Reply (Parameters, Parameters.Reply_Cap);
+      if Badge_Cap = Rose.Capabilities.Null_Capability then
+         if not Rose.Server.Has_Instance
+           (Server_Instance,
+            Badge_Endpoint,
+            Identifier)
+         then
+            Rose.Server.Set_Instance_Cap
+              (Server_Instance,
+               Badge_Endpoint,
+               Identifier,
+               Rose.Server.Create_Endpoint (Badge_Endpoint, Identifier));
+         end if;
+         Cap :=
+           Rose.Server.Get_Instance_Cap
+             (Server_Instance,
+              Badge_Endpoint,
+              Identifier);
+      else
+         Cap := Badge_Cap;
+      end if;
+      Rose.System_Calls.Send_Cap (Parameters, Cap);
+   end Handle_Get_Named_Interface;
+
+   -----------------------------------
+   -- Handle_Get_Resource_Interface --
+   -----------------------------------
+
+   procedure Handle_Get_Resource_Interface
+     (Parameters : in out Rose.Invocation.Invocation_Record)
+   is
+      use type Rose.Capabilities.Capability;
+      Cap        : Rose.Capabilities.Capability;
+      Identifier : constant Rose.Objects.Capability_Identifier :=
+        Parameters.Identifier;
+   begin
+      Rose.System_Calls.Initialize_Reply (Parameters, Parameters.Reply_Cap);
+      if Release_Cap = Rose.Capabilities.Null_Capability then
+         if not Rose.Server.Has_Instance
+           (Server_Instance,
+            Release_Endpoint,
+            Identifier)
+         then
+            Rose.Server.Set_Instance_Cap
+              (Server_Instance,
+               Release_Endpoint,
+               Identifier,
+               Rose.Server.Create_Endpoint (Release_Endpoint, Identifier));
+         end if;
+         Cap :=
+           Rose.Server.Get_Instance_Cap
+             (Server_Instance,
+              Release_Endpoint,
+              Identifier);
+      else
+         Cap := Release_Cap;
+      end if;
+      Rose.System_Calls.Send_Cap (Parameters, Cap);
+   end Handle_Get_Resource_Interface;
+
+   ----------------------
+   -- Handle_Increment --
+   ----------------------
+
+   procedure Handle_Increment
+     (Parameters : in out Rose.Invocation.Invocation_Record)
+   is
+      By : constant Rose.Words.Word :=
+        Rose.System_Calls.Get_Word_32 (Parameters, 0);
+   begin
+      Local_Increment (Parameters.Identifier, By);
+      Rose.System_Calls.Initialize_Reply (Parameters, Parameters.Reply_Cap);
+   end Handle_Increment;
+
+   --------------------
+   -- Handle_Release --
+   --------------------
+
+   procedure Handle_Release
+     (Parameters : in out Rose.Invocation.Invocation_Record)
+   is
+   begin
+      Local_Release (Parameters.Identifier);
+      Rose.Server.Remove_Instance (Server_Instance, Parameters.Identifier);
+      Rose.System_Calls.Initialize_Reply (Parameters, Parameters.Reply_Cap);
+   end Handle_Release;
+
+   ----------------------
+   -- Handle_Remaining --
+   ----------------------
+
+   procedure Handle_Remaining
+     (Parameters : in out Rose.Invocation.Invocation_Record)
+   is
+      Result : constant Rose.Words.Word :=
+        Local_Remaining (Parameters.Identifier);
+   begin
+      Rose.System_Calls.Initialize_Reply (Parameters, Parameters.Reply_Cap);
+      Rose.System_Calls.Send_Word (Parameters, Result);
+   end Handle_Remaining;
+
+   ------------------
+   -- Handle_Value --
+   ------------------
+
+   procedure Handle_Value
+     (Parameters : in out Rose.Invocation.Invocation_Record)
+   is
+      Result : constant Rose.Words.Word := Local_Value (Parameters.Identifier);
+   begin
+      Rose.System_Calls.Initialize_Reply (Parameters, Parameters.Reply_Cap);
+      Rose.System_Calls.Send_Word (Parameters, Result);
+   end Handle_Value;
+
+   -----------------------
+   -- Publish_Interface --
+   -----------------------
+
+   procedure Publish_Interface
+     (Server_Context : in out Rose.Server.Server_Context;
+      Badge          : Badge_Handler;
+      Increment      : Increment_Handler;
+      Value          : Value_Handler;
+      Release        : Release_Handler;
+      Remaining      : Remaining_Handler)
+   is
+   begin
+      Local_Badge := Badge;
+      Local_Increment := Increment;
+      Local_Value := Value;
+      Local_Release := Release;
+      Local_Remaining := Remaining;
+      Badge_Cap := Rose.Server.Create_Endpoint (Badge_Endpoint);
+      Increment_Cap := Rose.Server.Create_Endpoint (Increment_Endpoint);
+      Value_Cap := Rose.Server.Create_Endpoint (Value_Endpoint);
+      Release_Cap := Rose.Server.Create_Endpoint (Release_Endpoint);
+      Remaining_Cap := Rose.Server.Create_Endpoint (Remaining_Endpoint);
+      Published_Cap := Rose.Server.Create_Endpoint (Lease_Interface);
+      Rose.Server.Register_Handler
+        (Server_Context,
+         Named_Interface,
+         Handle_Get_Named_Interface'Access);
+      Rose.Server.Register_Handler
+        (Server_Context,
+         Counter_Interface,
+         Handle_Get_Counter_Interface'Access);
+      Rose.Server.Register_Handler
+        (Server_Context,
+         Resource_Interface,
+         Handle_Get_Resource_Interface'Access);
+      Rose.Server.Register_Handler
+        (Server_Context,
+         Lease_Interface,
+         Handle_Get_Lease_Interface'Access);
+      Rose.Server.Register_Handler
+        (Server_Context,
+         Badge_Endpoint,
+         Handle_Badge'Access);
+      Rose.Server.Register_Handler
+        (Server_Context,
+         Increment_Endpoint,
+         Handle_Increment'Access);
+      Rose.Server.Register_Handler
+        (Server_Context,
+         Value_Endpoint,
+         Handle_Value'Access);
+      Rose.Server.Register_Handler
+        (Server_Context,
+         Release_Endpoint,
+         Handle_Release'Access);
+      Rose.Server.Register_Handler
+        (Server_Context,
+         Remaining_Endpoint,
+         Handle_Remaining'Access);
+      Rose.Server.Publish_Interface (Published_Cap);
+   end Publish_Interface;
+
+   ---------------------
+   -- Remove_Instance --
+   ---------------------
+
+   procedure Remove_Instance
+     (Identifier : Rose.Objects.Capability_Identifier)
+   is
+   begin
+      Rose.Server.Remove_Instance (Server_Instance, Identifier);
+   end Remove_Instance;
+
+end Rose.Interfaces.Lease.Server;
