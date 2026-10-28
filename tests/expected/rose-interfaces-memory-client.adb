@@ -30,39 +30,14 @@ package body Rose.Interfaces.Memory.Client is
    -----------
 
    procedure Close (Client : in out Memory_Client) is
-      Params : aliased Rose.Invocation.Invocation_Record;
    begin
       Client.Is_Open := False;
-      Rose.System_Calls.Initialize_Send
-        (Params,
-         Rose.System_Calls.Delete_Cap_Capability);
-      Rose.System_Calls.Send_Cap (Params, Client.New_Process);
-      Rose.System_Calls.Invoke_Capability (Params);
-      Rose.System_Calls.Initialize_Send
-        (Params,
-         Rose.System_Calls.Delete_Cap_Capability);
-      Rose.System_Calls.Send_Cap (Params, Client.Register_Process);
-      Rose.System_Calls.Invoke_Capability (Params);
-      Rose.System_Calls.Initialize_Send
-        (Params,
-         Rose.System_Calls.Delete_Cap_Capability);
-      Rose.System_Calls.Send_Cap (Params, Client.Page_Fault);
-      Rose.System_Calls.Invoke_Capability (Params);
-      Rose.System_Calls.Initialize_Send
-        (Params,
-         Rose.System_Calls.Delete_Cap_Capability);
-      Rose.System_Calls.Send_Cap (Params, Client.Take_Physical_Memory);
-      Rose.System_Calls.Invoke_Capability (Params);
-      Rose.System_Calls.Initialize_Send
-        (Params,
-         Rose.System_Calls.Delete_Cap_Capability);
-      Rose.System_Calls.Send_Cap (Params, Client.Checkpoint);
-      Rose.System_Calls.Invoke_Capability (Params);
-      Rose.System_Calls.Initialize_Send
-        (Params,
-         Rose.System_Calls.Delete_Cap_Capability);
-      Rose.System_Calls.Send_Cap (Params, Client.Interface_Cap);
-      Rose.System_Calls.Invoke_Capability (Params);
+      Rose.System_Calls.Delete_Cap (Client.New_Process);
+      Rose.System_Calls.Delete_Cap (Client.Register_Process);
+      Rose.System_Calls.Delete_Cap (Client.Page_Fault);
+      Rose.System_Calls.Delete_Cap (Client.Take_Physical_Memory);
+      Rose.System_Calls.Delete_Cap (Client.Checkpoint);
+      Rose.System_Calls.Delete_Cap (Client.Interface_Cap);
    end Close;
 
    ------------------------

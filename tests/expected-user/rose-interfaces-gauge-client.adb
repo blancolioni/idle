@@ -34,66 +34,29 @@ package body Rose.Interfaces.Gauge.Client is
 
    procedure Close (Client : in out Gauge_Client) is
       use type Rose.Capabilities.Capability;
-      Params : aliased Rose.Invocation.Invocation_Record;
    begin
       if Client.Is_Open then
-         Rose.System_Calls.Initialize_Send
-           (Params,
-            Rose.System_Calls.Delete_Cap_Capability);
-         Rose.System_Calls.Send_Cap (Params, Client.Badge);
-         Rose.System_Calls.Invoke_Capability (Params);
-         Rose.System_Calls.Initialize_Send
-           (Params,
-            Rose.System_Calls.Delete_Cap_Capability);
-         Rose.System_Calls.Send_Cap (Params, Client.Increment);
-         Rose.System_Calls.Invoke_Capability (Params);
-         Rose.System_Calls.Initialize_Send
-           (Params,
-            Rose.System_Calls.Delete_Cap_Capability);
-         Rose.System_Calls.Send_Cap (Params, Client.Value);
-         Rose.System_Calls.Invoke_Capability (Params);
-         Rose.System_Calls.Initialize_Send
-           (Params,
-            Rose.System_Calls.Delete_Cap_Capability);
-         Rose.System_Calls.Send_Cap (Params, Client.Set_Label);
-         Rose.System_Calls.Invoke_Capability (Params);
-         Rose.System_Calls.Initialize_Send
-           (Params,
-            Rose.System_Calls.Delete_Cap_Capability);
-         Rose.System_Calls.Send_Cap (Params, Client.Reset);
-         Rose.System_Calls.Invoke_Capability (Params);
+         Rose.System_Calls.Delete_Cap (Client.Badge);
+         Rose.System_Calls.Delete_Cap (Client.Increment);
+         Rose.System_Calls.Delete_Cap (Client.Value);
+         Rose.System_Calls.Delete_Cap (Client.Set_Label);
+         Rose.System_Calls.Delete_Cap (Client.Reset);
       end if;
       Client.Is_Open := False;
       if Client.Named_Interface_Cap /= Rose.Capabilities.Null_Capability then
-         Rose.System_Calls.Initialize_Send
-           (Params,
-            Rose.System_Calls.Delete_Cap_Capability);
-         Rose.System_Calls.Send_Cap (Params, Client.Named_Interface_Cap);
-         Rose.System_Calls.Invoke_Capability (Params);
+         Rose.System_Calls.Delete_Cap (Client.Named_Interface_Cap);
          Client.Named_Interface_Cap := Rose.Capabilities.Null_Capability;
       end if;
       if Client.Counter_Interface_Cap /= Rose.Capabilities.Null_Capability then
-         Rose.System_Calls.Initialize_Send
-           (Params,
-            Rose.System_Calls.Delete_Cap_Capability);
-         Rose.System_Calls.Send_Cap (Params, Client.Counter_Interface_Cap);
-         Rose.System_Calls.Invoke_Capability (Params);
+         Rose.System_Calls.Delete_Cap (Client.Counter_Interface_Cap);
          Client.Counter_Interface_Cap := Rose.Capabilities.Null_Capability;
       end if;
       if Client.Labelled_Interface_Cap /= Rose.Capabilities.Null_Capability
       then
-         Rose.System_Calls.Initialize_Send
-           (Params,
-            Rose.System_Calls.Delete_Cap_Capability);
-         Rose.System_Calls.Send_Cap (Params, Client.Labelled_Interface_Cap);
-         Rose.System_Calls.Invoke_Capability (Params);
+         Rose.System_Calls.Delete_Cap (Client.Labelled_Interface_Cap);
          Client.Labelled_Interface_Cap := Rose.Capabilities.Null_Capability;
       end if;
-      Rose.System_Calls.Initialize_Send
-        (Params,
-         Rose.System_Calls.Delete_Cap_Capability);
-      Rose.System_Calls.Send_Cap (Params, Client.Interface_Cap);
-      Rose.System_Calls.Invoke_Capability (Params);
+      Rose.System_Calls.Delete_Cap (Client.Interface_Cap);
    end Close;
 
    -----------------

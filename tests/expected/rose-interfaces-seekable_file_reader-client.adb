@@ -11,32 +11,15 @@ package body Rose.Interfaces.Seekable_File_Reader.Client is
    -----------
 
    procedure Close (Client : in out Seekable_File_Reader_Client) is
-      Params : aliased Rose.Invocation.Invocation_Record;
    begin
       if Client.Is_Open then
          Release (Client);
       end if;
       Client.Is_Open := False;
-      Rose.System_Calls.Initialize_Send
-        (Params,
-         Rose.System_Calls.Delete_Cap_Capability);
-      Rose.System_Calls.Send_Cap (Params, Client.Read);
-      Rose.System_Calls.Invoke_Capability (Params);
-      Rose.System_Calls.Initialize_Send
-        (Params,
-         Rose.System_Calls.Delete_Cap_Capability);
-      Rose.System_Calls.Send_Cap (Params, Client.Release);
-      Rose.System_Calls.Invoke_Capability (Params);
-      Rose.System_Calls.Initialize_Send
-        (Params,
-         Rose.System_Calls.Delete_Cap_Capability);
-      Rose.System_Calls.Send_Cap (Params, Client.Seek);
-      Rose.System_Calls.Invoke_Capability (Params);
-      Rose.System_Calls.Initialize_Send
-        (Params,
-         Rose.System_Calls.Delete_Cap_Capability);
-      Rose.System_Calls.Send_Cap (Params, Client.Interface_Cap);
-      Rose.System_Calls.Invoke_Capability (Params);
+      Rose.System_Calls.Delete_Cap (Client.Read);
+      Rose.System_Calls.Delete_Cap (Client.Release);
+      Rose.System_Calls.Delete_Cap (Client.Seek);
+      Rose.System_Calls.Delete_Cap (Client.Interface_Cap);
    end Close;
 
    -----------------------

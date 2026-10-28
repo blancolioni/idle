@@ -65,54 +65,17 @@ package body Rose.Interfaces.Process.Client is
    -----------
 
    procedure Close (Client : in out Process_Client) is
-      Params : aliased Rose.Invocation.Invocation_Record;
    begin
       Client.Is_Open := False;
-      Rose.System_Calls.Initialize_Send
-        (Params,
-         Rose.System_Calls.Delete_Cap_Capability);
-      Rose.System_Calls.Send_Cap (Params, Client.Add_Segment);
-      Rose.System_Calls.Invoke_Capability (Params);
-      Rose.System_Calls.Initialize_Send
-        (Params,
-         Rose.System_Calls.Delete_Cap_Capability);
-      Rose.System_Calls.Send_Cap (Params, Client.Add_Nonpersistent_Segment);
-      Rose.System_Calls.Invoke_Capability (Params);
-      Rose.System_Calls.Initialize_Send
-        (Params,
-         Rose.System_Calls.Delete_Cap_Capability);
-      Rose.System_Calls.Send_Cap (Params, Client.Published_Interface);
-      Rose.System_Calls.Invoke_Capability (Params);
-      Rose.System_Calls.Initialize_Send
-        (Params,
-         Rose.System_Calls.Delete_Cap_Capability);
-      Rose.System_Calls.Send_Cap (Params, Client.Destroy);
-      Rose.System_Calls.Invoke_Capability (Params);
-      Rose.System_Calls.Initialize_Send
-        (Params,
-         Rose.System_Calls.Delete_Cap_Capability);
-      Rose.System_Calls.Send_Cap (Params, Client.Get_Object_Id);
-      Rose.System_Calls.Invoke_Capability (Params);
-      Rose.System_Calls.Initialize_Send
-        (Params,
-         Rose.System_Calls.Delete_Cap_Capability);
-      Rose.System_Calls.Send_Cap (Params, Client.Heap_Interface);
-      Rose.System_Calls.Invoke_Capability (Params);
-      Rose.System_Calls.Initialize_Send
-        (Params,
-         Rose.System_Calls.Delete_Cap_Capability);
-      Rose.System_Calls.Send_Cap (Params, Client.Exit_Process);
-      Rose.System_Calls.Invoke_Capability (Params);
-      Rose.System_Calls.Initialize_Send
-        (Params,
-         Rose.System_Calls.Delete_Cap_Capability);
-      Rose.System_Calls.Send_Cap (Params, Client.Publish_Interface);
-      Rose.System_Calls.Invoke_Capability (Params);
-      Rose.System_Calls.Initialize_Send
-        (Params,
-         Rose.System_Calls.Delete_Cap_Capability);
-      Rose.System_Calls.Send_Cap (Params, Client.Interface_Cap);
-      Rose.System_Calls.Invoke_Capability (Params);
+      Rose.System_Calls.Delete_Cap (Client.Add_Segment);
+      Rose.System_Calls.Delete_Cap (Client.Add_Nonpersistent_Segment);
+      Rose.System_Calls.Delete_Cap (Client.Published_Interface);
+      Rose.System_Calls.Delete_Cap (Client.Destroy);
+      Rose.System_Calls.Delete_Cap (Client.Get_Object_Id);
+      Rose.System_Calls.Delete_Cap (Client.Heap_Interface);
+      Rose.System_Calls.Delete_Cap (Client.Exit_Process);
+      Rose.System_Calls.Delete_Cap (Client.Publish_Interface);
+      Rose.System_Calls.Delete_Cap (Client.Interface_Cap);
    end Close;
 
    -------------
