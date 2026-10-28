@@ -26,6 +26,9 @@ package body Rose.Interfaces.Partner.Server is
 
    Registered      : Boolean := False;
 
+   subtype Partner_Object_Class is
+     Rose.Interfaces.Partner.Partner_Object'Class;
+
    function Find
      (Identifier : Rose.Objects.Capability_Identifier)
       return Object_Access;
@@ -64,8 +67,7 @@ package body Rose.Interfaces.Partner.Server is
          Registered := True;
       end if;
       if Attached_Count = Max_Attached then
-         raise Constraint_Error
-           with "Rose.Interfaces.Partner.Server: too many objects";
+         raise Constraint_Error with "Partner.Server: too many objects";
       end if;
       Attached (Attached_Count).Object := Object_Access (Object);
       Attached (Attached_Count).Cap :=
@@ -185,7 +187,7 @@ package body Rose.Interfaces.Partner.Server is
          return;
       end if;
       declare
-         Result : Rose.Interfaces.Partner.Partner_Object'Class := Object.Next;
+         Result : Partner_Object_Class := Object.Next;
       begin
          Rose.System_Calls.Initialize_Reply (Parameters, Parameters.Reply_Cap);
          Rose.System_Calls.Send_Cap (Parameters, Result.Partner_Cap);

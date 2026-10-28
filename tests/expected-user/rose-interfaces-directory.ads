@@ -2,7 +2,6 @@ with Rose.Capabilities;
 with Rose.Objects;
 with System.Storage_Elements;
 limited with Rose.Interfaces.File;
-limited with Rose.Interfaces.Stream_Reader;
 
 package Rose.Interfaces.Directory is
 
@@ -32,15 +31,6 @@ package Rose.Interfaces.Directory is
    Get_Directory_Endpoint         : constant Rose.Objects.Endpoint_Id :=
      16#1A5A_45A6_6CB5_6E1D#;
 
-   Read_File_Endpoint             : constant Rose.Objects.Endpoint_Id :=
-     16#EB8A_CB9A_A7B9_FD83#;
-
-   Create_Directory_Endpoint      : constant Rose.Objects.Endpoint_Id :=
-     16#A869_05E0_FF03_B268#;
-
-   Create_File_Endpoint           : constant Rose.Objects.Endpoint_Id :=
-     16#3451_684E_97FB_9A2A#;
-
    Directory_Entry_Count_Index    : constant := 0;
 
    Directory_Entry_Name_Index     : constant := 1;
@@ -55,13 +45,7 @@ package Rose.Interfaces.Directory is
 
    Get_Directory_Index            : constant := 6;
 
-   Read_File_Index                : constant := 7;
-
-   Create_Directory_Index         : constant := 8;
-
-   Create_File_Index              : constant := 9;
-
-   Subprogram_Count               : constant := 10;
+   Subprogram_Count               : constant := 7;
 
    type Directory_Object is limited interface;
 
@@ -102,21 +86,5 @@ package Rose.Interfaces.Directory is
      (Item  : in out Directory_Object;
       Index : Positive)
       return Rose.Interfaces.Directory.Directory_Object'Class is abstract;
-
-   function Read_File
-     (Item  : in out Directory_Object;
-      Index : Positive)
-      return Rose.Interfaces.Stream_Reader.Stream_Reader_Object'Class
-   is abstract;
-
-   function Create_Directory
-     (Item : in out Directory_Object;
-      Name : String)
-      return Rose.Interfaces.Directory.Directory_Object'Class is abstract;
-
-   function Create_File
-     (Item : in out Directory_Object;
-      Name : String)
-      return Rose.Interfaces.File.File_Object'Class is abstract;
 
 end Rose.Interfaces.Directory;

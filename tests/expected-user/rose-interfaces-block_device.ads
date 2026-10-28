@@ -7,7 +7,7 @@ package Rose.Interfaces.Block_Device is
 
    Max_Block_Size          : constant := 4096;
 
-   type Block_Size_Type is range 0 .. 4096;
+   type Block_Size_Type is range 0 .. Max_Block_Size;
 
    type Block_Address_Type is new Rose.Words.Word_64;
 

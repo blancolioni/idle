@@ -15,3 +15,6 @@ parents/labelled
 parents/gauge
 parents/resource
 parents/lease
+rose/resource
+rose/file_reader
+rose/seekable_file_reader

@@ -1,4 +1,6 @@
+with Rose.Interfaces.File_Reader.Client;
 with Rose.Interfaces.Objects;
+with Rose.Interfaces.Seekable_File_Reader.Client;
 with Rose.Invocation;
 with Rose.System_Calls;
 
@@ -11,70 +13,26 @@ package body Rose.Interfaces.File.Client is
    -----------
 
    procedure Close (Client : in out File_Client) is
-      use type Rose.Capabilities.Capability;
       Params : aliased Rose.Invocation.Invocation_Record;
    begin
       if Client.Is_Open then
          Rose.System_Calls.Initialize_Send
            (Params,
             Rose.System_Calls.Delete_Cap_Capability);
-         Rose.System_Calls.Send_Cap (Params, Client.Read);
+         Rose.System_Calls.Send_Cap (Params, Client.Size);
          Rose.System_Calls.Invoke_Capability (Params);
          Rose.System_Calls.Initialize_Send
            (Params,
             Rose.System_Calls.Delete_Cap_Capability);
-         Rose.System_Calls.Send_Cap (Params, Client.Write);
+         Rose.System_Calls.Send_Cap (Params, Client.Open_Reader);
          Rose.System_Calls.Invoke_Capability (Params);
          Rose.System_Calls.Initialize_Send
            (Params,
             Rose.System_Calls.Delete_Cap_Capability);
-         Rose.System_Calls.Send_Cap (Params, Client.Seek);
+         Rose.System_Calls.Send_Cap (Params, Client.Open_Seekable_Reader);
          Rose.System_Calls.Invoke_Capability (Params);
       end if;
       Client.Is_Open := False;
-      if Client.Stream_Reader_Interface_Cap /= Rose.Capabilities
-        .Null_Capability
-      then
-         Rose.System_Calls.Initialize_Send
-           (Params,
-            Rose.System_Calls.Delete_Cap_Capability);
-         Rose.System_Calls.Send_Cap
-           (Params,
-            Client.Stream_Reader_Interface_Cap);
-         Rose.System_Calls.Invoke_Capability (Params);
-         Client.Stream_Reader_Interface_Cap :=
-           Rose.Capabilities.Null_Capability;
-      end if;
-      if Client.Stream_Writer_Interface_Cap /= Rose.Capabilities
-        .Null_Capability
-      then
-         Rose.System_Calls.Initialize_Send
-           (Params,
-            Rose.System_Calls.Delete_Cap_Capability);
-         Rose.System_Calls.Send_Cap
-           (Params,
-            Client.Stream_Writer_Interface_Cap);
-         Rose.System_Calls.Invoke_Capability (Params);
-         Client.Stream_Writer_Interface_Cap :=
-           Rose.Capabilities.Null_Capability;
-      end if;
-      if Client.Stream_Interface_Cap /= Rose.Capabilities.Null_Capability then
-         Rose.System_Calls.Initialize_Send
-           (Params,
-            Rose.System_Calls.Delete_Cap_Capability);
-         Rose.System_Calls.Send_Cap (Params, Client.Stream_Interface_Cap);
-         Rose.System_Calls.Invoke_Capability (Params);
-         Client.Stream_Interface_Cap := Rose.Capabilities.Null_Capability;
-      end if;
-      if Client.Seekable_Interface_Cap /= Rose.Capabilities.Null_Capability
-      then
-         Rose.System_Calls.Initialize_Send
-           (Params,
-            Rose.System_Calls.Delete_Cap_Capability);
-         Rose.System_Calls.Send_Cap (Params, Client.Seekable_Interface_Cap);
-         Rose.System_Calls.Invoke_Capability (Params);
-         Client.Seekable_Interface_Cap := Rose.Capabilities.Null_Capability;
-      end if;
       Rose.System_Calls.Initialize_Send
         (Params,
          Rose.System_Calls.Delete_Cap_Capability);
@@ -109,11 +67,11 @@ package body Rose.Interfaces.File.Client is
       return Rose.Capabilities.Capability
    is (Item.Interface_Cap);
 
-   ------------------
-   -- Get_Read_Cap --
-   ------------------
+   -------------------------
+   -- Get_Open_Reader_Cap --
+   -------------------------
 
-   function Get_Read_Cap
+   function Get_Open_Reader_Cap
      (Item : in out File_Client)
       return Rose.Capabilities.Capability
    is
@@ -121,14 +79,14 @@ package body Rose.Interfaces.File.Client is
       if not Item.Is_Open then
          Load (Item);
       end if;
-      return Item.Read;
-   end Get_Read_Cap;
+      return Item.Open_Reader;
+   end Get_Open_Reader_Cap;
 
-   ------------------
-   -- Get_Seek_Cap --
-   ------------------
+   ----------------------------------
+   -- Get_Open_Seekable_Reader_Cap --
+   ----------------------------------
 
-   function Get_Seek_Cap
+   function Get_Open_Seekable_Reader_Cap
      (Item : in out File_Client)
       return Rose.Capabilities.Capability
    is
@@ -136,14 +94,14 @@ package body Rose.Interfaces.File.Client is
       if not Item.Is_Open then
          Load (Item);
       end if;
-      return Item.Seek;
-   end Get_Seek_Cap;
+      return Item.Open_Seekable_Reader;
+   end Get_Open_Seekable_Reader_Cap;
 
-   -------------------
-   -- Get_Write_Cap --
-   -------------------
+   ------------------
+   -- Get_Size_Cap --
+   ------------------
 
-   function Get_Write_Cap
+   function Get_Size_Cap
      (Item : in out File_Client)
       return Rose.Capabilities.Capability
    is
@@ -151,8 +109,8 @@ package body Rose.Interfaces.File.Client is
       if not Item.Is_Open then
          Load (Item);
       end if;
-      return Item.Write;
-   end Get_Write_Cap;
+      return Item.Size;
+   end Get_Size_Cap;
 
    ----------
    -- Load --
@@ -167,9 +125,9 @@ package body Rose.Interfaces.File.Client is
       if Params.Control.Flags (Rose.Invocation.Error) then
          raise Rose.Interfaces.Objects.Invocation_Error with "File.Open";
       end if;
-      Item.Read := Params.Caps (Read_Index);
-      Item.Write := Params.Caps (Write_Index);
-      Item.Seek := Params.Caps (Seek_Index);
+      Item.Size := Params.Caps (Size_Index);
+      Item.Open_Reader := Params.Caps (Open_Reader_Index);
+      Item.Open_Seekable_Reader := Params.Caps (Open_Seekable_Reader_Index);
       Item.Is_Open := True;
    end Load;
 
@@ -184,10 +142,6 @@ package body Rose.Interfaces.File.Client is
    begin
       Client.Is_Open := False;
       Client.Interface_Cap := Interface_Cap;
-      Client.Stream_Reader_Interface_Cap := Rose.Capabilities.Null_Capability;
-      Client.Stream_Writer_Interface_Cap := Rose.Capabilities.Null_Capability;
-      Client.Stream_Interface_Cap := Rose.Capabilities.Null_Capability;
-      Client.Seekable_Interface_Cap := Rose.Capabilities.Null_Capability;
    end Open;
 
    ------------------
@@ -195,193 +149,87 @@ package body Rose.Interfaces.File.Client is
    ------------------
 
    procedure Open_Cap_Set
-     (Client : out File_Client;
-      Read   : Rose.Capabilities.Capability;
-      Write  : Rose.Capabilities.Capability;
-      Seek   : Rose.Capabilities.Capability)
+     (Client               : out File_Client;
+      Size                 : Rose.Capabilities.Capability;
+      Open_Reader          : Rose.Capabilities.Capability;
+      Open_Seekable_Reader : Rose.Capabilities.Capability)
    is
    begin
-      Client.Read := Read;
-      Client.Write := Write;
-      Client.Seek := Seek;
+      Client.Size := Size;
+      Client.Open_Reader := Open_Reader;
+      Client.Open_Seekable_Reader := Open_Seekable_Reader;
       Client.Is_Open := True;
    end Open_Cap_Set;
 
-   ----------
-   -- Read --
-   ----------
+   -----------------
+   -- Open_Reader --
+   -----------------
 
-   overriding procedure Read
-     (Item   : in out File_Client;
-      Buffer : out System.Storage_Elements.Storage_Array;
-      Last   : out System.Storage_Elements.Storage_Count)
+   overriding function Open_Reader
+     (Item : in out File_Client)
+      return Rose.Interfaces.File_Reader.File_Reader_Object'Class
    is
       Params : aliased Rose.Invocation.Invocation_Record;
    begin
       if not Item.Is_Open then
          Load (Item);
       end if;
-      Rose.System_Calls.Initialize_Send (Params, Item.Read);
-      Rose.System_Calls.Receive_Buffer (Params, Buffer'Length);
+      Rose.System_Calls.Initialize_Send (Params, Item.Open_Reader);
+      Rose.System_Calls.Receive_Caps (Params, 1);
+      Rose.System_Calls.Invoke_Capability (Params);
+      if Params.Control.Flags (Rose.Invocation.Error) then
+         raise Rose.Interfaces.Objects.Invocation_Error
+           with "File.Open_Reader";
+      end if;
+      return Rose.Interfaces.File_Reader.Client.From_Cap (Params.Caps (0));
+   end Open_Reader;
+
+   --------------------------
+   -- Open_Seekable_Reader --
+   --------------------------
+
+   overriding function Open_Seekable_Reader
+     (Item : in out File_Client)
+      return
+        Rose.Interfaces.Seekable_File_Reader.Seekable_File_Reader_Object'Class
+   is
+      Params : aliased Rose.Invocation.Invocation_Record;
+   begin
+      if not Item.Is_Open then
+         Load (Item);
+      end if;
+      Rose.System_Calls.Initialize_Send (Params, Item.Open_Seekable_Reader);
+      Rose.System_Calls.Receive_Caps (Params, 1);
+      Rose.System_Calls.Invoke_Capability (Params);
+      if Params.Control.Flags (Rose.Invocation.Error) then
+         raise Rose.Interfaces.Objects.Invocation_Error
+           with "File.Open_Seekable_Reader";
+      end if;
+      return Rose.Interfaces.Seekable_File_Reader.Client.From_Cap
+        (Params.Caps (0));
+   end Open_Seekable_Reader;
+
+   ----------
+   -- Size --
+   ----------
+
+   overriding function Size
+     (Item : in out File_Client)
+      return System.Storage_Elements.Storage_Count
+   is
+      Params : aliased Rose.Invocation.Invocation_Record;
+   begin
+      if not Item.Is_Open then
+         Load (Item);
+      end if;
+      Rose.System_Calls.Initialize_Send (Params, Item.Size);
       Rose.System_Calls.Receive_Words (Params, 1);
       Rose.System_Calls.Invoke_Capability (Params);
       if Params.Control.Flags (Rose.Invocation.Error) then
-         raise Rose.Interfaces.Objects.Invocation_Error with "File.Read";
+         raise Rose.Interfaces.Objects.Invocation_Error with "File.Size";
       end if;
-      Rose.System_Calls.Copy_Received_Buffer (Buffer'Length, Buffer'Address);
-      Last :=
-        System.Storage_Elements.Storage_Count
-          (Rose.System_Calls.Get_Word_32 (Params, 0));
-   end Read;
-
-   ----------
-   -- Seek --
-   ----------
-
-   overriding procedure Seek
-     (Item              : in out File_Client;
-      Offset_From_Start : Rose.Words.Word_64)
-   is
-      Params : aliased Rose.Invocation.Invocation_Record;
-   begin
-      if not Item.Is_Open then
-         Load (Item);
-      end if;
-      Rose.System_Calls.Initialize_Send (Params, Item.Seek);
-      Rose.System_Calls.Send_Word (Params, Offset_From_Start);
-      Rose.System_Calls.Invoke_Capability (Params);
-      if Params.Control.Flags (Rose.Invocation.Error) then
-         raise Rose.Interfaces.Objects.Invocation_Error with "File.Seek";
-      end if;
-   end Seek;
-
-   ------------------
-   -- Seekable_Cap --
-   ------------------
-
-   overriding function Seekable_Cap
-     (Item : in out File_Client)
-      return Rose.Capabilities.Capability
-   is
-      use type Rose.Capabilities.Capability;
-      Params : aliased Rose.Invocation.Invocation_Record;
-   begin
-      if Item.Seekable_Interface_Cap = Rose.Capabilities.Null_Capability
-        and then Item.Interface_Cap /= Rose.Capabilities.Null_Capability
-      then
-         Rose.System_Calls.Initialize_Send (Params, Item.Interface_Cap);
-         Rose.System_Calls.Send_Word (Params, Natural (4));
-         Rose.System_Calls.Receive_Caps (Params, 1);
-         Rose.System_Calls.Invoke_Capability (Params);
-         if Params.Control.Flags (Rose.Invocation.Error) then
-            raise Rose.Interfaces.Objects.Invocation_Error
-              with "File.Seekable_Cap";
-         end if;
-         Item.Seekable_Interface_Cap := Params.Caps (0);
-      end if;
-      return Item.Seekable_Interface_Cap;
-   end Seekable_Cap;
-
-   ----------------
-   -- Stream_Cap --
-   ----------------
-
-   overriding function Stream_Cap
-     (Item : in out File_Client)
-      return Rose.Capabilities.Capability
-   is
-      use type Rose.Capabilities.Capability;
-      Params : aliased Rose.Invocation.Invocation_Record;
-   begin
-      if Item.Stream_Interface_Cap = Rose.Capabilities.Null_Capability
-        and then Item.Interface_Cap /= Rose.Capabilities.Null_Capability
-      then
-         Rose.System_Calls.Initialize_Send (Params, Item.Interface_Cap);
-         Rose.System_Calls.Send_Word (Params, Natural (3));
-         Rose.System_Calls.Receive_Caps (Params, 1);
-         Rose.System_Calls.Invoke_Capability (Params);
-         if Params.Control.Flags (Rose.Invocation.Error) then
-            raise Rose.Interfaces.Objects.Invocation_Error
-              with "File.Stream_Cap";
-         end if;
-         Item.Stream_Interface_Cap := Params.Caps (0);
-      end if;
-      return Item.Stream_Interface_Cap;
-   end Stream_Cap;
-
-   -----------------------
-   -- Stream_Reader_Cap --
-   -----------------------
-
-   overriding function Stream_Reader_Cap
-     (Item : in out File_Client)
-      return Rose.Capabilities.Capability
-   is
-      use type Rose.Capabilities.Capability;
-      Params : aliased Rose.Invocation.Invocation_Record;
-   begin
-      if Item.Stream_Reader_Interface_Cap = Rose.Capabilities.Null_Capability
-        and then Item.Interface_Cap /= Rose.Capabilities.Null_Capability
-      then
-         Rose.System_Calls.Initialize_Send (Params, Item.Interface_Cap);
-         Rose.System_Calls.Send_Word (Params, Natural (1));
-         Rose.System_Calls.Receive_Caps (Params, 1);
-         Rose.System_Calls.Invoke_Capability (Params);
-         if Params.Control.Flags (Rose.Invocation.Error) then
-            raise Rose.Interfaces.Objects.Invocation_Error
-              with "File.Stream_Reader_Cap";
-         end if;
-         Item.Stream_Reader_Interface_Cap := Params.Caps (0);
-      end if;
-      return Item.Stream_Reader_Interface_Cap;
-   end Stream_Reader_Cap;
-
-   -----------------------
-   -- Stream_Writer_Cap --
-   -----------------------
-
-   overriding function Stream_Writer_Cap
-     (Item : in out File_Client)
-      return Rose.Capabilities.Capability
-   is
-      use type Rose.Capabilities.Capability;
-      Params : aliased Rose.Invocation.Invocation_Record;
-   begin
-      if Item.Stream_Writer_Interface_Cap = Rose.Capabilities.Null_Capability
-        and then Item.Interface_Cap /= Rose.Capabilities.Null_Capability
-      then
-         Rose.System_Calls.Initialize_Send (Params, Item.Interface_Cap);
-         Rose.System_Calls.Send_Word (Params, Natural (2));
-         Rose.System_Calls.Receive_Caps (Params, 1);
-         Rose.System_Calls.Invoke_Capability (Params);
-         if Params.Control.Flags (Rose.Invocation.Error) then
-            raise Rose.Interfaces.Objects.Invocation_Error
-              with "File.Stream_Writer_Cap";
-         end if;
-         Item.Stream_Writer_Interface_Cap := Params.Caps (0);
-      end if;
-      return Item.Stream_Writer_Interface_Cap;
-   end Stream_Writer_Cap;
-
-   -----------
-   -- Write --
-   -----------
-
-   overriding procedure Write
-     (Item   : in out File_Client;
-      Buffer : System.Storage_Elements.Storage_Array)
-   is
-      Params : aliased Rose.Invocation.Invocation_Record;
-   begin
-      if not Item.Is_Open then
-         Load (Item);
-      end if;
-      Rose.System_Calls.Initialize_Send (Params, Item.Write);
-      Rose.System_Calls.Send_Storage_Array (Params, Buffer, False);
-      Rose.System_Calls.Invoke_Capability (Params);
-      if Params.Control.Flags (Rose.Invocation.Error) then
-         raise Rose.Interfaces.Objects.Invocation_Error with "File.Write";
-      end if;
-   end Write;
+      return System.Storage_Elements.Storage_Count
+        (Rose.System_Calls.Get_Word_32 (Params, 0));
+   end Size;
 
 end Rose.Interfaces.File.Client;

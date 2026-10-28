@@ -16,7 +16,11 @@ package body Rose.Interfaces.Exec.Client.Conversions is
       Result : Rose.Interfaces.Launch.Client.Launch_Client;
    begin
       if Item.Interface_Cap = Rose.Capabilities.Null_Capability then
-         Rose.Interfaces.Launch.Client.Open_Cap_Set (Result, Item.Launch);
+         Rose.Interfaces.Launch.Client.Open_Cap_Set
+           (Result,
+            Item.Launch,
+            Item.Launch_Command,
+            Item.Metadata);
       else
          Rose.System_Calls.Initialize_Send (Params, Item.Interface_Cap);
          Rose.System_Calls.Send_Word (Params, Natural (1));

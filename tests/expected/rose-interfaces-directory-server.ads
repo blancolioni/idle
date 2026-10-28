@@ -40,21 +40,6 @@ package Rose.Interfaces.Directory.Server is
       Index : Positive)
       return Rose.Capabilities.Capability;
 
-   type Read_File_Handler is access function
-     (Id    : Rose.Objects.Capability_Identifier;
-      Index : Positive)
-      return Rose.Capabilities.Capability;
-
-   type Create_Directory_Handler is access function
-     (Id   : Rose.Objects.Capability_Identifier;
-      Name : String)
-      return Rose.Capabilities.Capability;
-
-   type Create_File_Handler is access function
-     (Id   : Rose.Objects.Capability_Identifier;
-      Name : String)
-      return Rose.Capabilities.Capability;
-
    procedure Create_Server
      (Server_Context        : in out Rose.Server.Server_Context;
       Directory_Entry_Count : Directory_Entry_Count_Handler;
@@ -64,9 +49,6 @@ package Rose.Interfaces.Directory.Server is
       Find_Entry            : Find_Entry_Handler;
       Get_Ordinary_File     : Get_Ordinary_File_Handler;
       Get_Directory         : Get_Directory_Handler;
-      Read_File             : Read_File_Handler;
-      Create_Directory      : Create_Directory_Handler;
-      Create_File           : Create_File_Handler;
       Instanced             : Boolean := False);
 
    procedure Attach_Interface
@@ -78,9 +60,6 @@ package Rose.Interfaces.Directory.Server is
       Find_Entry            : Find_Entry_Handler;
       Get_Ordinary_File     : Get_Ordinary_File_Handler;
       Get_Directory         : Get_Directory_Handler;
-      Read_File             : Read_File_Handler;
-      Create_Directory      : Create_Directory_Handler;
-      Create_File           : Create_File_Handler;
       Instanced             : Boolean := False);
 
    procedure Publish_Interface
@@ -91,10 +70,7 @@ package Rose.Interfaces.Directory.Server is
       Directory_Entry_Size  : Directory_Entry_Size_Handler;
       Find_Entry            : Find_Entry_Handler;
       Get_Ordinary_File     : Get_Ordinary_File_Handler;
-      Get_Directory         : Get_Directory_Handler;
-      Read_File             : Read_File_Handler;
-      Create_Directory      : Create_Directory_Handler;
-      Create_File           : Create_File_Handler);
+      Get_Directory         : Get_Directory_Handler);
 
    function Get_Directory_Entry_Count_Cap return Rose.Capabilities.Capability;
 
@@ -109,12 +85,6 @@ package Rose.Interfaces.Directory.Server is
    function Get_Get_Ordinary_File_Cap return Rose.Capabilities.Capability;
 
    function Get_Get_Directory_Cap return Rose.Capabilities.Capability;
-
-   function Get_Read_File_Cap return Rose.Capabilities.Capability;
-
-   function Get_Create_Directory_Cap return Rose.Capabilities.Capability;
-
-   function Get_Create_File_Cap return Rose.Capabilities.Capability;
 
    procedure Remove_Instance (Identifier : Rose.Objects.Capability_Identifier);
 

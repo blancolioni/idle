@@ -25,7 +25,22 @@ package body Rose.Interfaces.Exec.Client is
          Rose.System_Calls.Initialize_Send
            (Params,
             Rose.System_Calls.Delete_Cap_Capability);
+         Rose.System_Calls.Send_Cap (Params, Client.Launch_Command);
+         Rose.System_Calls.Invoke_Capability (Params);
+         Rose.System_Calls.Initialize_Send
+           (Params,
+            Rose.System_Calls.Delete_Cap_Capability);
+         Rose.System_Calls.Send_Cap (Params, Client.Metadata);
+         Rose.System_Calls.Invoke_Capability (Params);
+         Rose.System_Calls.Initialize_Send
+           (Params,
+            Rose.System_Calls.Delete_Cap_Capability);
          Rose.System_Calls.Send_Cap (Params, Client.Install);
+         Rose.System_Calls.Invoke_Capability (Params);
+         Rose.System_Calls.Initialize_Send
+           (Params,
+            Rose.System_Calls.Delete_Cap_Capability);
+         Rose.System_Calls.Send_Cap (Params, Client.Set_Standard_Output);
          Rose.System_Calls.Invoke_Capability (Params);
       end if;
       Client.Is_Open := False;
@@ -100,6 +115,51 @@ package body Rose.Interfaces.Exec.Client is
       end if;
       return Item.Launch;
    end Get_Launch_Cap;
+
+   ----------------------------
+   -- Get_Launch_Command_Cap --
+   ----------------------------
+
+   function Get_Launch_Command_Cap
+     (Item : in out Exec_Client)
+      return Rose.Capabilities.Capability
+   is
+   begin
+      if not Item.Is_Open then
+         Load (Item);
+      end if;
+      return Item.Launch_Command;
+   end Get_Launch_Command_Cap;
+
+   ----------------------
+   -- Get_Metadata_Cap --
+   ----------------------
+
+   function Get_Metadata_Cap
+     (Item : in out Exec_Client)
+      return Rose.Capabilities.Capability
+   is
+   begin
+      if not Item.Is_Open then
+         Load (Item);
+      end if;
+      return Item.Metadata;
+   end Get_Metadata_Cap;
+
+   ---------------------------------
+   -- Get_Set_Standard_Output_Cap --
+   ---------------------------------
+
+   function Get_Set_Standard_Output_Cap
+     (Item : in out Exec_Client)
+      return Rose.Capabilities.Capability
+   is
+   begin
+      if not Item.Is_Open then
+         Load (Item);
+      end if;
+      return Item.Set_Standard_Output;
+   end Get_Set_Standard_Output_Cap;
 
    -------------
    -- Install --
@@ -187,6 +247,33 @@ package body Rose.Interfaces.Exec.Client is
       return Item.Launch_Interface_Cap;
    end Launch_Cap;
 
+   --------------------
+   -- Launch_Command --
+   --------------------
+
+   overriding function Launch_Command
+     (Item : in out Exec_Client;
+      Caps : Rose.Capabilities.Capability_Array)
+      return Rose.Capabilities.Capability
+   is
+      Params : aliased Rose.Invocation.Invocation_Record;
+   begin
+      if not Item.Is_Open then
+         Load (Item);
+      end if;
+      Rose.System_Calls.Initialize_Send (Params, Item.Launch_Command);
+      for Cap of Caps loop
+         Rose.System_Calls.Send_Cap (Params, Cap);
+      end loop;
+      Rose.System_Calls.Receive_Caps (Params, 1);
+      Rose.System_Calls.Invoke_Capability (Params);
+      if Params.Control.Flags (Rose.Invocation.Error) then
+         raise Rose.Interfaces.Objects.Invocation_Error
+           with "Exec.Launch_Command";
+      end if;
+      return Params.Caps (0);
+   end Launch_Command;
+
    ----------
    -- Load --
    ----------
@@ -201,9 +288,39 @@ package body Rose.Interfaces.Exec.Client is
          raise Rose.Interfaces.Objects.Invocation_Error with "Exec.Open";
       end if;
       Item.Launch := Params.Caps (Launch_Index);
+      Item.Launch_Command := Params.Caps (Launch_Command_Index);
+      Item.Metadata := Params.Caps (Metadata_Index);
       Item.Install := Params.Caps (Install_Index);
+      Item.Set_Standard_Output := Params.Caps (Set_Standard_Output_Index);
       Item.Is_Open := True;
    end Load;
+
+   --------------
+   -- Metadata --
+   --------------
+
+   overriding function Metadata (Item : in out Exec_Client) return String is
+      Params : aliased Rose.Invocation.Invocation_Record;
+   begin
+      if not Item.Is_Open then
+         Load (Item);
+      end if;
+      Rose.System_Calls.Initialize_Send (Params, Item.Metadata);
+      Rose.System_Calls.Receive_Words (Params, 1);
+      Rose.System_Calls.Receive_Buffer (Params);
+      Rose.System_Calls.Invoke_Capability (Params);
+      if Params.Control.Flags (Rose.Invocation.Error) then
+         raise Rose.Interfaces.Objects.Invocation_Error with "Exec.Metadata";
+      end if;
+      declare
+         Result : String
+           (1 .. Natural (Rose.System_Calls.Get_Word_32 (Params, 0)));
+         Last   : Natural;
+      begin
+         Rose.System_Calls.Copy_Text (Params, Result'Length, Result, Last);
+         return Result (1 .. Last);
+      end;
+   end Metadata;
 
    ----------
    -- Open --
@@ -224,14 +341,42 @@ package body Rose.Interfaces.Exec.Client is
    ------------------
 
    procedure Open_Cap_Set
-     (Client  : out Exec_Client;
-      Launch  : Rose.Capabilities.Capability;
-      Install : Rose.Capabilities.Capability)
+     (Client              : out Exec_Client;
+      Launch              : Rose.Capabilities.Capability;
+      Launch_Command      : Rose.Capabilities.Capability;
+      Metadata            : Rose.Capabilities.Capability;
+      Install             : Rose.Capabilities.Capability;
+      Set_Standard_Output : Rose.Capabilities.Capability)
    is
    begin
       Client.Launch := Launch;
+      Client.Launch_Command := Launch_Command;
+      Client.Metadata := Metadata;
       Client.Install := Install;
+      Client.Set_Standard_Output := Set_Standard_Output;
       Client.Is_Open := True;
    end Open_Cap_Set;
+
+   -------------------------
+   -- Set_Standard_Output --
+   -------------------------
+
+   overriding procedure Set_Standard_Output
+     (Item   : in out Exec_Client;
+      Output : in out Rose.Interfaces.Stream_Writer.Stream_Writer_Object'Class)
+   is
+      Params : aliased Rose.Invocation.Invocation_Record;
+   begin
+      if not Item.Is_Open then
+         Load (Item);
+      end if;
+      Rose.System_Calls.Initialize_Send (Params, Item.Set_Standard_Output);
+      Rose.System_Calls.Send_Cap (Params, Output.Stream_Writer_Cap);
+      Rose.System_Calls.Invoke_Capability (Params);
+      if Params.Control.Flags (Rose.Invocation.Error) then
+         raise Rose.Interfaces.Objects.Invocation_Error
+           with "Exec.Set_Standard_Output";
+      end if;
+   end Set_Standard_Output;
 
 end Rose.Interfaces.Exec.Client;

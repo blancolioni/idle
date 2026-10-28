@@ -66,8 +66,7 @@ package body Rose.Interfaces.Resource.Server is
          Registered := True;
       end if;
       if Slot = Max_Attached then
-         raise Constraint_Error
-           with "Rose.Interfaces.Resource.Server: too many objects";
+         raise Constraint_Error with "Resource.Server: too many objects";
       end if;
       Attached (Slot).Object := Object_Access (Object);
       Attached (Slot).Cap :=

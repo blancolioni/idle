@@ -40,21 +40,6 @@ package body Rose.Interfaces.Directory.Server is
    Get_Directory_Cap           : Rose.Capabilities.Capability :=
      Rose.Capabilities.Null_Capability;
 
-   Local_Read_File             : Read_File_Handler;
-
-   Read_File_Cap               : Rose.Capabilities.Capability :=
-     Rose.Capabilities.Null_Capability;
-
-   Local_Create_Directory      : Create_Directory_Handler;
-
-   Create_Directory_Cap        : Rose.Capabilities.Capability :=
-     Rose.Capabilities.Null_Capability;
-
-   Local_Create_File           : Create_File_Handler;
-
-   Create_File_Cap             : Rose.Capabilities.Capability :=
-     Rose.Capabilities.Null_Capability;
-
    Published_Cap               : Rose.Capabilities.Capability :=
      Rose.Capabilities.Null_Capability;
 
@@ -82,15 +67,6 @@ package body Rose.Interfaces.Directory.Server is
    procedure Handle_Get_Directory
      (Parameters : in out Rose.Invocation.Invocation_Record);
 
-   procedure Handle_Read_File
-     (Parameters : in out Rose.Invocation.Invocation_Record);
-
-   procedure Handle_Create_Directory
-     (Parameters : in out Rose.Invocation.Invocation_Record);
-
-   procedure Handle_Create_File
-     (Parameters : in out Rose.Invocation.Invocation_Record);
-
    ----------------------
    -- Attach_Interface --
    ----------------------
@@ -104,9 +80,6 @@ package body Rose.Interfaces.Directory.Server is
       Find_Entry            : Find_Entry_Handler;
       Get_Ordinary_File     : Get_Ordinary_File_Handler;
       Get_Directory         : Get_Directory_Handler;
-      Read_File             : Read_File_Handler;
-      Create_Directory      : Create_Directory_Handler;
-      Create_File           : Create_File_Handler;
       Instanced             : Boolean := False)
    is
    begin
@@ -117,9 +90,6 @@ package body Rose.Interfaces.Directory.Server is
       Local_Find_Entry := Find_Entry;
       Local_Get_Ordinary_File := Get_Ordinary_File;
       Local_Get_Directory := Get_Directory;
-      Local_Read_File := Read_File;
-      Local_Create_Directory := Create_Directory;
-      Local_Create_File := Create_File;
       Rose.Server.Register_Handler
         (Server_Context,
          Directory_Interface,
@@ -138,10 +108,6 @@ package body Rose.Interfaces.Directory.Server is
            Rose.Server.Create_Endpoint (Get_Ordinary_File_Endpoint);
          Get_Directory_Cap :=
            Rose.Server.Create_Endpoint (Get_Directory_Endpoint);
-         Read_File_Cap := Rose.Server.Create_Endpoint (Read_File_Endpoint);
-         Create_Directory_Cap :=
-           Rose.Server.Create_Endpoint (Create_Directory_Endpoint);
-         Create_File_Cap := Rose.Server.Create_Endpoint (Create_File_Endpoint);
          Rose.Server.Create_Anonymous_Endpoint (Directory_Interface);
       end if;
       Rose.Server.Register_Handler
@@ -172,18 +138,6 @@ package body Rose.Interfaces.Directory.Server is
         (Server_Context,
          Get_Directory_Endpoint,
          Handle_Get_Directory'Access);
-      Rose.Server.Register_Handler
-        (Server_Context,
-         Read_File_Endpoint,
-         Handle_Read_File'Access);
-      Rose.Server.Register_Handler
-        (Server_Context,
-         Create_Directory_Endpoint,
-         Handle_Create_Directory'Access);
-      Rose.Server.Register_Handler
-        (Server_Context,
-         Create_File_Endpoint,
-         Handle_Create_File'Access);
    end Attach_Interface;
 
    -------------------
@@ -199,9 +153,6 @@ package body Rose.Interfaces.Directory.Server is
       Find_Entry            : Find_Entry_Handler;
       Get_Ordinary_File     : Get_Ordinary_File_Handler;
       Get_Directory         : Get_Directory_Handler;
-      Read_File             : Read_File_Handler;
-      Create_Directory      : Create_Directory_Handler;
-      Create_File           : Create_File_Handler;
       Instanced             : Boolean := False)
    is
    begin
@@ -214,27 +165,8 @@ package body Rose.Interfaces.Directory.Server is
          Find_Entry,
          Get_Ordinary_File,
          Get_Directory,
-         Read_File,
-         Create_Directory,
-         Create_File,
          Instanced);
    end Create_Server;
-
-   ------------------------------
-   -- Get_Create_Directory_Cap --
-   ------------------------------
-
-   function Get_Create_Directory_Cap
-      return Rose.Capabilities.Capability
-   is (Create_Directory_Cap);
-
-   -------------------------
-   -- Get_Create_File_Cap --
-   -------------------------
-
-   function Get_Create_File_Cap
-      return Rose.Capabilities.Capability
-   is (Create_File_Cap);
 
    -----------------------------------
    -- Get_Directory_Entry_Count_Cap --
@@ -291,46 +223,6 @@ package body Rose.Interfaces.Directory.Server is
    function Get_Get_Ordinary_File_Cap
       return Rose.Capabilities.Capability
    is (Get_Ordinary_File_Cap);
-
-   -----------------------
-   -- Get_Read_File_Cap --
-   -----------------------
-
-   function Get_Read_File_Cap
-      return Rose.Capabilities.Capability
-   is (Read_File_Cap);
-
-   -----------------------------
-   -- Handle_Create_Directory --
-   -----------------------------
-
-   procedure Handle_Create_Directory
-     (Parameters : in out Rose.Invocation.Invocation_Record)
-   is
-      Name   : String (1 .. Natural (Parameters.Buffer_Length))
-        with Import, Address => Parameters.Buffer_Address;
-      Result : constant Rose.Capabilities.Capability :=
-        Local_Create_Directory (Parameters.Identifier, Name);
-   begin
-      Rose.System_Calls.Initialize_Reply (Parameters, Parameters.Reply_Cap);
-      Rose.System_Calls.Send_Cap (Parameters, Result);
-   end Handle_Create_Directory;
-
-   ------------------------
-   -- Handle_Create_File --
-   ------------------------
-
-   procedure Handle_Create_File
-     (Parameters : in out Rose.Invocation.Invocation_Record)
-   is
-      Name   : String (1 .. Natural (Parameters.Buffer_Length))
-        with Import, Address => Parameters.Buffer_Address;
-      Result : constant Rose.Capabilities.Capability :=
-        Local_Create_File (Parameters.Identifier, Name);
-   begin
-      Rose.System_Calls.Initialize_Reply (Parameters, Parameters.Reply_Cap);
-      Rose.System_Calls.Send_Cap (Parameters, Result);
-   end Handle_Create_File;
 
    ----------------------------------
    -- Handle_Directory_Entry_Count --
@@ -602,71 +494,6 @@ package body Rose.Interfaces.Directory.Server is
          Cap := Get_Directory_Cap;
       end if;
       Rose.System_Calls.Send_Cap (Parameters, Cap);
-      if Read_File_Cap = Rose.Capabilities.Null_Capability then
-         if not Rose.Server.Has_Instance
-           (Server_Instance,
-            Read_File_Endpoint,
-            Identifier)
-         then
-            Rose.Server.Set_Instance_Cap
-              (Server_Instance,
-               Read_File_Endpoint,
-               Identifier,
-               Rose.Server.Create_Endpoint (Read_File_Endpoint, Identifier));
-         end if;
-         Cap :=
-           Rose.Server.Get_Instance_Cap
-             (Server_Instance,
-              Read_File_Endpoint,
-              Identifier);
-      else
-         Cap := Read_File_Cap;
-      end if;
-      Rose.System_Calls.Send_Cap (Parameters, Cap);
-      if Create_Directory_Cap = Rose.Capabilities.Null_Capability then
-         if not Rose.Server.Has_Instance
-           (Server_Instance,
-            Create_Directory_Endpoint,
-            Identifier)
-         then
-            Rose.Server.Set_Instance_Cap
-              (Server_Instance,
-               Create_Directory_Endpoint,
-               Identifier,
-               Rose.Server.Create_Endpoint
-                 (Create_Directory_Endpoint,
-                  Identifier));
-         end if;
-         Cap :=
-           Rose.Server.Get_Instance_Cap
-             (Server_Instance,
-              Create_Directory_Endpoint,
-              Identifier);
-      else
-         Cap := Create_Directory_Cap;
-      end if;
-      Rose.System_Calls.Send_Cap (Parameters, Cap);
-      if Create_File_Cap = Rose.Capabilities.Null_Capability then
-         if not Rose.Server.Has_Instance
-           (Server_Instance,
-            Create_File_Endpoint,
-            Identifier)
-         then
-            Rose.Server.Set_Instance_Cap
-              (Server_Instance,
-               Create_File_Endpoint,
-               Identifier,
-               Rose.Server.Create_Endpoint (Create_File_Endpoint, Identifier));
-         end if;
-         Cap :=
-           Rose.Server.Get_Instance_Cap
-             (Server_Instance,
-              Create_File_Endpoint,
-              Identifier);
-      else
-         Cap := Create_File_Cap;
-      end if;
-      Rose.System_Calls.Send_Cap (Parameters, Cap);
    end Handle_Get_Directory_Interface;
 
    ------------------------------
@@ -685,22 +512,6 @@ package body Rose.Interfaces.Directory.Server is
       Rose.System_Calls.Send_Cap (Parameters, Result);
    end Handle_Get_Ordinary_File;
 
-   ----------------------
-   -- Handle_Read_File --
-   ----------------------
-
-   procedure Handle_Read_File
-     (Parameters : in out Rose.Invocation.Invocation_Record)
-   is
-      Index  : constant Positive :=
-        Positive (Rose.System_Calls.Get_Word_32 (Parameters, 0));
-      Result : constant Rose.Capabilities.Capability :=
-        Local_Read_File (Parameters.Identifier, Index);
-   begin
-      Rose.System_Calls.Initialize_Reply (Parameters, Parameters.Reply_Cap);
-      Rose.System_Calls.Send_Cap (Parameters, Result);
-   end Handle_Read_File;
-
    -----------------------
    -- Publish_Interface --
    -----------------------
@@ -713,10 +524,7 @@ package body Rose.Interfaces.Directory.Server is
       Directory_Entry_Size  : Directory_Entry_Size_Handler;
       Find_Entry            : Find_Entry_Handler;
       Get_Ordinary_File     : Get_Ordinary_File_Handler;
-      Get_Directory         : Get_Directory_Handler;
-      Read_File             : Read_File_Handler;
-      Create_Directory      : Create_Directory_Handler;
-      Create_File           : Create_File_Handler)
+      Get_Directory         : Get_Directory_Handler)
    is
    begin
       Local_Directory_Entry_Count := Directory_Entry_Count;
@@ -726,9 +534,6 @@ package body Rose.Interfaces.Directory.Server is
       Local_Find_Entry := Find_Entry;
       Local_Get_Ordinary_File := Get_Ordinary_File;
       Local_Get_Directory := Get_Directory;
-      Local_Read_File := Read_File;
-      Local_Create_Directory := Create_Directory;
-      Local_Create_File := Create_File;
       Directory_Entry_Count_Cap :=
         Rose.Server.Create_Endpoint (Directory_Entry_Count_Endpoint);
       Directory_Entry_Name_Cap :=
@@ -742,10 +547,6 @@ package body Rose.Interfaces.Directory.Server is
         Rose.Server.Create_Endpoint (Get_Ordinary_File_Endpoint);
       Get_Directory_Cap :=
         Rose.Server.Create_Endpoint (Get_Directory_Endpoint);
-      Read_File_Cap := Rose.Server.Create_Endpoint (Read_File_Endpoint);
-      Create_Directory_Cap :=
-        Rose.Server.Create_Endpoint (Create_Directory_Endpoint);
-      Create_File_Cap := Rose.Server.Create_Endpoint (Create_File_Endpoint);
       Published_Cap := Rose.Server.Create_Endpoint (Directory_Interface);
       Rose.Server.Register_Handler
         (Server_Context,
@@ -779,18 +580,6 @@ package body Rose.Interfaces.Directory.Server is
         (Server_Context,
          Get_Directory_Endpoint,
          Handle_Get_Directory'Access);
-      Rose.Server.Register_Handler
-        (Server_Context,
-         Read_File_Endpoint,
-         Handle_Read_File'Access);
-      Rose.Server.Register_Handler
-        (Server_Context,
-         Create_Directory_Endpoint,
-         Handle_Create_Directory'Access);
-      Rose.Server.Register_Handler
-        (Server_Context,
-         Create_File_Endpoint,
-         Handle_Create_File'Access);
       Rose.Server.Publish_Interface (Published_Cap);
    end Publish_Interface;
 

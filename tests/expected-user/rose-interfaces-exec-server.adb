@@ -2,8 +2,10 @@ with Rose.Interfaces.Launch;
 with Rose.Interfaces.Objects;
 with Rose.Interfaces.Process;
 with Rose.Interfaces.Stream_Reader.Client;
+with Rose.Interfaces.Stream_Writer.Client;
 with Rose.Invocation;
 with Rose.System_Calls;
+with Rose.Texts;
 with System;
 with System.Storage_Elements;
 
@@ -29,6 +31,12 @@ package body Rose.Interfaces.Exec.Server is
 
    Registered      : Boolean := False;
 
+   subtype Process_Object_Class is
+     Rose.Interfaces.Process.Process_Object'Class;
+
+   subtype Launch_Object_Class is
+     Rose.Interfaces.Launch.Launch_Object'Class;
+
    function Find
      (Identifier : Rose.Objects.Capability_Identifier)
       return Object_Access;
@@ -42,7 +50,16 @@ package body Rose.Interfaces.Exec.Server is
    procedure Handle_Launch
      (Parameters : in out Rose.Invocation.Invocation_Record);
 
+   procedure Handle_Launch_Command
+     (Parameters : in out Rose.Invocation.Invocation_Record);
+
+   procedure Handle_Metadata
+     (Parameters : in out Rose.Invocation.Invocation_Record);
+
    procedure Handle_Install
+     (Parameters : in out Rose.Invocation.Invocation_Record);
+
+   procedure Handle_Set_Standard_Output
      (Parameters : in out Rose.Invocation.Invocation_Record);
 
    ------------
@@ -69,13 +86,24 @@ package body Rose.Interfaces.Exec.Server is
             Handle_Launch'Access);
          Rose.Server.Register_Handler
            (Server_Context,
+            Launch_Command_Endpoint,
+            Handle_Launch_Command'Access);
+         Rose.Server.Register_Handler
+           (Server_Context,
+            Metadata_Endpoint,
+            Handle_Metadata'Access);
+         Rose.Server.Register_Handler
+           (Server_Context,
             Install_Endpoint,
             Handle_Install'Access);
+         Rose.Server.Register_Handler
+           (Server_Context,
+            Set_Standard_Output_Endpoint,
+            Handle_Set_Standard_Output'Access);
          Registered := True;
       end if;
       if Attached_Count = Max_Attached then
-         raise Constraint_Error
-           with "Rose.Interfaces.Exec.Server: too many objects";
+         raise Constraint_Error with "Exec.Server: too many objects";
       end if;
       Attached (Attached_Count).Object := Object_Access (Object);
       Attached (Attached_Count).Cap :=
@@ -186,6 +214,42 @@ package body Rose.Interfaces.Exec.Server is
          Rose.System_Calls.Send_Cap (Parameters, Cap);
          if not Rose.Server.Has_Instance
            (Server_Instance,
+            Launch_Command_Endpoint,
+            Identifier)
+         then
+            Rose.Server.Set_Instance_Cap
+              (Server_Instance,
+               Launch_Command_Endpoint,
+               Identifier,
+               Rose.Server.Create_Endpoint
+                 (Launch_Command_Endpoint,
+                  Identifier));
+         end if;
+         Cap :=
+           Rose.Server.Get_Instance_Cap
+             (Server_Instance,
+              Launch_Command_Endpoint,
+              Identifier);
+         Rose.System_Calls.Send_Cap (Parameters, Cap);
+         if not Rose.Server.Has_Instance
+           (Server_Instance,
+            Metadata_Endpoint,
+            Identifier)
+         then
+            Rose.Server.Set_Instance_Cap
+              (Server_Instance,
+               Metadata_Endpoint,
+               Identifier,
+               Rose.Server.Create_Endpoint (Metadata_Endpoint, Identifier));
+         end if;
+         Cap :=
+           Rose.Server.Get_Instance_Cap
+             (Server_Instance,
+              Metadata_Endpoint,
+              Identifier);
+         Rose.System_Calls.Send_Cap (Parameters, Cap);
+         if not Rose.Server.Has_Instance
+           (Server_Instance,
             Install_Endpoint,
             Identifier)
          then
@@ -199,6 +263,25 @@ package body Rose.Interfaces.Exec.Server is
            Rose.Server.Get_Instance_Cap
              (Server_Instance,
               Install_Endpoint,
+              Identifier);
+         Rose.System_Calls.Send_Cap (Parameters, Cap);
+         if not Rose.Server.Has_Instance
+           (Server_Instance,
+            Set_Standard_Output_Endpoint,
+            Identifier)
+         then
+            Rose.Server.Set_Instance_Cap
+              (Server_Instance,
+               Set_Standard_Output_Endpoint,
+               Identifier,
+               Rose.Server.Create_Endpoint
+                 (Set_Standard_Output_Endpoint,
+                  Identifier));
+         end if;
+         Cap :=
+           Rose.Server.Get_Instance_Cap
+             (Server_Instance,
+              Set_Standard_Output_Endpoint,
               Identifier);
          Rose.System_Calls.Send_Cap (Parameters, Cap);
       else
@@ -257,6 +340,40 @@ package body Rose.Interfaces.Exec.Server is
            Launch_Endpoint,
            Identifier);
       Rose.System_Calls.Send_Cap (Parameters, Cap);
+      if not Rose.Server.Has_Instance
+        (Server_Instance,
+         Launch_Command_Endpoint,
+         Identifier)
+      then
+         Rose.Server.Set_Instance_Cap
+           (Server_Instance,
+            Launch_Command_Endpoint,
+            Identifier,
+            Rose.Server.Create_Endpoint (Launch_Command_Endpoint, Identifier));
+      end if;
+      Cap :=
+        Rose.Server.Get_Instance_Cap
+          (Server_Instance,
+           Launch_Command_Endpoint,
+           Identifier);
+      Rose.System_Calls.Send_Cap (Parameters, Cap);
+      if not Rose.Server.Has_Instance
+        (Server_Instance,
+         Metadata_Endpoint,
+         Identifier)
+      then
+         Rose.Server.Set_Instance_Cap
+           (Server_Instance,
+            Metadata_Endpoint,
+            Identifier,
+            Rose.Server.Create_Endpoint (Metadata_Endpoint, Identifier));
+      end if;
+      Cap :=
+        Rose.Server.Get_Instance_Cap
+          (Server_Instance,
+           Metadata_Endpoint,
+           Identifier);
+      Rose.System_Calls.Send_Cap (Parameters, Cap);
    end Handle_Get_Launch_Interface;
 
    --------------------
@@ -286,7 +403,7 @@ package body Rose.Interfaces.Exec.Server is
          return;
       end if;
       declare
-         Result : Rose.Interfaces.Launch.Launch_Object'Class :=
+         Result : Launch_Object_Class :=
            Object.Install
              (Executable,
               Name,
@@ -321,13 +438,85 @@ package body Rose.Interfaces.Exec.Server is
          return;
       end if;
       declare
-         Result : Rose.Interfaces.Process.Process_Object'Class :=
+         Result : Process_Object_Class :=
            Object.Launch (Caps (1 .. Caps_Count), Environment);
       begin
          Rose.System_Calls.Initialize_Reply (Parameters, Parameters.Reply_Cap);
          Rose.System_Calls.Send_Cap (Parameters, Result.Process_Cap);
       end;
    end Handle_Launch;
+
+   ---------------------------
+   -- Handle_Launch_Command --
+   ---------------------------
+
+   procedure Handle_Launch_Command
+     (Parameters : in out Rose.Invocation.Invocation_Record)
+   is
+      Object     : constant Object_Access := Find (Parameters.Identifier);
+      Caps       : Rose.Capabilities.Capability_Array
+        (1 .. Rose.Invocation.Max_Capabilities);
+      Caps_Count : constant Natural :=
+        Rose.System_Calls.Copy_Received_Caps (Parameters, 0, Caps);
+      Result     : Rose.Capabilities.Capability;
+   begin
+      if Object = null then
+         Rose.System_Calls.Initialize_Reply (Parameters, Parameters.Reply_Cap);
+         Rose.System_Calls.Send_Error
+           (Parameters,
+            Rose.Invocation.Invalid_Operation);
+         return;
+      end if;
+      Result := Object.Launch_Command (Caps (1 .. Caps_Count));
+      Rose.System_Calls.Initialize_Reply (Parameters, Parameters.Reply_Cap);
+      Rose.System_Calls.Send_Cap (Parameters, Result);
+   end Handle_Launch_Command;
+
+   ---------------------
+   -- Handle_Metadata --
+   ---------------------
+
+   procedure Handle_Metadata
+     (Parameters : in out Rose.Invocation.Invocation_Record)
+   is
+      Object : constant Object_Access := Find (Parameters.Identifier);
+      Last   : Natural := 0;
+      Result : String (1 .. Natural (Parameters.Buffer_Length))
+        with Import, Address => Parameters.Buffer_Address;
+   begin
+      if Object = null then
+         Rose.System_Calls.Initialize_Reply (Parameters, Parameters.Reply_Cap);
+         Rose.System_Calls.Send_Error
+           (Parameters,
+            Rose.Invocation.Invalid_Operation);
+         return;
+      end if;
+      Rose.Texts.Copy (Object.Metadata, Result, Last);
+      Rose.System_Calls.Initialize_Reply (Parameters, Parameters.Reply_Cap);
+      Rose.System_Calls.Send_Word (Parameters, Last);
+   end Handle_Metadata;
+
+   --------------------------------
+   -- Handle_Set_Standard_Output --
+   --------------------------------
+
+   procedure Handle_Set_Standard_Output
+     (Parameters : in out Rose.Invocation.Invocation_Record)
+   is
+      Object : constant Object_Access := Find (Parameters.Identifier);
+      Output : Rose.Interfaces.Stream_Writer.Client.Stream_Writer_Client :=
+        Rose.Interfaces.Stream_Writer.Client.From_Cap (Parameters.Caps (0));
+   begin
+      if Object = null then
+         Rose.System_Calls.Initialize_Reply (Parameters, Parameters.Reply_Cap);
+         Rose.System_Calls.Send_Error
+           (Parameters,
+            Rose.Invocation.Invalid_Operation);
+         return;
+      end if;
+      Object.Set_Standard_Output (Output);
+      Rose.System_Calls.Initialize_Reply (Parameters, Parameters.Reply_Cap);
+   end Handle_Set_Standard_Output;
 
    -------------------
    -- Interface_Cap --
