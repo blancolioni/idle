@@ -49,6 +49,15 @@ package Idle.Targets.Kernel is
    --  interface package names other interfaces through limited with
    --  clauses.
    --
+   --  An interface that is a Resource (Rose ADR 0010), because it, or an
+   --  ancestor, is the interface Resource, has clients whose Close calls
+   --  Release first. On the kernel target, the server's Release handler
+   --  then removes the object's instance caps. On the user target, the
+   --  server rescinds the object's caps and frees its slot, which Attach
+   --  can then use again; without the rescind cap, it retires the slot.
+   --  An interface that declares a Release of its own, without being a
+   --  Resource, gets a warning.
+   --
    --  The user target's units for a command are those of the kernel
    --  target, but that the command takes each interface argument, and
    --  each role member that is an interface, as an in out object of the

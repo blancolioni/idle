@@ -1,0 +1,8 @@
+--  A resource with another parent: its clients' Close releases it, and
+--  the user target's server frees its slot when it is released.
+
+interface Lease : Counter, Resource is
+
+   function Remaining return Word;
+
+end Lease;

@@ -5,6 +5,7 @@ private with Ada.Containers.Vectors;
 with Syn;
 with Syn.Factory;
 
+with Idle.Hierarchy;
 with Idle.Syntax;
 
 private package Idle.Targets.Kernel.Support is
@@ -64,6 +65,15 @@ private package Idle.Targets.Kernel.Support is
    Count_Name : constant String := "Subprogram_Count";
    --  The name of the constant that gives the number of caps in the
    --  reply to the interface cap.
+
+   function Is_Resource
+     (Item : Idle.Syntax.Interface_Declaration)
+      return Boolean;
+   --  True if Item is the interface Resource, or inherits it: its objects
+   --  hold something until they are released (Rose ADR 0010).
+
+   function Is_Release (Member : Idle.Hierarchy.Member) return Boolean;
+   --  True if Member is the Release that the interface Resource declares.
 
    function Subprograms
      (Item : Idle.Syntax.Interface_Declaration)

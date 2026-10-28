@@ -199,6 +199,17 @@ for name in orphan loop_a twice bounds typo clash out_array; do
   fi
 done
 
+# An interface that declares Release without being a Resource (Rose
+# ADR 0010) gets a warning, and is still generated.
+
+if $idle --target kernel -o output warnings/unreleased.idl \
+     2> output/warnings.txt \
+   && diff -u warnings/expected.txt output/warnings.txt; then
+  pass "warning for Release without Resource"
+else
+  fail "warning for Release without Resource"
+fi
+
 # Checking interfaces together. Rose's build gives only warnings, for the
 # files it does not compile. Each case in check-errors/ but extra.idl has
 # an error or a warning.

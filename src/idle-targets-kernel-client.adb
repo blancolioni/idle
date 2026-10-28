@@ -38,6 +38,8 @@ package body Idle.Targets.Kernel.Client is
         Support.Subprograms (Item);
       Ancestors    : constant Idle.Hierarchy.Interface_Vectors.Vector :=
         Idle.Hierarchy.Ancestors (Item);
+      Resource     : constant Boolean := Is_Resource (Item);
+      --  True if Item's objects are released (Rose ADR 0010).
 
       F            : Syn.Factory.Factory;
       Spec_Context : Context_List;
@@ -246,6 +248,24 @@ package body Idle.Targets.Kernel.Client is
          Statements : Node_List;
          Own_Caps   : Node_List;
       begin
+         if Resource then
+            --  A resource is released first (Rose ADR 0010). A user-target
+            --  client that has made no call has only its interface cap,
+            --  and gets the others in Release.
+            Statements.Append
+              (F.New_If
+                 (Condition =>
+                    (if User
+                     then F.New_Binary
+                            (F.New_Name ("Client.Is_Open"), "or else",
+                             F.New_Binary
+                               (F.New_Name ("Client.Interface_Cap"), "/=",
+                                F.New_Name
+                                  ("Rose.Capabilities.Null_Capability")))
+                     else F.New_Name ("Client.Is_Open")),
+                  Then_Part => [Call ("Release", [F.New_Name ("Client")])]));
+         end if;
+
          for Subprogram of Subprograms loop
             for Statement of Delete (Name (Subprogram)) loop
                Own_Caps.Append (Statement);
@@ -296,7 +316,7 @@ package body Idle.Targets.Kernel.Client is
             F.New_Subprogram_Body
               (Specification => Specification,
                Declarations  =>
-                 (if User and then not Ancestors.Is_Empty
+                 (if User and then (Resource or else not Ancestors.Is_Empty)
                   then [F.New_Use ("Rose.Capabilities.Capability",
                                    Use_Type => True)]
                   else Syn.No_Nodes)

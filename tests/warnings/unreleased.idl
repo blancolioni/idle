@@ -1,0 +1,8 @@
+--  An interface that declares Release without being a Resource (Rose
+--  ADR 0010), as Region does in Rose: its clients' Close does not call it.
+
+interface Unreleased is
+
+   procedure Release;
+
+end Unreleased;
