@@ -107,6 +107,28 @@ package body Idle.Targets.Kernel.Types is
       end case;
    end Decode;
 
+   -------------------
+   -- Packs_Buffers --
+   -------------------
+
+   function Packs_Buffers
+     (Owner : Idle.Syntax.Interface_Declaration;
+      Item  : Idle.Syntax.Subprogram)
+      return Boolean
+   is
+      use type Idle.Syntax.Parameter_Mode;
+      Count : Natural := 0;
+   begin
+      for Parameter of Item.Parameters loop
+         if Parameter.Mode = Idle.Syntax.In_Mode
+           and then Is_Buffer (Resolve (Owner, Parameter.Of_Type))
+         then
+            Count := Count + 1;
+         end if;
+      end loop;
+      return Count > 1;
+   end Packs_Buffers;
+
    ----------------
    -- Predefined --
    ----------------

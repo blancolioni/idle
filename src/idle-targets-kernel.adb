@@ -300,6 +300,9 @@ package body Idle.Targets.Kernel is
 
          Subprogram     : Idle.Syntax.Subprogram renames Member.Subprogram;
          Buffers        : Natural := 0;
+         Packable       : Boolean := True;
+         --  Several buffers can be sent as items if they are all in
+         --  arguments (idle#58): there is one buffer for the reply.
          Cap_Array_Seen : Boolean := False;
 
          function Unsupported_Text (What : String) return String
@@ -367,6 +370,9 @@ package body Idle.Targets.Kernel is
 
                   if Types.Is_Buffer (Info) then
                      Buffers := Buffers + 1;
+                     if Parameter.Mode /= Idle.Syntax.In_Mode then
+                        Packable := False;
+                     end if;
                   end if;
 
                   if Parameter.Mode /= Idle.Syntax.In_Mode
@@ -397,16 +403,17 @@ package body Idle.Targets.Kernel is
                             Unsupported_Text ("results of type " & Type_Name));
                   when String_Value =>
                      Buffers := Buffers + 1;
+                     Packable := False;
                   when others =>
                      Check_Interface (Info, Type_Name, Subprogram.Position);
                end case;
             end;
          end if;
 
-         if Buffers > 1 then
+         if Buffers > 1 and then not Packable then
             Error (Member.File_Name, Subprogram.Position,
-                   "only one string or array can be passed in an "
-                   & "invocation");
+                   "several strings or arrays can be passed in an "
+                   & "invocation only if they are all in arguments");
          end if;
       end Check_Member;
 

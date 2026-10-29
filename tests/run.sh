@@ -190,7 +190,7 @@ done
 # Interfaces that the kernel target rejects. The other files in
 # kernel-errors/ are their parents.
 
-for name in orphan loop_a twice bounds typo clash out_array; do
+for name in orphan loop_a twice bounds typo clash out_array buffers; do
   file="kernel-errors/$name.idl"
   if $idle --target kernel -o output "$file" \
        2> output/diagnostics.txt; then
