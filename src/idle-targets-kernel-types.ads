@@ -74,6 +74,15 @@ private package Idle.Targets.Kernel.Types is
    function Is_Buffer (Info : Type_Info) return Boolean
    is (Info.Category in String_Value | Storage_Value);
 
+   function Packs_Buffers
+     (Owner : Idle.Syntax.Interface_Declaration;
+      Item  : Idle.Syntax.Subprogram)
+      return Boolean;
+   --  True if Item, a subprogram of Owner, has more than one in argument
+   --  that is a string or an array. They travel in the one invocation
+   --  buffer as items: each is its length in four bytes, little-endian,
+   --  then its bytes, padded to a multiple of four (idle#58).
+
    function Object_Unit (Info : Type_Info) return String
    is ("Rose.Interfaces." & To_String (Info.Interface_Name))
      with Pre => Info.Category = Interface_Value;

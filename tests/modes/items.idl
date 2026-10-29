@@ -1,0 +1,19 @@
+--  Several in strings and arrays, which travel as items in the one
+--  invocation buffer (idle#58).
+
+interface Items is
+
+   --  Two strings, as Login has.
+   function Pair (Name : String; Password : String) return Capability;
+
+   --  A string and an array, between a word and a cap.
+   procedure Store
+     (Index : Word;
+      Key   : String;
+      Data  : Storage_Array;
+      Owner : Capability);
+
+   --  One string: sent alone, as before.
+   procedure Single (Name : String);
+
+end Items;

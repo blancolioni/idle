@@ -1,0 +1,10 @@
+--  Several buffers can travel together only if they are all in
+--  arguments: there is one buffer for the reply (idle#58).
+
+interface Buffers is
+
+   procedure Rename (Old_Name : String; New_Name : in out String);
+
+   function Label (Prefix : String) return String;
+
+end Buffers;

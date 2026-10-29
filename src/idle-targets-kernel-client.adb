@@ -582,6 +582,9 @@ package body Idle.Targets.Kernel.Client is
             else (others => <>));
          Returns_String  : constant Boolean :=
            Subprogram.Is_Function and then Result.Category = String_Value;
+         Packed          : constant Boolean :=
+           Types.Packs_Buffers (Member.Owner, Subprogram);
+         --  The in strings and arrays are items in the buffer (idle#58).
 
          function Info
            (Parameter : Idle.Syntax.Parameter)
@@ -708,6 +711,9 @@ package body Idle.Targets.Kernel.Client is
          Statements.Append
            (Call (System_Calls & "Initialize_Send",
                   [Params, F.New_Name ("Item." & Subprogram_Name)]));
+         if Packed then
+            Statements.Append (Call (System_Calls & "Start_Items", [Params]));
+         end if;
 
          for Parameter of Subprogram.Parameters loop
             declare
@@ -719,7 +725,14 @@ package body Idle.Targets.Kernel.Client is
                  (Parameter_Info,
                   Is_Out => Parameter.Mode = Idle.Syntax.Out_Mode);
 
-               if Parameter.Mode /= Idle.Syntax.Out_Mode then
+               if Packed and then Types.Is_Buffer (Parameter_Info) then
+                  Statements.Append
+                    (Call (System_Calls
+                           & (if Parameter_Info.Category = String_Value
+                              then "Send_Text_Item"
+                              else "Send_Storage_Item"),
+                           [Params, Value]));
+               elsif Parameter.Mode /= Idle.Syntax.Out_Mode then
                   case Parameter_Info.Category is
                      when Word_Value | Double_Word_Value =>
                         Statements.Append

@@ -1,0 +1,2 @@
+kernel-errors/buffers.idl:6:4: error: several strings or arrays can be passed in an invocation only if they are all in arguments
+kernel-errors/buffers.idl:8:4: error: several strings or arrays can be passed in an invocation only if they are all in arguments

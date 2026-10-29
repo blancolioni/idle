@@ -867,6 +867,18 @@ package body Idle.Targets.Kernel.Server is
                    (Literal (1), "..",
                     F.New_Name ("Parameters.Buffer_Length"))]));
 
+         Packed : constant Boolean :=
+           Types.Packs_Buffers (Member.Owner, Subprogram);
+         --  The in strings and arrays are items in the buffer (idle#58).
+
+         Next_Item : Positive := 1;
+
+         procedure Add_Item_Overlay
+           (Object_Name : String;
+            Is_String   : Boolean);
+         --  Declare Object_Name, a string or a storage array, at the next
+         --  item in the invocation buffer.
+
          Declarations : Node_List;
          Arguments    : Node_List;
          Statements   : Node_List;
@@ -877,6 +889,44 @@ package body Idle.Targets.Kernel.Server is
          --  the reply.
          Next_Word    : Natural := 0;
          Next_Cap     : Natural := 0;
+
+         ----------------------
+         -- Add_Item_Overlay --
+         ----------------------
+
+         procedure Add_Item_Overlay
+           (Object_Name : String;
+            Is_String   : Boolean)
+         is
+            Item_Name : constant String := Object_Name & "_Item";
+            Length    : constant not null Syn.Node_Access :=
+              F.New_Name (Item_Name & ".Length");
+         begin
+            Declarations.Append
+              (F.New_Object
+                 (Item_Name, F.New_Name (System_Calls & "Buffer_Item"),
+                  F.New_Call
+                    (System_Calls & "Get_Buffer_Item",
+                     [Parameters, Literal (Next_Item)]),
+                  Is_Constant => True));
+            Declarations.Append
+              (F.New_Object
+                 (Object_Name,
+                  (if Is_String
+                   then F.New_Call
+                          ("String",
+                           [F.New_Binary
+                              (Literal (1), "..",
+                               F.New_Call ("Natural", [Length]))])
+                   else F.New_Call
+                          ("System.Storage_Elements.Storage_Array",
+                           [F.New_Binary (Literal (1), "..", Length)])),
+                  Aspects =>
+                    [F.New_Aspect ("Import"),
+                     F.New_Aspect
+                       ("Address", F.New_Name (Item_Name & ".Address"))]));
+            Next_Item := Next_Item + 1;
+         end Add_Item_Overlay;
 
       begin
          Handler_Specs.Append (Specification);
@@ -899,112 +949,120 @@ package body Idle.Targets.Kernel.Server is
                  F.New_Name (Server_Type_Of (Info));
                Argument    : Syn.Node_Access := F.New_Name (Object_Name);
             begin
-               case Info.Category is
-                  when Word_Value | Double_Word_Value =>
-                     if Parameter.Mode = Idle.Syntax.Out_Mode then
-                        Declarations.Append
-                          (F.New_Object (Object_Name, Object_Type));
-                     else
-                        Declarations.Append
-                          (F.New_Object
-                             (Object_Name, Object_Type,
-                              Types.Decode
-                                (F, Info, "Parameters", Next_Word),
-                              Is_Constant =>
-                                Parameter.Mode = Idle.Syntax.In_Mode));
-                        Next_Word := Next_Word + Types.Words (Info);
-                     end if;
-                  when Capability_Value | Interface_Value =>
-                     if User and then Info.Category = Interface_Value then
-                        --  A client of the interface, which the object can
-                        --  call, or for an out interface opens.
+               if Packed and then Parameter.Mode = Idle.Syntax.In_Mode
+                 and then Types.Is_Buffer (Info)
+               then
+                  Add_Item_Overlay
+                    (Object_Name, Info.Category = String_Value);
+               else
+                  case Info.Category is
+                     when Word_Value | Double_Word_Value =>
+                        if Parameter.Mode = Idle.Syntax.Out_Mode then
+                           Declarations.Append
+                             (F.New_Object (Object_Name, Object_Type));
+                        else
+                           Declarations.Append
+                             (F.New_Object
+                                (Object_Name, Object_Type,
+                                 Types.Decode
+                                   (F, Info, "Parameters", Next_Word),
+                                 Is_Constant =>
+                                   Parameter.Mode = Idle.Syntax.In_Mode));
+                           Next_Word := Next_Word + Types.Words (Info);
+                        end if;
+                     when Capability_Value | Interface_Value =>
+                        if User and then Info.Category = Interface_Value then
+                           --  A client of the interface, which the object can
+                           --  call, or for an out interface opens.
+                           Declarations.Append
+                             (F.New_Object
+                                (Object_Name,
+                                 F.New_Name (To_String (Info.Ada_Name)),
+                                 (if Parameter.Mode = Idle.Syntax.Out_Mode
+                                  then null
+                                  else F.New_Call
+                                         (To_String (Info.Unit) & ".From_Cap",
+                                          [F.New_Call
+                                             ("Parameters.Caps",
+                                              [Literal (Next_Cap)])]))));
+                           if Parameter.Mode /= Idle.Syntax.Out_Mode then
+                              Next_Cap := Next_Cap + 1;
+                           end if;
+                        elsif Parameter.Mode = Idle.Syntax.Out_Mode then
+                           Declarations.Append
+                             (F.New_Object
+                                (Object_Name, Object_Type,
+                                 F.New_Name
+                                   ("Rose.Capabilities.Null_Capability")));
+                        else
+                           Declarations.Append
+                             (F.New_Object
+                                (Object_Name, Object_Type,
+                                 F.New_Call
+                                   ("Parameters.Caps", [Literal (Next_Cap)]),
+                                 Is_Constant =>
+                                   Parameter.Mode = Idle.Syntax.In_Mode));
+                           Next_Cap := Next_Cap + 1;
+                        end if;
+                     when Capability_Array_Value =>
                         Declarations.Append
                           (F.New_Object
                              (Object_Name,
-                              F.New_Name (To_String (Info.Ada_Name)),
-                              (if Parameter.Mode = Idle.Syntax.Out_Mode
-                               then null
-                               else F.New_Call
-                                      (To_String (Info.Unit) & ".From_Cap",
-                                       [F.New_Call
-                                          ("Parameters.Caps",
-                                           [Literal (Next_Cap)])]))));
-                        if Parameter.Mode /= Idle.Syntax.Out_Mode then
-                           Next_Cap := Next_Cap + 1;
-                        end if;
-                     elsif Parameter.Mode = Idle.Syntax.Out_Mode then
-                        Declarations.Append
-                          (F.New_Object
-                             (Object_Name, Object_Type,
-                              F.New_Name
-                                ("Rose.Capabilities.Null_Capability")));
-                     else
-                        Declarations.Append
-                          (F.New_Object
-                             (Object_Name, Object_Type,
                               F.New_Call
-                                ("Parameters.Caps", [Literal (Next_Cap)]),
-                              Is_Constant =>
-                                Parameter.Mode = Idle.Syntax.In_Mode));
-                        Next_Cap := Next_Cap + 1;
-                     end if;
-                  when Capability_Array_Value =>
-                     Declarations.Append
-                       (F.New_Object
-                          (Object_Name,
-                           F.New_Call
-                             (Capability_Name & "_Array",
-                              [F.New_Binary
-                                 (Literal (1), "..",
-                                  F.New_Name
-                                    ("Rose.Invocation.Max_Capabilities"))])));
-                     Declarations.Append
-                       (F.New_Object
-                          (Object_Name & "_Count", F.New_Name ("Natural"),
-                           F.New_Call
-                             (System_Calls & "Copy_Received_Caps",
-                              [Parameters, Literal (Next_Cap),
-                               F.New_Name (Object_Name)]),
-                           Is_Constant => True));
-                     Argument :=
-                       F.New_Call
-                         (Object_Name,
-                          [F.New_Binary
-                             (Literal (1), "..",
-                              F.New_Name (Object_Name & "_Count"))]);
-                  when String_Value =>
-                     if User and then Parameter.Mode /= Idle.Syntax.In_Mode
-                     then
-                        --  A text, from the buffer for an in out string,
-                        --  which is copied to the buffer for the reply.
-                        Declarations.Append
-                          (Buffer_Overlay (Object_Name & "_Buffer",
-                                           String_Type));
+                                (Capability_Name & "_Array",
+                                 [F.New_Binary
+                                    (Literal (1), "..",
+                                     F.New_Name
+                                       ("Rose.Invocation"
+                                        & ".Max_Capabilities"))])));
                         Declarations.Append
                           (F.New_Object
-                             (Object_Name, F.New_Name (Text_Name),
-                              (if Parameter.Mode = Idle.Syntax.Out_Mode
-                               then null
-                               else F.New_Call
-                                      ("Rose.Texts.To_Text",
-                                       [F.New_Name
-                                          (Object_Name & "_Buffer")]))));
-                     else
+                             (Object_Name & "_Count", F.New_Name ("Natural"),
+                              F.New_Call
+                                (System_Calls & "Copy_Received_Caps",
+                                 [Parameters, Literal (Next_Cap),
+                                  F.New_Name (Object_Name)]),
+                              Is_Constant => True));
+                        Argument :=
+                          F.New_Call
+                            (Object_Name,
+                             [F.New_Binary
+                                (Literal (1), "..",
+                                 F.New_Name (Object_Name & "_Count"))]);
+                     when String_Value =>
+                        if User and then Parameter.Mode /= Idle.Syntax.In_Mode
+                        then
+                           --  A text, from the buffer for an in out string,
+                           --  which is copied to the buffer for the reply.
+                           Declarations.Append
+                             (Buffer_Overlay (Object_Name & "_Buffer",
+                                              String_Type));
+                           Declarations.Append
+                             (F.New_Object
+                                (Object_Name, F.New_Name (Text_Name),
+                                 (if Parameter.Mode = Idle.Syntax.Out_Mode
+                                  then null
+                                  else F.New_Call
+                                         ("Rose.Texts.To_Text",
+                                          [F.New_Name
+                                             (Object_Name & "_Buffer")]))));
+                        else
+                           Declarations.Append
+                             (Buffer_Overlay (Object_Name, String_Type));
+                        end if;
+                        if Parameter.Mode /= Idle.Syntax.In_Mode then
+                           Declarations.Append
+                             (F.New_Object
+                                (Object_Name & "_Last", F.New_Name ("Natural"),
+                                 Literal (0)));
+                        end if;
+                     when Storage_Value =>
                         Declarations.Append
-                          (Buffer_Overlay (Object_Name, String_Type));
-                     end if;
-                     if Parameter.Mode /= Idle.Syntax.In_Mode then
-                        Declarations.Append
-                          (F.New_Object
-                             (Object_Name & "_Last", F.New_Name ("Natural"),
-                              Literal (0)));
-                     end if;
-                  when Storage_Value =>
-                     Declarations.Append
-                       (Buffer_Overlay (Object_Name, Storage_Type));
-                  when Unknown =>
-                     raise Program_Error;
-               end case;
+                          (Buffer_Overlay (Object_Name, Storage_Type));
+                     when Unknown =>
+                        raise Program_Error;
+                  end case;
+               end if;
                Arguments.Append (Argument);
                if Info.Category = String_Value
                  and then Parameter.Mode /= Idle.Syntax.In_Mode
