@@ -150,20 +150,33 @@ package body Rose.Interfaces.Seekable.Server is
    procedure Handle_Seek
      (Parameters : in out Rose.Invocation.Invocation_Record)
    is
-      Object            : constant Object_Access :=
-        Find (Parameters.Identifier);
-      Offset_From_Start : constant Rose.Words.Word_64 :=
-        Rose.System_Calls.Get_Word_64 (Parameters, 0);
    begin
-      if Object = null then
+      declare
+         Object            : constant Object_Access :=
+           Find (Parameters.Identifier);
+         Offset_From_Start : constant Rose.Words.Word_64 :=
+           Rose.System_Calls.Get_Word_64 (Parameters, 0);
+      begin
+         if Object = null then
+            Rose.System_Calls.Initialize_Reply
+              (Parameters,
+               Parameters.Reply_Cap);
+            Rose.System_Calls.Send_Error
+              (Parameters,
+               Rose.Invocation.Invalid_Operation);
+            return;
+         end if;
+         Object.Seek (Offset_From_Start);
          Rose.System_Calls.Initialize_Reply (Parameters, Parameters.Reply_Cap);
-         Rose.System_Calls.Send_Error
-           (Parameters,
-            Rose.Invocation.Invalid_Operation);
-         return;
-      end if;
-      Object.Seek (Offset_From_Start);
-      Rose.System_Calls.Initialize_Reply (Parameters, Parameters.Reply_Cap);
+      exception
+         when others =>
+            Rose.System_Calls.Initialize_Reply
+              (Parameters,
+               Parameters.Reply_Cap);
+            Rose.System_Calls.Send_Error
+              (Parameters,
+               Rose.Invocation.Exception_Raised);
+      end;
    end Handle_Seek;
 
    -------------------

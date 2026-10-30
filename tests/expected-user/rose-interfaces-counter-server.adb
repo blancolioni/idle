@@ -160,19 +160,32 @@ package body Rose.Interfaces.Counter.Server is
    procedure Handle_Badge
      (Parameters : in out Rose.Invocation.Invocation_Record)
    is
-      Object : constant Object_Access := Find (Parameters.Identifier);
-      Result : Rose.Capabilities.Capability;
    begin
-      if Object = null then
+      declare
+         Object : constant Object_Access := Find (Parameters.Identifier);
+         Result : Rose.Capabilities.Capability;
+      begin
+         if Object = null then
+            Rose.System_Calls.Initialize_Reply
+              (Parameters,
+               Parameters.Reply_Cap);
+            Rose.System_Calls.Send_Error
+              (Parameters,
+               Rose.Invocation.Invalid_Operation);
+            return;
+         end if;
+         Result := Object.Badge;
          Rose.System_Calls.Initialize_Reply (Parameters, Parameters.Reply_Cap);
-         Rose.System_Calls.Send_Error
-           (Parameters,
-            Rose.Invocation.Invalid_Operation);
-         return;
-      end if;
-      Result := Object.Badge;
-      Rose.System_Calls.Initialize_Reply (Parameters, Parameters.Reply_Cap);
-      Rose.System_Calls.Send_Cap (Parameters, Result);
+         Rose.System_Calls.Send_Cap (Parameters, Result);
+      exception
+         when others =>
+            Rose.System_Calls.Initialize_Reply
+              (Parameters,
+               Parameters.Reply_Cap);
+            Rose.System_Calls.Send_Error
+              (Parameters,
+               Rose.Invocation.Exception_Raised);
+      end;
    end Handle_Badge;
 
    ----------------------------------
@@ -308,19 +321,32 @@ package body Rose.Interfaces.Counter.Server is
    procedure Handle_Increment
      (Parameters : in out Rose.Invocation.Invocation_Record)
    is
-      Object : constant Object_Access := Find (Parameters.Identifier);
-      By     : constant Rose.Words.Word :=
-        Rose.System_Calls.Get_Word_32 (Parameters, 0);
    begin
-      if Object = null then
+      declare
+         Object : constant Object_Access := Find (Parameters.Identifier);
+         By     : constant Rose.Words.Word :=
+           Rose.System_Calls.Get_Word_32 (Parameters, 0);
+      begin
+         if Object = null then
+            Rose.System_Calls.Initialize_Reply
+              (Parameters,
+               Parameters.Reply_Cap);
+            Rose.System_Calls.Send_Error
+              (Parameters,
+               Rose.Invocation.Invalid_Operation);
+            return;
+         end if;
+         Object.Increment (By);
          Rose.System_Calls.Initialize_Reply (Parameters, Parameters.Reply_Cap);
-         Rose.System_Calls.Send_Error
-           (Parameters,
-            Rose.Invocation.Invalid_Operation);
-         return;
-      end if;
-      Object.Increment (By);
-      Rose.System_Calls.Initialize_Reply (Parameters, Parameters.Reply_Cap);
+      exception
+         when others =>
+            Rose.System_Calls.Initialize_Reply
+              (Parameters,
+               Parameters.Reply_Cap);
+            Rose.System_Calls.Send_Error
+              (Parameters,
+               Rose.Invocation.Exception_Raised);
+      end;
    end Handle_Increment;
 
    ------------------
@@ -330,19 +356,32 @@ package body Rose.Interfaces.Counter.Server is
    procedure Handle_Value
      (Parameters : in out Rose.Invocation.Invocation_Record)
    is
-      Object : constant Object_Access := Find (Parameters.Identifier);
-      Result : Rose.Words.Word;
    begin
-      if Object = null then
+      declare
+         Object : constant Object_Access := Find (Parameters.Identifier);
+         Result : Rose.Words.Word;
+      begin
+         if Object = null then
+            Rose.System_Calls.Initialize_Reply
+              (Parameters,
+               Parameters.Reply_Cap);
+            Rose.System_Calls.Send_Error
+              (Parameters,
+               Rose.Invocation.Invalid_Operation);
+            return;
+         end if;
+         Result := Object.Value;
          Rose.System_Calls.Initialize_Reply (Parameters, Parameters.Reply_Cap);
-         Rose.System_Calls.Send_Error
-           (Parameters,
-            Rose.Invocation.Invalid_Operation);
-         return;
-      end if;
-      Result := Object.Value;
-      Rose.System_Calls.Initialize_Reply (Parameters, Parameters.Reply_Cap);
-      Rose.System_Calls.Send_Word (Parameters, Result);
+         Rose.System_Calls.Send_Word (Parameters, Result);
+      exception
+         when others =>
+            Rose.System_Calls.Initialize_Reply
+              (Parameters,
+               Parameters.Reply_Cap);
+            Rose.System_Calls.Send_Error
+              (Parameters,
+               Rose.Invocation.Exception_Raised);
+      end;
    end Handle_Value;
 
    -------------------

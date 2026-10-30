@@ -210,15 +210,28 @@ package body Rose.Interfaces.Block_Device.Server is
    procedure Handle_Get_Parameters
      (Parameters : in out Rose.Invocation.Invocation_Record)
    is
-      Block_Count : Rose.Interfaces.Block_Device.Block_Address_Type;
-      Block_Size  : Rose.Interfaces.Block_Device.Block_Size_Type;
    begin
-      Local_Get_Parameters (Parameters.Identifier, Block_Count, Block_Size);
-      Rose.System_Calls.Initialize_Reply (Parameters, Parameters.Reply_Cap);
-      Rose.System_Calls.Send_Word
-        (Parameters,
-         Rose.Words.Word_64 (Block_Count));
-      Rose.System_Calls.Send_Word (Parameters, Rose.Words.Word (Block_Size));
+      declare
+         Block_Count : Rose.Interfaces.Block_Device.Block_Address_Type;
+         Block_Size  : Rose.Interfaces.Block_Device.Block_Size_Type;
+      begin
+         Local_Get_Parameters (Parameters.Identifier, Block_Count, Block_Size);
+         Rose.System_Calls.Initialize_Reply (Parameters, Parameters.Reply_Cap);
+         Rose.System_Calls.Send_Word
+           (Parameters,
+            Rose.Words.Word_64 (Block_Count));
+         Rose.System_Calls.Send_Word
+           (Parameters,
+            Rose.Words.Word (Block_Size));
+      exception
+         when others =>
+            Rose.System_Calls.Initialize_Reply
+              (Parameters,
+               Parameters.Reply_Cap);
+            Rose.System_Calls.Send_Error
+              (Parameters,
+               Rose.Invocation.Exception_Raised);
+      end;
    end Handle_Get_Parameters;
 
    ------------------------
@@ -228,17 +241,28 @@ package body Rose.Interfaces.Block_Device.Server is
    procedure Handle_Read_Blocks
      (Parameters : in out Rose.Invocation.Invocation_Record)
    is
-      Start  : constant Rose.Interfaces.Block_Device.Block_Address_Type :=
-        Rose.Interfaces.Block_Device.Block_Address_Type
-          (Rose.System_Calls.Get_Word_64 (Parameters, 0));
-      Count  : constant Natural :=
-        Natural (Rose.System_Calls.Get_Word_32 (Parameters, 2));
-      Blocks : System.Storage_Elements.Storage_Array
-        (1 .. Parameters.Buffer_Length)
-        with Import, Address => Parameters.Buffer_Address;
    begin
-      Local_Read_Blocks (Parameters.Identifier, Start, Count, Blocks);
-      Rose.System_Calls.Initialize_Reply (Parameters, Parameters.Reply_Cap);
+      declare
+         Start  : constant Rose.Interfaces.Block_Device.Block_Address_Type :=
+           Rose.Interfaces.Block_Device.Block_Address_Type
+             (Rose.System_Calls.Get_Word_64 (Parameters, 0));
+         Count  : constant Natural :=
+           Natural (Rose.System_Calls.Get_Word_32 (Parameters, 2));
+         Blocks : System.Storage_Elements.Storage_Array
+           (1 .. Parameters.Buffer_Length)
+           with Import, Address => Parameters.Buffer_Address;
+      begin
+         Local_Read_Blocks (Parameters.Identifier, Start, Count, Blocks);
+         Rose.System_Calls.Initialize_Reply (Parameters, Parameters.Reply_Cap);
+      exception
+         when others =>
+            Rose.System_Calls.Initialize_Reply
+              (Parameters,
+               Parameters.Reply_Cap);
+            Rose.System_Calls.Send_Error
+              (Parameters,
+               Rose.Invocation.Exception_Raised);
+      end;
    end Handle_Read_Blocks;
 
    -------------------------
@@ -248,17 +272,28 @@ package body Rose.Interfaces.Block_Device.Server is
    procedure Handle_Write_Blocks
      (Parameters : in out Rose.Invocation.Invocation_Record)
    is
-      Start  : constant Rose.Interfaces.Block_Device.Block_Address_Type :=
-        Rose.Interfaces.Block_Device.Block_Address_Type
-          (Rose.System_Calls.Get_Word_64 (Parameters, 0));
-      Count  : constant Natural :=
-        Natural (Rose.System_Calls.Get_Word_32 (Parameters, 2));
-      Blocks : System.Storage_Elements.Storage_Array
-        (1 .. Parameters.Buffer_Length)
-        with Import, Address => Parameters.Buffer_Address;
    begin
-      Local_Write_Blocks (Parameters.Identifier, Start, Count, Blocks);
-      Rose.System_Calls.Initialize_Reply (Parameters, Parameters.Reply_Cap);
+      declare
+         Start  : constant Rose.Interfaces.Block_Device.Block_Address_Type :=
+           Rose.Interfaces.Block_Device.Block_Address_Type
+             (Rose.System_Calls.Get_Word_64 (Parameters, 0));
+         Count  : constant Natural :=
+           Natural (Rose.System_Calls.Get_Word_32 (Parameters, 2));
+         Blocks : System.Storage_Elements.Storage_Array
+           (1 .. Parameters.Buffer_Length)
+           with Import, Address => Parameters.Buffer_Address;
+      begin
+         Local_Write_Blocks (Parameters.Identifier, Start, Count, Blocks);
+         Rose.System_Calls.Initialize_Reply (Parameters, Parameters.Reply_Cap);
+      exception
+         when others =>
+            Rose.System_Calls.Initialize_Reply
+              (Parameters,
+               Parameters.Reply_Cap);
+            Rose.System_Calls.Send_Error
+              (Parameters,
+               Rose.Invocation.Exception_Raised);
+      end;
    end Handle_Write_Blocks;
 
    -----------------------

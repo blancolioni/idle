@@ -152,20 +152,33 @@ package body Rose.Interfaces.Stream_Writer.Server is
    procedure Handle_Write
      (Parameters : in out Rose.Invocation.Invocation_Record)
    is
-      Object : constant Object_Access := Find (Parameters.Identifier);
-      Buffer : System.Storage_Elements.Storage_Array
-        (1 .. Parameters.Buffer_Length)
-        with Import, Address => Parameters.Buffer_Address;
    begin
-      if Object = null then
+      declare
+         Object : constant Object_Access := Find (Parameters.Identifier);
+         Buffer : System.Storage_Elements.Storage_Array
+           (1 .. Parameters.Buffer_Length)
+           with Import, Address => Parameters.Buffer_Address;
+      begin
+         if Object = null then
+            Rose.System_Calls.Initialize_Reply
+              (Parameters,
+               Parameters.Reply_Cap);
+            Rose.System_Calls.Send_Error
+              (Parameters,
+               Rose.Invocation.Invalid_Operation);
+            return;
+         end if;
+         Object.Write (Buffer);
          Rose.System_Calls.Initialize_Reply (Parameters, Parameters.Reply_Cap);
-         Rose.System_Calls.Send_Error
-           (Parameters,
-            Rose.Invocation.Invalid_Operation);
-         return;
-      end if;
-      Object.Write (Buffer);
-      Rose.System_Calls.Initialize_Reply (Parameters, Parameters.Reply_Cap);
+      exception
+         when others =>
+            Rose.System_Calls.Initialize_Reply
+              (Parameters,
+               Parameters.Reply_Cap);
+            Rose.System_Calls.Send_Error
+              (Parameters,
+               Rose.Invocation.Exception_Raised);
+      end;
    end Handle_Write;
 
    -------------------

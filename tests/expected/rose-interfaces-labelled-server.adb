@@ -94,11 +94,22 @@ package body Rose.Interfaces.Labelled.Server is
    procedure Handle_Badge
      (Parameters : in out Rose.Invocation.Invocation_Record)
    is
-      Result : constant Rose.Capabilities.Capability :=
-        Local_Badge (Parameters.Identifier);
    begin
-      Rose.System_Calls.Initialize_Reply (Parameters, Parameters.Reply_Cap);
-      Rose.System_Calls.Send_Cap (Parameters, Result);
+      declare
+         Result : constant Rose.Capabilities.Capability :=
+           Local_Badge (Parameters.Identifier);
+      begin
+         Rose.System_Calls.Initialize_Reply (Parameters, Parameters.Reply_Cap);
+         Rose.System_Calls.Send_Cap (Parameters, Result);
+      exception
+         when others =>
+            Rose.System_Calls.Initialize_Reply
+              (Parameters,
+               Parameters.Reply_Cap);
+            Rose.System_Calls.Send_Error
+              (Parameters,
+               Rose.Invocation.Exception_Raised);
+      end;
    end Handle_Badge;
 
    -----------------------------------
@@ -165,11 +176,22 @@ package body Rose.Interfaces.Labelled.Server is
    procedure Handle_Set_Label
      (Parameters : in out Rose.Invocation.Invocation_Record)
    is
-      Label : constant Rose.Words.Word :=
-        Rose.System_Calls.Get_Word_32 (Parameters, 0);
    begin
-      Local_Set_Label (Parameters.Identifier, Label);
-      Rose.System_Calls.Initialize_Reply (Parameters, Parameters.Reply_Cap);
+      declare
+         Label : constant Rose.Words.Word :=
+           Rose.System_Calls.Get_Word_32 (Parameters, 0);
+      begin
+         Local_Set_Label (Parameters.Identifier, Label);
+         Rose.System_Calls.Initialize_Reply (Parameters, Parameters.Reply_Cap);
+      exception
+         when others =>
+            Rose.System_Calls.Initialize_Reply
+              (Parameters,
+               Parameters.Reply_Cap);
+            Rose.System_Calls.Send_Error
+              (Parameters,
+               Rose.Invocation.Exception_Raised);
+      end;
    end Handle_Set_Label;
 
    -----------------------

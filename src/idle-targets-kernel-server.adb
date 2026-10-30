@@ -1240,12 +1240,28 @@ package body Idle.Targets.Kernel.Server is
                   Statements   => Reply.To_Array));
          end if;
 
+         --  An exception that the handler raises, in the declarations as
+         --  well as the statements, is an error reply, so the block
+         --  holds both.
+
          Bodies.Add
            (Handle (Subprogram),
             F.New_Subprogram_Body
               (Specification => Specification,
-               Declarations  => Declarations.To_Array,
-               Statements    => Statements.To_Array));
+               Statements    =>
+                 [F.New_Block
+                    (Declarations => Declarations.To_Array,
+                     Statements   => Statements.To_Array,
+                     Handlers     =>
+                       [F.New_Handler
+                          ([Call (System_Calls & "Initialize_Reply",
+                                  [Parameters,
+                                   F.New_Name ("Parameters.Reply_Cap")]),
+                            Call (System_Calls & "Send_Error",
+                                  [Parameters,
+                                   F.New_Name
+                                     ("Rose.Invocation.Exception_Raised")])
+                           ])])]));
       end Add_Handler;
 
       ----------------------

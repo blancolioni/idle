@@ -170,19 +170,32 @@ package body Rose.Interfaces.Directory.Server is
    procedure Handle_Directory_Entry_Count
      (Parameters : in out Rose.Invocation.Invocation_Record)
    is
-      Object : constant Object_Access := Find (Parameters.Identifier);
-      Result : Natural;
    begin
-      if Object = null then
+      declare
+         Object : constant Object_Access := Find (Parameters.Identifier);
+         Result : Natural;
+      begin
+         if Object = null then
+            Rose.System_Calls.Initialize_Reply
+              (Parameters,
+               Parameters.Reply_Cap);
+            Rose.System_Calls.Send_Error
+              (Parameters,
+               Rose.Invocation.Invalid_Operation);
+            return;
+         end if;
+         Result := Object.Directory_Entry_Count;
          Rose.System_Calls.Initialize_Reply (Parameters, Parameters.Reply_Cap);
-         Rose.System_Calls.Send_Error
-           (Parameters,
-            Rose.Invocation.Invalid_Operation);
-         return;
-      end if;
-      Result := Object.Directory_Entry_Count;
-      Rose.System_Calls.Initialize_Reply (Parameters, Parameters.Reply_Cap);
-      Rose.System_Calls.Send_Word (Parameters, Result);
+         Rose.System_Calls.Send_Word (Parameters, Result);
+      exception
+         when others =>
+            Rose.System_Calls.Initialize_Reply
+              (Parameters,
+               Parameters.Reply_Cap);
+            Rose.System_Calls.Send_Error
+              (Parameters,
+               Rose.Invocation.Exception_Raised);
+      end;
    end Handle_Directory_Entry_Count;
 
    ---------------------------------
@@ -192,23 +205,36 @@ package body Rose.Interfaces.Directory.Server is
    procedure Handle_Directory_Entry_Kind
      (Parameters : in out Rose.Invocation.Invocation_Record)
    is
-      Object : constant Object_Access := Find (Parameters.Identifier);
-      Index  : constant Positive :=
-        Positive (Rose.System_Calls.Get_Word_32 (Parameters, 0));
-      Result : Rose.Interfaces.Directory.File_Kind;
    begin
-      if Object = null then
+      declare
+         Object : constant Object_Access := Find (Parameters.Identifier);
+         Index  : constant Positive :=
+           Positive (Rose.System_Calls.Get_Word_32 (Parameters, 0));
+         Result : Rose.Interfaces.Directory.File_Kind;
+      begin
+         if Object = null then
+            Rose.System_Calls.Initialize_Reply
+              (Parameters,
+               Parameters.Reply_Cap);
+            Rose.System_Calls.Send_Error
+              (Parameters,
+               Rose.Invocation.Invalid_Operation);
+            return;
+         end if;
+         Result := Object.Directory_Entry_Kind (Index);
          Rose.System_Calls.Initialize_Reply (Parameters, Parameters.Reply_Cap);
-         Rose.System_Calls.Send_Error
+         Rose.System_Calls.Send_Word
            (Parameters,
-            Rose.Invocation.Invalid_Operation);
-         return;
-      end if;
-      Result := Object.Directory_Entry_Kind (Index);
-      Rose.System_Calls.Initialize_Reply (Parameters, Parameters.Reply_Cap);
-      Rose.System_Calls.Send_Word
-        (Parameters,
-         Natural (Rose.Interfaces.Directory.File_Kind'Pos (Result)));
+            Natural (Rose.Interfaces.Directory.File_Kind'Pos (Result)));
+      exception
+         when others =>
+            Rose.System_Calls.Initialize_Reply
+              (Parameters,
+               Parameters.Reply_Cap);
+            Rose.System_Calls.Send_Error
+              (Parameters,
+               Rose.Invocation.Exception_Raised);
+      end;
    end Handle_Directory_Entry_Kind;
 
    ---------------------------------
@@ -218,23 +244,36 @@ package body Rose.Interfaces.Directory.Server is
    procedure Handle_Directory_Entry_Name
      (Parameters : in out Rose.Invocation.Invocation_Record)
    is
-      Object : constant Object_Access := Find (Parameters.Identifier);
-      Index  : constant Positive :=
-        Positive (Rose.System_Calls.Get_Word_32 (Parameters, 0));
-      Last   : Natural := 0;
-      Result : String (1 .. Natural (Parameters.Buffer_Length))
-        with Import, Address => Parameters.Buffer_Address;
    begin
-      if Object = null then
+      declare
+         Object : constant Object_Access := Find (Parameters.Identifier);
+         Index  : constant Positive :=
+           Positive (Rose.System_Calls.Get_Word_32 (Parameters, 0));
+         Last   : Natural := 0;
+         Result : String (1 .. Natural (Parameters.Buffer_Length))
+           with Import, Address => Parameters.Buffer_Address;
+      begin
+         if Object = null then
+            Rose.System_Calls.Initialize_Reply
+              (Parameters,
+               Parameters.Reply_Cap);
+            Rose.System_Calls.Send_Error
+              (Parameters,
+               Rose.Invocation.Invalid_Operation);
+            return;
+         end if;
+         Rose.Texts.Copy (Object.Directory_Entry_Name (Index), Result, Last);
          Rose.System_Calls.Initialize_Reply (Parameters, Parameters.Reply_Cap);
-         Rose.System_Calls.Send_Error
-           (Parameters,
-            Rose.Invocation.Invalid_Operation);
-         return;
-      end if;
-      Rose.Texts.Copy (Object.Directory_Entry_Name (Index), Result, Last);
-      Rose.System_Calls.Initialize_Reply (Parameters, Parameters.Reply_Cap);
-      Rose.System_Calls.Send_Word (Parameters, Last);
+         Rose.System_Calls.Send_Word (Parameters, Last);
+      exception
+         when others =>
+            Rose.System_Calls.Initialize_Reply
+              (Parameters,
+               Parameters.Reply_Cap);
+            Rose.System_Calls.Send_Error
+              (Parameters,
+               Rose.Invocation.Exception_Raised);
+      end;
    end Handle_Directory_Entry_Name;
 
    ---------------------------------
@@ -244,21 +283,34 @@ package body Rose.Interfaces.Directory.Server is
    procedure Handle_Directory_Entry_Size
      (Parameters : in out Rose.Invocation.Invocation_Record)
    is
-      Object : constant Object_Access := Find (Parameters.Identifier);
-      Index  : constant Positive :=
-        Positive (Rose.System_Calls.Get_Word_32 (Parameters, 0));
-      Result : System.Storage_Elements.Storage_Count;
    begin
-      if Object = null then
+      declare
+         Object : constant Object_Access := Find (Parameters.Identifier);
+         Index  : constant Positive :=
+           Positive (Rose.System_Calls.Get_Word_32 (Parameters, 0));
+         Result : System.Storage_Elements.Storage_Count;
+      begin
+         if Object = null then
+            Rose.System_Calls.Initialize_Reply
+              (Parameters,
+               Parameters.Reply_Cap);
+            Rose.System_Calls.Send_Error
+              (Parameters,
+               Rose.Invocation.Invalid_Operation);
+            return;
+         end if;
+         Result := Object.Directory_Entry_Size (Index);
          Rose.System_Calls.Initialize_Reply (Parameters, Parameters.Reply_Cap);
-         Rose.System_Calls.Send_Error
-           (Parameters,
-            Rose.Invocation.Invalid_Operation);
-         return;
-      end if;
-      Result := Object.Directory_Entry_Size (Index);
-      Rose.System_Calls.Initialize_Reply (Parameters, Parameters.Reply_Cap);
-      Rose.System_Calls.Send_Storage_Offset (Parameters, Result);
+         Rose.System_Calls.Send_Storage_Offset (Parameters, Result);
+      exception
+         when others =>
+            Rose.System_Calls.Initialize_Reply
+              (Parameters,
+               Parameters.Reply_Cap);
+            Rose.System_Calls.Send_Error
+              (Parameters,
+               Rose.Invocation.Exception_Raised);
+      end;
    end Handle_Directory_Entry_Size;
 
    -----------------------
@@ -268,21 +320,34 @@ package body Rose.Interfaces.Directory.Server is
    procedure Handle_Find_Entry
      (Parameters : in out Rose.Invocation.Invocation_Record)
    is
-      Object : constant Object_Access := Find (Parameters.Identifier);
-      Name   : String (1 .. Natural (Parameters.Buffer_Length))
-        with Import, Address => Parameters.Buffer_Address;
-      Result : Natural;
    begin
-      if Object = null then
+      declare
+         Object : constant Object_Access := Find (Parameters.Identifier);
+         Name   : String (1 .. Natural (Parameters.Buffer_Length))
+           with Import, Address => Parameters.Buffer_Address;
+         Result : Natural;
+      begin
+         if Object = null then
+            Rose.System_Calls.Initialize_Reply
+              (Parameters,
+               Parameters.Reply_Cap);
+            Rose.System_Calls.Send_Error
+              (Parameters,
+               Rose.Invocation.Invalid_Operation);
+            return;
+         end if;
+         Result := Object.Find_Entry (Name);
          Rose.System_Calls.Initialize_Reply (Parameters, Parameters.Reply_Cap);
-         Rose.System_Calls.Send_Error
-           (Parameters,
-            Rose.Invocation.Invalid_Operation);
-         return;
-      end if;
-      Result := Object.Find_Entry (Name);
-      Rose.System_Calls.Initialize_Reply (Parameters, Parameters.Reply_Cap);
-      Rose.System_Calls.Send_Word (Parameters, Result);
+         Rose.System_Calls.Send_Word (Parameters, Result);
+      exception
+         when others =>
+            Rose.System_Calls.Initialize_Reply
+              (Parameters,
+               Parameters.Reply_Cap);
+            Rose.System_Calls.Send_Error
+              (Parameters,
+               Rose.Invocation.Exception_Raised);
+      end;
    end Handle_Find_Entry;
 
    --------------------------
@@ -292,22 +357,37 @@ package body Rose.Interfaces.Directory.Server is
    procedure Handle_Get_Directory
      (Parameters : in out Rose.Invocation.Invocation_Record)
    is
-      Object : constant Object_Access := Find (Parameters.Identifier);
-      Index  : constant Positive :=
-        Positive (Rose.System_Calls.Get_Word_32 (Parameters, 0));
    begin
-      if Object = null then
-         Rose.System_Calls.Initialize_Reply (Parameters, Parameters.Reply_Cap);
-         Rose.System_Calls.Send_Error
-           (Parameters,
-            Rose.Invocation.Invalid_Operation);
-         return;
-      end if;
       declare
-         Result : Directory_Object_Class := Object.Get_Directory (Index);
+         Object : constant Object_Access := Find (Parameters.Identifier);
+         Index  : constant Positive :=
+           Positive (Rose.System_Calls.Get_Word_32 (Parameters, 0));
       begin
-         Rose.System_Calls.Initialize_Reply (Parameters, Parameters.Reply_Cap);
-         Rose.System_Calls.Send_Cap (Parameters, Result.Directory_Cap);
+         if Object = null then
+            Rose.System_Calls.Initialize_Reply
+              (Parameters,
+               Parameters.Reply_Cap);
+            Rose.System_Calls.Send_Error
+              (Parameters,
+               Rose.Invocation.Invalid_Operation);
+            return;
+         end if;
+         declare
+            Result : Directory_Object_Class := Object.Get_Directory (Index);
+         begin
+            Rose.System_Calls.Initialize_Reply
+              (Parameters,
+               Parameters.Reply_Cap);
+            Rose.System_Calls.Send_Cap (Parameters, Result.Directory_Cap);
+         end;
+      exception
+         when others =>
+            Rose.System_Calls.Initialize_Reply
+              (Parameters,
+               Parameters.Reply_Cap);
+            Rose.System_Calls.Send_Error
+              (Parameters,
+               Rose.Invocation.Exception_Raised);
       end;
    end Handle_Get_Directory;
 
@@ -461,22 +541,37 @@ package body Rose.Interfaces.Directory.Server is
    procedure Handle_Get_Ordinary_File
      (Parameters : in out Rose.Invocation.Invocation_Record)
    is
-      Object : constant Object_Access := Find (Parameters.Identifier);
-      Index  : constant Positive :=
-        Positive (Rose.System_Calls.Get_Word_32 (Parameters, 0));
    begin
-      if Object = null then
-         Rose.System_Calls.Initialize_Reply (Parameters, Parameters.Reply_Cap);
-         Rose.System_Calls.Send_Error
-           (Parameters,
-            Rose.Invocation.Invalid_Operation);
-         return;
-      end if;
       declare
-         Result : File_Object_Class := Object.Get_Ordinary_File (Index);
+         Object : constant Object_Access := Find (Parameters.Identifier);
+         Index  : constant Positive :=
+           Positive (Rose.System_Calls.Get_Word_32 (Parameters, 0));
       begin
-         Rose.System_Calls.Initialize_Reply (Parameters, Parameters.Reply_Cap);
-         Rose.System_Calls.Send_Cap (Parameters, Result.File_Cap);
+         if Object = null then
+            Rose.System_Calls.Initialize_Reply
+              (Parameters,
+               Parameters.Reply_Cap);
+            Rose.System_Calls.Send_Error
+              (Parameters,
+               Rose.Invocation.Invalid_Operation);
+            return;
+         end if;
+         declare
+            Result : File_Object_Class := Object.Get_Ordinary_File (Index);
+         begin
+            Rose.System_Calls.Initialize_Reply
+              (Parameters,
+               Parameters.Reply_Cap);
+            Rose.System_Calls.Send_Cap (Parameters, Result.File_Cap);
+         end;
+      exception
+         when others =>
+            Rose.System_Calls.Initialize_Reply
+              (Parameters,
+               Parameters.Reply_Cap);
+            Rose.System_Calls.Send_Error
+              (Parameters,
+               Rose.Invocation.Exception_Raised);
       end;
    end Handle_Get_Ordinary_File;
 

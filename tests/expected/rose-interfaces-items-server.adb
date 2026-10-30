@@ -192,19 +192,30 @@ package body Rose.Interfaces.Items.Server is
    procedure Handle_Pair
      (Parameters : in out Rose.Invocation.Invocation_Record)
    is
-      Name_Item     : constant Rose.System_Calls.Buffer_Item :=
-        Rose.System_Calls.Get_Buffer_Item (Parameters, 1);
-      Name          : String (1 .. Natural (Name_Item.Length))
-        with Import, Address => Name_Item.Address;
-      Password_Item : constant Rose.System_Calls.Buffer_Item :=
-        Rose.System_Calls.Get_Buffer_Item (Parameters, 2);
-      Password      : String (1 .. Natural (Password_Item.Length))
-        with Import, Address => Password_Item.Address;
-      Result        : constant Rose.Capabilities.Capability :=
-        Local_Pair (Parameters.Identifier, Name, Password);
    begin
-      Rose.System_Calls.Initialize_Reply (Parameters, Parameters.Reply_Cap);
-      Rose.System_Calls.Send_Cap (Parameters, Result);
+      declare
+         Name_Item     : constant Rose.System_Calls.Buffer_Item :=
+           Rose.System_Calls.Get_Buffer_Item (Parameters, 1);
+         Name          : String (1 .. Natural (Name_Item.Length))
+           with Import, Address => Name_Item.Address;
+         Password_Item : constant Rose.System_Calls.Buffer_Item :=
+           Rose.System_Calls.Get_Buffer_Item (Parameters, 2);
+         Password      : String (1 .. Natural (Password_Item.Length))
+           with Import, Address => Password_Item.Address;
+         Result        : constant Rose.Capabilities.Capability :=
+           Local_Pair (Parameters.Identifier, Name, Password);
+      begin
+         Rose.System_Calls.Initialize_Reply (Parameters, Parameters.Reply_Cap);
+         Rose.System_Calls.Send_Cap (Parameters, Result);
+      exception
+         when others =>
+            Rose.System_Calls.Initialize_Reply
+              (Parameters,
+               Parameters.Reply_Cap);
+            Rose.System_Calls.Send_Error
+              (Parameters,
+               Rose.Invocation.Exception_Raised);
+      end;
    end Handle_Pair;
 
    -------------------
@@ -214,11 +225,22 @@ package body Rose.Interfaces.Items.Server is
    procedure Handle_Single
      (Parameters : in out Rose.Invocation.Invocation_Record)
    is
-      Name : String (1 .. Natural (Parameters.Buffer_Length))
-        with Import, Address => Parameters.Buffer_Address;
    begin
-      Local_Single (Parameters.Identifier, Name);
-      Rose.System_Calls.Initialize_Reply (Parameters, Parameters.Reply_Cap);
+      declare
+         Name : String (1 .. Natural (Parameters.Buffer_Length))
+           with Import, Address => Parameters.Buffer_Address;
+      begin
+         Local_Single (Parameters.Identifier, Name);
+         Rose.System_Calls.Initialize_Reply (Parameters, Parameters.Reply_Cap);
+      exception
+         when others =>
+            Rose.System_Calls.Initialize_Reply
+              (Parameters,
+               Parameters.Reply_Cap);
+            Rose.System_Calls.Send_Error
+              (Parameters,
+               Rose.Invocation.Exception_Raised);
+      end;
    end Handle_Single;
 
    ------------------
@@ -228,20 +250,33 @@ package body Rose.Interfaces.Items.Server is
    procedure Handle_Store
      (Parameters : in out Rose.Invocation.Invocation_Record)
    is
-      Index     : constant Rose.Words.Word :=
-        Rose.System_Calls.Get_Word_32 (Parameters, 0);
-      Key_Item  : constant Rose.System_Calls.Buffer_Item :=
-        Rose.System_Calls.Get_Buffer_Item (Parameters, 1);
-      Key       : String (1 .. Natural (Key_Item.Length))
-        with Import, Address => Key_Item.Address;
-      Data_Item : constant Rose.System_Calls.Buffer_Item :=
-        Rose.System_Calls.Get_Buffer_Item (Parameters, 2);
-      Data      : System.Storage_Elements.Storage_Array (1 .. Data_Item.Length)
-        with Import, Address => Data_Item.Address;
-      Owner     : constant Rose.Capabilities.Capability := Parameters.Caps (0);
    begin
-      Local_Store (Parameters.Identifier, Index, Key, Data, Owner);
-      Rose.System_Calls.Initialize_Reply (Parameters, Parameters.Reply_Cap);
+      declare
+         Index     : constant Rose.Words.Word :=
+           Rose.System_Calls.Get_Word_32 (Parameters, 0);
+         Key_Item  : constant Rose.System_Calls.Buffer_Item :=
+           Rose.System_Calls.Get_Buffer_Item (Parameters, 1);
+         Key       : String (1 .. Natural (Key_Item.Length))
+           with Import, Address => Key_Item.Address;
+         Data_Item : constant Rose.System_Calls.Buffer_Item :=
+           Rose.System_Calls.Get_Buffer_Item (Parameters, 2);
+         Data      : System.Storage_Elements.Storage_Array
+           (1 .. Data_Item.Length)
+           with Import, Address => Data_Item.Address;
+         Owner     : constant Rose.Capabilities.Capability :=
+           Parameters.Caps (0);
+      begin
+         Local_Store (Parameters.Identifier, Index, Key, Data, Owner);
+         Rose.System_Calls.Initialize_Reply (Parameters, Parameters.Reply_Cap);
+      exception
+         when others =>
+            Rose.System_Calls.Initialize_Reply
+              (Parameters,
+               Parameters.Reply_Cap);
+            Rose.System_Calls.Send_Error
+              (Parameters,
+               Rose.Invocation.Exception_Raised);
+      end;
    end Handle_Store;
 
    -----------------------

@@ -154,24 +154,39 @@ package body Rose.Interfaces.Timer.Server is
    procedure Handle_Set_Timer
      (Parameters : in out Rose.Invocation.Invocation_Record)
    is
-      Object       : constant Object_Access := Find (Parameters.Identifier);
-      Milliseconds : constant Rose.Words.Word :=
-        Rose.System_Calls.Get_Word_32 (Parameters, 0);
-      Cap          : constant Rose.Capabilities.Capability :=
-        Parameters.Caps (0);
    begin
-      if Object = null then
-         Rose.System_Calls.Initialize_Reply (Parameters, Parameters.Reply_Cap);
-         Rose.System_Calls.Send_Error
-           (Parameters,
-            Rose.Invocation.Invalid_Operation);
-         return;
-      end if;
       declare
-         Result : Cap_Object_Class := Object.Set_Timer (Milliseconds, Cap);
+         Object       : constant Object_Access := Find (Parameters.Identifier);
+         Milliseconds : constant Rose.Words.Word :=
+           Rose.System_Calls.Get_Word_32 (Parameters, 0);
+         Cap          : constant Rose.Capabilities.Capability :=
+           Parameters.Caps (0);
       begin
-         Rose.System_Calls.Initialize_Reply (Parameters, Parameters.Reply_Cap);
-         Rose.System_Calls.Send_Cap (Parameters, Result.Cap_Cap);
+         if Object = null then
+            Rose.System_Calls.Initialize_Reply
+              (Parameters,
+               Parameters.Reply_Cap);
+            Rose.System_Calls.Send_Error
+              (Parameters,
+               Rose.Invocation.Invalid_Operation);
+            return;
+         end if;
+         declare
+            Result : Cap_Object_Class := Object.Set_Timer (Milliseconds, Cap);
+         begin
+            Rose.System_Calls.Initialize_Reply
+              (Parameters,
+               Parameters.Reply_Cap);
+            Rose.System_Calls.Send_Cap (Parameters, Result.Cap_Cap);
+         end;
+      exception
+         when others =>
+            Rose.System_Calls.Initialize_Reply
+              (Parameters,
+               Parameters.Reply_Cap);
+            Rose.System_Calls.Send_Error
+              (Parameters,
+               Rose.Invocation.Exception_Raised);
       end;
    end Handle_Set_Timer;
 
