@@ -70,22 +70,11 @@ package body Rose.Interfaces.Named.Server is
    procedure Handle_Badge
      (Parameters : in out Rose.Invocation.Invocation_Record)
    is
+      Result : constant Rose.Capabilities.Capability :=
+        Local_Badge (Parameters.Identifier);
    begin
-      declare
-         Result : constant Rose.Capabilities.Capability :=
-           Local_Badge (Parameters.Identifier);
-      begin
-         Rose.System_Calls.Initialize_Reply (Parameters, Parameters.Reply_Cap);
-         Rose.System_Calls.Send_Cap (Parameters, Result);
-      exception
-         when others =>
-            Rose.System_Calls.Initialize_Reply
-              (Parameters,
-               Parameters.Reply_Cap);
-            Rose.System_Calls.Send_Error
-              (Parameters,
-               Rose.Invocation.Exception_Raised);
-      end;
+      Rose.System_Calls.Initialize_Reply (Parameters, Parameters.Reply_Cap);
+      Rose.System_Calls.Send_Cap (Parameters, Result);
    end Handle_Badge;
 
    --------------------------------

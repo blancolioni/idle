@@ -193,22 +193,11 @@ package body Rose.Interfaces.Gauge.Server is
    procedure Handle_Badge
      (Parameters : in out Rose.Invocation.Invocation_Record)
    is
+      Result : constant Rose.Capabilities.Capability :=
+        Local_Badge (Parameters.Identifier);
    begin
-      declare
-         Result : constant Rose.Capabilities.Capability :=
-           Local_Badge (Parameters.Identifier);
-      begin
-         Rose.System_Calls.Initialize_Reply (Parameters, Parameters.Reply_Cap);
-         Rose.System_Calls.Send_Cap (Parameters, Result);
-      exception
-         when others =>
-            Rose.System_Calls.Initialize_Reply
-              (Parameters,
-               Parameters.Reply_Cap);
-            Rose.System_Calls.Send_Error
-              (Parameters,
-               Rose.Invocation.Exception_Raised);
-      end;
+      Rose.System_Calls.Initialize_Reply (Parameters, Parameters.Reply_Cap);
+      Rose.System_Calls.Send_Cap (Parameters, Result);
    end Handle_Badge;
 
    ----------------------------------
@@ -619,22 +608,11 @@ package body Rose.Interfaces.Gauge.Server is
    procedure Handle_Increment
      (Parameters : in out Rose.Invocation.Invocation_Record)
    is
+      By : constant Rose.Words.Word :=
+        Rose.System_Calls.Get_Word_32 (Parameters, 0);
    begin
-      declare
-         By : constant Rose.Words.Word :=
-           Rose.System_Calls.Get_Word_32 (Parameters, 0);
-      begin
-         Local_Increment (Parameters.Identifier, By);
-         Rose.System_Calls.Initialize_Reply (Parameters, Parameters.Reply_Cap);
-      exception
-         when others =>
-            Rose.System_Calls.Initialize_Reply
-              (Parameters,
-               Parameters.Reply_Cap);
-            Rose.System_Calls.Send_Error
-              (Parameters,
-               Rose.Invocation.Exception_Raised);
-      end;
+      Local_Increment (Parameters.Identifier, By);
+      Rose.System_Calls.Initialize_Reply (Parameters, Parameters.Reply_Cap);
    end Handle_Increment;
 
    ------------------
@@ -645,18 +623,8 @@ package body Rose.Interfaces.Gauge.Server is
      (Parameters : in out Rose.Invocation.Invocation_Record)
    is
    begin
-      begin
-         Local_Reset (Parameters.Identifier);
-         Rose.System_Calls.Initialize_Reply (Parameters, Parameters.Reply_Cap);
-      exception
-         when others =>
-            Rose.System_Calls.Initialize_Reply
-              (Parameters,
-               Parameters.Reply_Cap);
-            Rose.System_Calls.Send_Error
-              (Parameters,
-               Rose.Invocation.Exception_Raised);
-      end;
+      Local_Reset (Parameters.Identifier);
+      Rose.System_Calls.Initialize_Reply (Parameters, Parameters.Reply_Cap);
    end Handle_Reset;
 
    ----------------------
@@ -666,22 +634,11 @@ package body Rose.Interfaces.Gauge.Server is
    procedure Handle_Set_Label
      (Parameters : in out Rose.Invocation.Invocation_Record)
    is
+      Label : constant Rose.Words.Word :=
+        Rose.System_Calls.Get_Word_32 (Parameters, 0);
    begin
-      declare
-         Label : constant Rose.Words.Word :=
-           Rose.System_Calls.Get_Word_32 (Parameters, 0);
-      begin
-         Local_Set_Label (Parameters.Identifier, Label);
-         Rose.System_Calls.Initialize_Reply (Parameters, Parameters.Reply_Cap);
-      exception
-         when others =>
-            Rose.System_Calls.Initialize_Reply
-              (Parameters,
-               Parameters.Reply_Cap);
-            Rose.System_Calls.Send_Error
-              (Parameters,
-               Rose.Invocation.Exception_Raised);
-      end;
+      Local_Set_Label (Parameters.Identifier, Label);
+      Rose.System_Calls.Initialize_Reply (Parameters, Parameters.Reply_Cap);
    end Handle_Set_Label;
 
    ------------------
@@ -691,22 +648,10 @@ package body Rose.Interfaces.Gauge.Server is
    procedure Handle_Value
      (Parameters : in out Rose.Invocation.Invocation_Record)
    is
+      Result : constant Rose.Words.Word := Local_Value (Parameters.Identifier);
    begin
-      declare
-         Result : constant Rose.Words.Word :=
-           Local_Value (Parameters.Identifier);
-      begin
-         Rose.System_Calls.Initialize_Reply (Parameters, Parameters.Reply_Cap);
-         Rose.System_Calls.Send_Word (Parameters, Result);
-      exception
-         when others =>
-            Rose.System_Calls.Initialize_Reply
-              (Parameters,
-               Parameters.Reply_Cap);
-            Rose.System_Calls.Send_Error
-              (Parameters,
-               Rose.Invocation.Exception_Raised);
-      end;
+      Rose.System_Calls.Initialize_Reply (Parameters, Parameters.Reply_Cap);
+      Rose.System_Calls.Send_Word (Parameters, Result);
    end Handle_Value;
 
    -----------------------

@@ -280,30 +280,19 @@ package body Rose.Interfaces.Process.Server is
    procedure Handle_Add_Nonpersistent_Segment
      (Parameters : in out Rose.Invocation.Invocation_Record)
    is
+      Virtual_Base  : constant Rose.Words.Word :=
+        Rose.System_Calls.Get_Word_32 (Parameters, 0);
+      Virtual_Bound : constant Rose.Words.Word :=
+        Rose.System_Calls.Get_Word_32 (Parameters, 1);
+      Flags         : constant Rose.Words.Word :=
+        Rose.System_Calls.Get_Word_32 (Parameters, 2);
    begin
-      declare
-         Virtual_Base  : constant Rose.Words.Word :=
-           Rose.System_Calls.Get_Word_32 (Parameters, 0);
-         Virtual_Bound : constant Rose.Words.Word :=
-           Rose.System_Calls.Get_Word_32 (Parameters, 1);
-         Flags         : constant Rose.Words.Word :=
-           Rose.System_Calls.Get_Word_32 (Parameters, 2);
-      begin
-         Local_Add_Nonpersistent_Segment
-           (Parameters.Identifier,
-            Virtual_Base,
-            Virtual_Bound,
-            Flags);
-         Rose.System_Calls.Initialize_Reply (Parameters, Parameters.Reply_Cap);
-      exception
-         when others =>
-            Rose.System_Calls.Initialize_Reply
-              (Parameters,
-               Parameters.Reply_Cap);
-            Rose.System_Calls.Send_Error
-              (Parameters,
-               Rose.Invocation.Exception_Raised);
-      end;
+      Local_Add_Nonpersistent_Segment
+        (Parameters.Identifier,
+         Virtual_Base,
+         Virtual_Bound,
+         Flags);
+      Rose.System_Calls.Initialize_Reply (Parameters, Parameters.Reply_Cap);
    end Handle_Add_Nonpersistent_Segment;
 
    ------------------------
@@ -313,36 +302,25 @@ package body Rose.Interfaces.Process.Server is
    procedure Handle_Add_Segment
      (Parameters : in out Rose.Invocation.Invocation_Record)
    is
+      Virtual_Base  : constant Rose.Words.Word :=
+        Rose.System_Calls.Get_Word_32 (Parameters, 0);
+      Virtual_Bound : constant Rose.Words.Word :=
+        Rose.System_Calls.Get_Word_32 (Parameters, 1);
+      Region        : constant Rose.Capabilities.Capability :=
+        Parameters.Caps (0);
+      Region_Offset : constant Rose.Words.Word :=
+        Rose.System_Calls.Get_Word_32 (Parameters, 2);
+      Flags         : constant Rose.Words.Word :=
+        Rose.System_Calls.Get_Word_32 (Parameters, 3);
    begin
-      declare
-         Virtual_Base  : constant Rose.Words.Word :=
-           Rose.System_Calls.Get_Word_32 (Parameters, 0);
-         Virtual_Bound : constant Rose.Words.Word :=
-           Rose.System_Calls.Get_Word_32 (Parameters, 1);
-         Region        : constant Rose.Capabilities.Capability :=
-           Parameters.Caps (0);
-         Region_Offset : constant Rose.Words.Word :=
-           Rose.System_Calls.Get_Word_32 (Parameters, 2);
-         Flags         : constant Rose.Words.Word :=
-           Rose.System_Calls.Get_Word_32 (Parameters, 3);
-      begin
-         Local_Add_Segment
-           (Parameters.Identifier,
-            Virtual_Base,
-            Virtual_Bound,
-            Region,
-            Region_Offset,
-            Flags);
-         Rose.System_Calls.Initialize_Reply (Parameters, Parameters.Reply_Cap);
-      exception
-         when others =>
-            Rose.System_Calls.Initialize_Reply
-              (Parameters,
-               Parameters.Reply_Cap);
-            Rose.System_Calls.Send_Error
-              (Parameters,
-               Rose.Invocation.Exception_Raised);
-      end;
+      Local_Add_Segment
+        (Parameters.Identifier,
+         Virtual_Base,
+         Virtual_Bound,
+         Region,
+         Region_Offset,
+         Flags);
+      Rose.System_Calls.Initialize_Reply (Parameters, Parameters.Reply_Cap);
    end Handle_Add_Segment;
 
    --------------------
@@ -353,18 +331,8 @@ package body Rose.Interfaces.Process.Server is
      (Parameters : in out Rose.Invocation.Invocation_Record)
    is
    begin
-      begin
-         Local_Destroy (Parameters.Identifier);
-         Rose.System_Calls.Initialize_Reply (Parameters, Parameters.Reply_Cap);
-      exception
-         when others =>
-            Rose.System_Calls.Initialize_Reply
-              (Parameters,
-               Parameters.Reply_Cap);
-            Rose.System_Calls.Send_Error
-              (Parameters,
-               Rose.Invocation.Exception_Raised);
-      end;
+      Local_Destroy (Parameters.Identifier);
+      Rose.System_Calls.Initialize_Reply (Parameters, Parameters.Reply_Cap);
    end Handle_Destroy;
 
    -------------------------
@@ -374,22 +342,11 @@ package body Rose.Interfaces.Process.Server is
    procedure Handle_Exit_Process
      (Parameters : in out Rose.Invocation.Invocation_Record)
    is
+      Exit_Status : constant Natural :=
+        Natural (Rose.System_Calls.Get_Word_32 (Parameters, 0));
    begin
-      declare
-         Exit_Status : constant Natural :=
-           Natural (Rose.System_Calls.Get_Word_32 (Parameters, 0));
-      begin
-         Local_Exit_Process (Parameters.Identifier, Exit_Status);
-         Rose.System_Calls.Initialize_Reply (Parameters, Parameters.Reply_Cap);
-      exception
-         when others =>
-            Rose.System_Calls.Initialize_Reply
-              (Parameters,
-               Parameters.Reply_Cap);
-            Rose.System_Calls.Send_Error
-              (Parameters,
-               Rose.Invocation.Exception_Raised);
-      end;
+      Local_Exit_Process (Parameters.Identifier, Exit_Status);
+      Rose.System_Calls.Initialize_Reply (Parameters, Parameters.Reply_Cap);
    end Handle_Exit_Process;
 
    ------------------------------
@@ -458,22 +415,11 @@ package body Rose.Interfaces.Process.Server is
    procedure Handle_Get_Object_Id
      (Parameters : in out Rose.Invocation.Invocation_Record)
    is
+      Result : constant Rose.Objects.Object_Id :=
+        Local_Get_Object_Id (Parameters.Identifier);
    begin
-      declare
-         Result : constant Rose.Objects.Object_Id :=
-           Local_Get_Object_Id (Parameters.Identifier);
-      begin
-         Rose.System_Calls.Initialize_Reply (Parameters, Parameters.Reply_Cap);
-         Rose.System_Calls.Send_Object_Id (Parameters, Result);
-      exception
-         when others =>
-            Rose.System_Calls.Initialize_Reply
-              (Parameters,
-               Parameters.Reply_Cap);
-            Rose.System_Calls.Send_Error
-              (Parameters,
-               Rose.Invocation.Exception_Raised);
-      end;
+      Rose.System_Calls.Initialize_Reply (Parameters, Parameters.Reply_Cap);
+      Rose.System_Calls.Send_Object_Id (Parameters, Result);
    end Handle_Get_Object_Id;
 
    ----------------------------------
@@ -852,22 +798,11 @@ package body Rose.Interfaces.Process.Server is
    procedure Handle_Heap_Interface
      (Parameters : in out Rose.Invocation.Invocation_Record)
    is
+      Result : constant Rose.Capabilities.Capability :=
+        Local_Heap_Interface (Parameters.Identifier);
    begin
-      declare
-         Result : constant Rose.Capabilities.Capability :=
-           Local_Heap_Interface (Parameters.Identifier);
-      begin
-         Rose.System_Calls.Initialize_Reply (Parameters, Parameters.Reply_Cap);
-         Rose.System_Calls.Send_Cap (Parameters, Result);
-      exception
-         when others =>
-            Rose.System_Calls.Initialize_Reply
-              (Parameters,
-               Parameters.Reply_Cap);
-            Rose.System_Calls.Send_Error
-              (Parameters,
-               Rose.Invocation.Exception_Raised);
-      end;
+      Rose.System_Calls.Initialize_Reply (Parameters, Parameters.Reply_Cap);
+      Rose.System_Calls.Send_Cap (Parameters, Result);
    end Handle_Heap_Interface;
 
    ------------------------------
@@ -877,22 +812,11 @@ package body Rose.Interfaces.Process.Server is
    procedure Handle_Publish_Interface
      (Parameters : in out Rose.Invocation.Invocation_Record)
    is
+      Interface_Cap : constant Rose.Capabilities.Capability :=
+        Parameters.Caps (0);
    begin
-      declare
-         Interface_Cap : constant Rose.Capabilities.Capability :=
-           Parameters.Caps (0);
-      begin
-         Local_Publish_Interface (Parameters.Identifier, Interface_Cap);
-         Rose.System_Calls.Initialize_Reply (Parameters, Parameters.Reply_Cap);
-      exception
-         when others =>
-            Rose.System_Calls.Initialize_Reply
-              (Parameters,
-               Parameters.Reply_Cap);
-            Rose.System_Calls.Send_Error
-              (Parameters,
-               Rose.Invocation.Exception_Raised);
-      end;
+      Local_Publish_Interface (Parameters.Identifier, Interface_Cap);
+      Rose.System_Calls.Initialize_Reply (Parameters, Parameters.Reply_Cap);
    end Handle_Publish_Interface;
 
    --------------------------------
@@ -902,22 +826,11 @@ package body Rose.Interfaces.Process.Server is
    procedure Handle_Published_Interface
      (Parameters : in out Rose.Invocation.Invocation_Record)
    is
+      Result : constant Rose.Capabilities.Capability :=
+        Local_Published_Interface (Parameters.Identifier);
    begin
-      declare
-         Result : constant Rose.Capabilities.Capability :=
-           Local_Published_Interface (Parameters.Identifier);
-      begin
-         Rose.System_Calls.Initialize_Reply (Parameters, Parameters.Reply_Cap);
-         Rose.System_Calls.Send_Cap (Parameters, Result);
-      exception
-         when others =>
-            Rose.System_Calls.Initialize_Reply
-              (Parameters,
-               Parameters.Reply_Cap);
-            Rose.System_Calls.Send_Error
-              (Parameters,
-               Rose.Invocation.Exception_Raised);
-      end;
+      Rose.System_Calls.Initialize_Reply (Parameters, Parameters.Reply_Cap);
+      Rose.System_Calls.Send_Cap (Parameters, Result);
    end Handle_Published_Interface;
 
    -----------------------
