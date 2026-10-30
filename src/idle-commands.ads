@@ -80,6 +80,9 @@ package Idle.Commands is
       Argument  : Idle.Syntax.Argument;
       Role      : Unbounded_String;
       --  The role it comes from, or "" for a declared argument.
+      Category  : Unbounded_String;
+      --  The category of that role, or "" if it is public or the
+      --  argument is declared (Rose ADR 0021).
       Stream    : Commands.Stream := No_Stream;
       System    : System_Cap := No_System_Cap;
       Kind      : Argument_Type := Other_Argument;

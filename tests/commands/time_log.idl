@@ -1,0 +1,1 @@
+role Time_Log : Stream_Writer with Category => "time";
