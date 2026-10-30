@@ -160,11 +160,22 @@ package body Rose.Interfaces.Meter.Server is
    procedure Handle_Badge
      (Parameters : in out Rose.Invocation.Invocation_Record)
    is
-      Result : constant Rose.Capabilities.Capability :=
-        Local_Badge (Parameters.Identifier);
    begin
-      Rose.System_Calls.Initialize_Reply (Parameters, Parameters.Reply_Cap);
-      Rose.System_Calls.Send_Cap (Parameters, Result);
+      declare
+         Result : constant Rose.Capabilities.Capability :=
+           Local_Badge (Parameters.Identifier);
+      begin
+         Rose.System_Calls.Initialize_Reply (Parameters, Parameters.Reply_Cap);
+         Rose.System_Calls.Send_Cap (Parameters, Result);
+      exception
+         when others =>
+            Rose.System_Calls.Initialize_Reply
+              (Parameters,
+               Parameters.Reply_Cap);
+            Rose.System_Calls.Send_Error
+              (Parameters,
+               Rose.Invocation.Exception_Raised);
+      end;
    end Handle_Badge;
 
    ----------------------------------
@@ -473,11 +484,22 @@ package body Rose.Interfaces.Meter.Server is
    procedure Handle_Increment
      (Parameters : in out Rose.Invocation.Invocation_Record)
    is
-      By : constant Rose.Words.Word :=
-        Rose.System_Calls.Get_Word_32 (Parameters, 0);
    begin
-      Local_Increment (Parameters.Identifier, By);
-      Rose.System_Calls.Initialize_Reply (Parameters, Parameters.Reply_Cap);
+      declare
+         By : constant Rose.Words.Word :=
+           Rose.System_Calls.Get_Word_32 (Parameters, 0);
+      begin
+         Local_Increment (Parameters.Identifier, By);
+         Rose.System_Calls.Initialize_Reply (Parameters, Parameters.Reply_Cap);
+      exception
+         when others =>
+            Rose.System_Calls.Initialize_Reply
+              (Parameters,
+               Parameters.Reply_Cap);
+            Rose.System_Calls.Send_Error
+              (Parameters,
+               Rose.Invocation.Exception_Raised);
+      end;
    end Handle_Increment;
 
    ------------------
@@ -488,8 +510,18 @@ package body Rose.Interfaces.Meter.Server is
      (Parameters : in out Rose.Invocation.Invocation_Record)
    is
    begin
-      Local_Reset (Parameters.Identifier);
-      Rose.System_Calls.Initialize_Reply (Parameters, Parameters.Reply_Cap);
+      begin
+         Local_Reset (Parameters.Identifier);
+         Rose.System_Calls.Initialize_Reply (Parameters, Parameters.Reply_Cap);
+      exception
+         when others =>
+            Rose.System_Calls.Initialize_Reply
+              (Parameters,
+               Parameters.Reply_Cap);
+            Rose.System_Calls.Send_Error
+              (Parameters,
+               Rose.Invocation.Exception_Raised);
+      end;
    end Handle_Reset;
 
    ------------------
@@ -499,10 +531,22 @@ package body Rose.Interfaces.Meter.Server is
    procedure Handle_Value
      (Parameters : in out Rose.Invocation.Invocation_Record)
    is
-      Result : constant Rose.Words.Word := Local_Value (Parameters.Identifier);
    begin
-      Rose.System_Calls.Initialize_Reply (Parameters, Parameters.Reply_Cap);
-      Rose.System_Calls.Send_Word (Parameters, Result);
+      declare
+         Result : constant Rose.Words.Word :=
+           Local_Value (Parameters.Identifier);
+      begin
+         Rose.System_Calls.Initialize_Reply (Parameters, Parameters.Reply_Cap);
+         Rose.System_Calls.Send_Word (Parameters, Result);
+      exception
+         when others =>
+            Rose.System_Calls.Initialize_Reply
+              (Parameters,
+               Parameters.Reply_Cap);
+            Rose.System_Calls.Send_Error
+              (Parameters,
+               Rose.Invocation.Exception_Raised);
+      end;
    end Handle_Value;
 
    -----------------------

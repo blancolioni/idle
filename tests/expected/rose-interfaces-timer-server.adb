@@ -108,15 +108,26 @@ package body Rose.Interfaces.Timer.Server is
    procedure Handle_Set_Timer
      (Parameters : in out Rose.Invocation.Invocation_Record)
    is
-      Milliseconds : constant Rose.Words.Word :=
-        Rose.System_Calls.Get_Word_32 (Parameters, 0);
-      Cap          : constant Rose.Capabilities.Capability :=
-        Parameters.Caps (0);
-      Result       : constant Rose.Capabilities.Capability :=
-        Local_Set_Timer (Parameters.Identifier, Milliseconds, Cap);
    begin
-      Rose.System_Calls.Initialize_Reply (Parameters, Parameters.Reply_Cap);
-      Rose.System_Calls.Send_Cap (Parameters, Result);
+      declare
+         Milliseconds : constant Rose.Words.Word :=
+           Rose.System_Calls.Get_Word_32 (Parameters, 0);
+         Cap          : constant Rose.Capabilities.Capability :=
+           Parameters.Caps (0);
+         Result       : constant Rose.Capabilities.Capability :=
+           Local_Set_Timer (Parameters.Identifier, Milliseconds, Cap);
+      begin
+         Rose.System_Calls.Initialize_Reply (Parameters, Parameters.Reply_Cap);
+         Rose.System_Calls.Send_Cap (Parameters, Result);
+      exception
+         when others =>
+            Rose.System_Calls.Initialize_Reply
+              (Parameters,
+               Parameters.Reply_Cap);
+            Rose.System_Calls.Send_Error
+              (Parameters,
+               Rose.Invocation.Exception_Raised);
+      end;
    end Handle_Set_Timer;
 
    -----------------------

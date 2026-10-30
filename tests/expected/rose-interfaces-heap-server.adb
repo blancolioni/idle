@@ -102,11 +102,22 @@ package body Rose.Interfaces.Heap.Server is
    procedure Handle_Current_Bound
      (Parameters : in out Rose.Invocation.Invocation_Record)
    is
-      Result : constant Rose.Words.Word :=
-        Local_Current_Bound (Parameters.Identifier);
    begin
-      Rose.System_Calls.Initialize_Reply (Parameters, Parameters.Reply_Cap);
-      Rose.System_Calls.Send_Word (Parameters, Result);
+      declare
+         Result : constant Rose.Words.Word :=
+           Local_Current_Bound (Parameters.Identifier);
+      begin
+         Rose.System_Calls.Initialize_Reply (Parameters, Parameters.Reply_Cap);
+         Rose.System_Calls.Send_Word (Parameters, Result);
+      exception
+         when others =>
+            Rose.System_Calls.Initialize_Reply
+              (Parameters,
+               Parameters.Reply_Cap);
+            Rose.System_Calls.Send_Error
+              (Parameters,
+               Rose.Invocation.Exception_Raised);
+      end;
    end Handle_Current_Bound;
 
    -------------------------------
@@ -177,11 +188,22 @@ package body Rose.Interfaces.Heap.Server is
    procedure Handle_Request_New_Bound
      (Parameters : in out Rose.Invocation.Invocation_Record)
    is
-      New_Bound : constant Rose.Words.Word :=
-        Rose.System_Calls.Get_Word_32 (Parameters, 0);
    begin
-      Local_Request_New_Bound (Parameters.Identifier, New_Bound);
-      Rose.System_Calls.Initialize_Reply (Parameters, Parameters.Reply_Cap);
+      declare
+         New_Bound : constant Rose.Words.Word :=
+           Rose.System_Calls.Get_Word_32 (Parameters, 0);
+      begin
+         Local_Request_New_Bound (Parameters.Identifier, New_Bound);
+         Rose.System_Calls.Initialize_Reply (Parameters, Parameters.Reply_Cap);
+      exception
+         when others =>
+            Rose.System_Calls.Initialize_Reply
+              (Parameters,
+               Parameters.Reply_Cap);
+            Rose.System_Calls.Send_Error
+              (Parameters,
+               Rose.Invocation.Exception_Raised);
+      end;
    end Handle_Request_New_Bound;
 
    -----------------------

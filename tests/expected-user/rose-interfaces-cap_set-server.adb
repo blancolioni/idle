@@ -132,21 +132,34 @@ package body Rose.Interfaces.Cap_Set.Server is
    procedure Handle_Append
      (Parameters : in out Rose.Invocation.Invocation_Record)
    is
-      Object     : constant Object_Access := Find (Parameters.Identifier);
-      Caps       : Rose.Capabilities.Capability_Array
-        (1 .. Rose.Invocation.Max_Capabilities);
-      Caps_Count : constant Natural :=
-        Rose.System_Calls.Copy_Received_Caps (Parameters, 0, Caps);
    begin
-      if Object = null then
+      declare
+         Object     : constant Object_Access := Find (Parameters.Identifier);
+         Caps       : Rose.Capabilities.Capability_Array
+           (1 .. Rose.Invocation.Max_Capabilities);
+         Caps_Count : constant Natural :=
+           Rose.System_Calls.Copy_Received_Caps (Parameters, 0, Caps);
+      begin
+         if Object = null then
+            Rose.System_Calls.Initialize_Reply
+              (Parameters,
+               Parameters.Reply_Cap);
+            Rose.System_Calls.Send_Error
+              (Parameters,
+               Rose.Invocation.Invalid_Operation);
+            return;
+         end if;
+         Object.Append (Caps (1 .. Caps_Count));
          Rose.System_Calls.Initialize_Reply (Parameters, Parameters.Reply_Cap);
-         Rose.System_Calls.Send_Error
-           (Parameters,
-            Rose.Invocation.Invalid_Operation);
-         return;
-      end if;
-      Object.Append (Caps (1 .. Caps_Count));
-      Rose.System_Calls.Initialize_Reply (Parameters, Parameters.Reply_Cap);
+      exception
+         when others =>
+            Rose.System_Calls.Initialize_Reply
+              (Parameters,
+               Parameters.Reply_Cap);
+            Rose.System_Calls.Send_Error
+              (Parameters,
+               Rose.Invocation.Exception_Raised);
+      end;
    end Handle_Append;
 
    --------------------
@@ -156,21 +169,34 @@ package body Rose.Interfaces.Cap_Set.Server is
    procedure Handle_Get_Cap
      (Parameters : in out Rose.Invocation.Invocation_Record)
    is
-      Object : constant Object_Access := Find (Parameters.Identifier);
-      Index  : constant Positive :=
-        Positive (Rose.System_Calls.Get_Word_32 (Parameters, 0));
-      Result : Rose.Capabilities.Capability;
    begin
-      if Object = null then
+      declare
+         Object : constant Object_Access := Find (Parameters.Identifier);
+         Index  : constant Positive :=
+           Positive (Rose.System_Calls.Get_Word_32 (Parameters, 0));
+         Result : Rose.Capabilities.Capability;
+      begin
+         if Object = null then
+            Rose.System_Calls.Initialize_Reply
+              (Parameters,
+               Parameters.Reply_Cap);
+            Rose.System_Calls.Send_Error
+              (Parameters,
+               Rose.Invocation.Invalid_Operation);
+            return;
+         end if;
+         Result := Object.Get_Cap (Index);
          Rose.System_Calls.Initialize_Reply (Parameters, Parameters.Reply_Cap);
-         Rose.System_Calls.Send_Error
-           (Parameters,
-            Rose.Invocation.Invalid_Operation);
-         return;
-      end if;
-      Result := Object.Get_Cap (Index);
-      Rose.System_Calls.Initialize_Reply (Parameters, Parameters.Reply_Cap);
-      Rose.System_Calls.Send_Cap (Parameters, Result);
+         Rose.System_Calls.Send_Cap (Parameters, Result);
+      exception
+         when others =>
+            Rose.System_Calls.Initialize_Reply
+              (Parameters,
+               Parameters.Reply_Cap);
+            Rose.System_Calls.Send_Error
+              (Parameters,
+               Rose.Invocation.Exception_Raised);
+      end;
    end Handle_Get_Cap;
 
    ----------------------------------
@@ -245,19 +271,32 @@ package body Rose.Interfaces.Cap_Set.Server is
    procedure Handle_Length
      (Parameters : in out Rose.Invocation.Invocation_Record)
    is
-      Object : constant Object_Access := Find (Parameters.Identifier);
-      Result : Natural;
    begin
-      if Object = null then
+      declare
+         Object : constant Object_Access := Find (Parameters.Identifier);
+         Result : Natural;
+      begin
+         if Object = null then
+            Rose.System_Calls.Initialize_Reply
+              (Parameters,
+               Parameters.Reply_Cap);
+            Rose.System_Calls.Send_Error
+              (Parameters,
+               Rose.Invocation.Invalid_Operation);
+            return;
+         end if;
+         Result := Object.Length;
          Rose.System_Calls.Initialize_Reply (Parameters, Parameters.Reply_Cap);
-         Rose.System_Calls.Send_Error
-           (Parameters,
-            Rose.Invocation.Invalid_Operation);
-         return;
-      end if;
-      Result := Object.Length;
-      Rose.System_Calls.Initialize_Reply (Parameters, Parameters.Reply_Cap);
-      Rose.System_Calls.Send_Word (Parameters, Result);
+         Rose.System_Calls.Send_Word (Parameters, Result);
+      exception
+         when others =>
+            Rose.System_Calls.Initialize_Reply
+              (Parameters,
+               Parameters.Reply_Cap);
+            Rose.System_Calls.Send_Error
+              (Parameters,
+               Rose.Invocation.Exception_Raised);
+      end;
    end Handle_Length;
 
    -------------------
