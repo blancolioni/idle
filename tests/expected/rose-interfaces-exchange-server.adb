@@ -170,28 +170,17 @@ package body Rose.Interfaces.Exchange.Server is
    procedure Handle_Create_Endpoint
      (Parameters : in out Rose.Invocation.Invocation_Record)
    is
+      Id      : constant Rose.Words.Word_64 :=
+        Rose.System_Calls.Get_Word_64 (Parameters, 0);
+      Receive : Rose.Capabilities.Capability :=
+        Rose.Capabilities.Null_Capability;
+      Send    : Rose.Capabilities.Capability :=
+        Rose.Capabilities.Null_Capability;
    begin
-      declare
-         Id      : constant Rose.Words.Word_64 :=
-           Rose.System_Calls.Get_Word_64 (Parameters, 0);
-         Receive : Rose.Capabilities.Capability :=
-           Rose.Capabilities.Null_Capability;
-         Send    : Rose.Capabilities.Capability :=
-           Rose.Capabilities.Null_Capability;
-      begin
-         Local_Create_Endpoint (Parameters.Identifier, Id, Receive, Send);
-         Rose.System_Calls.Initialize_Reply (Parameters, Parameters.Reply_Cap);
-         Rose.System_Calls.Send_Cap (Parameters, Receive);
-         Rose.System_Calls.Send_Cap (Parameters, Send);
-      exception
-         when others =>
-            Rose.System_Calls.Initialize_Reply
-              (Parameters,
-               Parameters.Reply_Cap);
-            Rose.System_Calls.Send_Error
-              (Parameters,
-               Rose.Invocation.Exception_Raised);
-      end;
+      Local_Create_Endpoint (Parameters.Identifier, Id, Receive, Send);
+      Rose.System_Calls.Initialize_Reply (Parameters, Parameters.Reply_Cap);
+      Rose.System_Calls.Send_Cap (Parameters, Receive);
+      Rose.System_Calls.Send_Cap (Parameters, Send);
    end Handle_Create_Endpoint;
 
    -------------------
@@ -201,27 +190,16 @@ package body Rose.Interfaces.Exchange.Server is
    procedure Handle_Gather
      (Parameters : in out Rose.Invocation.Invocation_Record)
    is
+      Caps       : Rose.Capabilities.Capability_Array
+        (1 .. Rose.Invocation.Max_Capabilities);
+      Caps_Count : constant Natural :=
+        Rose.System_Calls.Copy_Received_Caps (Parameters, 0, Caps);
+      First      : Rose.Capabilities.Capability :=
+        Rose.Capabilities.Null_Capability;
    begin
-      declare
-         Caps       : Rose.Capabilities.Capability_Array
-           (1 .. Rose.Invocation.Max_Capabilities);
-         Caps_Count : constant Natural :=
-           Rose.System_Calls.Copy_Received_Caps (Parameters, 0, Caps);
-         First      : Rose.Capabilities.Capability :=
-           Rose.Capabilities.Null_Capability;
-      begin
-         Local_Gather (Parameters.Identifier, Caps (1 .. Caps_Count), First);
-         Rose.System_Calls.Initialize_Reply (Parameters, Parameters.Reply_Cap);
-         Rose.System_Calls.Send_Cap (Parameters, First);
-      exception
-         when others =>
-            Rose.System_Calls.Initialize_Reply
-              (Parameters,
-               Parameters.Reply_Cap);
-            Rose.System_Calls.Send_Error
-              (Parameters,
-               Rose.Invocation.Exception_Raised);
-      end;
+      Local_Gather (Parameters.Identifier, Caps (1 .. Caps_Count), First);
+      Rose.System_Calls.Initialize_Reply (Parameters, Parameters.Reply_Cap);
+      Rose.System_Calls.Send_Cap (Parameters, First);
    end Handle_Gather;
 
    -----------------------------------
@@ -353,27 +331,16 @@ package body Rose.Interfaces.Exchange.Server is
    procedure Handle_Partner
      (Parameters : in out Rose.Invocation.Invocation_Record)
    is
+      Other      : Rose.Capabilities.Capability :=
+        Rose.Capabilities.Null_Capability;
+      Label      : String (1 .. Natural (Parameters.Buffer_Length))
+        with Import, Address => Parameters.Buffer_Address;
+      Label_Last : Natural := 0;
    begin
-      declare
-         Other      : Rose.Capabilities.Capability :=
-           Rose.Capabilities.Null_Capability;
-         Label      : String (1 .. Natural (Parameters.Buffer_Length))
-           with Import, Address => Parameters.Buffer_Address;
-         Label_Last : Natural := 0;
-      begin
-         Local_Partner (Parameters.Identifier, Other, Label, Label_Last);
-         Rose.System_Calls.Initialize_Reply (Parameters, Parameters.Reply_Cap);
-         Rose.System_Calls.Send_Cap (Parameters, Other);
-         Rose.System_Calls.Send_Word (Parameters, Label_Last);
-      exception
-         when others =>
-            Rose.System_Calls.Initialize_Reply
-              (Parameters,
-               Parameters.Reply_Cap);
-            Rose.System_Calls.Send_Error
-              (Parameters,
-               Rose.Invocation.Exception_Raised);
-      end;
+      Local_Partner (Parameters.Identifier, Other, Label, Label_Last);
+      Rose.System_Calls.Initialize_Reply (Parameters, Parameters.Reply_Cap);
+      Rose.System_Calls.Send_Cap (Parameters, Other);
+      Rose.System_Calls.Send_Word (Parameters, Label_Last);
    end Handle_Partner;
 
    -------------------
@@ -383,26 +350,15 @@ package body Rose.Interfaces.Exchange.Server is
    procedure Handle_Rename
      (Parameters : in out Rose.Invocation.Invocation_Record)
    is
+      Cap       : Rose.Capabilities.Capability := Parameters.Caps (0);
+      Name      : String (1 .. Natural (Parameters.Buffer_Length))
+        with Import, Address => Parameters.Buffer_Address;
+      Name_Last : Natural := 0;
    begin
-      declare
-         Cap       : Rose.Capabilities.Capability := Parameters.Caps (0);
-         Name      : String (1 .. Natural (Parameters.Buffer_Length))
-           with Import, Address => Parameters.Buffer_Address;
-         Name_Last : Natural := 0;
-      begin
-         Local_Rename (Parameters.Identifier, Cap, Name, Name_Last);
-         Rose.System_Calls.Initialize_Reply (Parameters, Parameters.Reply_Cap);
-         Rose.System_Calls.Send_Cap (Parameters, Cap);
-         Rose.System_Calls.Send_Word (Parameters, Name_Last);
-      exception
-         when others =>
-            Rose.System_Calls.Initialize_Reply
-              (Parameters,
-               Parameters.Reply_Cap);
-            Rose.System_Calls.Send_Error
-              (Parameters,
-               Rose.Invocation.Exception_Raised);
-      end;
+      Local_Rename (Parameters.Identifier, Cap, Name, Name_Last);
+      Rose.System_Calls.Initialize_Reply (Parameters, Parameters.Reply_Cap);
+      Rose.System_Calls.Send_Cap (Parameters, Cap);
+      Rose.System_Calls.Send_Word (Parameters, Name_Last);
    end Handle_Rename;
 
    ------------------
@@ -412,26 +368,15 @@ package body Rose.Interfaces.Exchange.Server is
    procedure Handle_Split
      (Parameters : in out Rose.Invocation.Invocation_Record)
    is
+      Whole  : constant Rose.Capabilities.Capability := Parameters.Caps (0);
+      Part   : Rose.Capabilities.Capability :=
+        Rose.Capabilities.Null_Capability;
+      Result : constant Rose.Capabilities.Capability :=
+        Local_Split (Parameters.Identifier, Whole, Part);
    begin
-      declare
-         Whole  : constant Rose.Capabilities.Capability := Parameters.Caps (0);
-         Part   : Rose.Capabilities.Capability :=
-           Rose.Capabilities.Null_Capability;
-         Result : constant Rose.Capabilities.Capability :=
-           Local_Split (Parameters.Identifier, Whole, Part);
-      begin
-         Rose.System_Calls.Initialize_Reply (Parameters, Parameters.Reply_Cap);
-         Rose.System_Calls.Send_Cap (Parameters, Part);
-         Rose.System_Calls.Send_Cap (Parameters, Result);
-      exception
-         when others =>
-            Rose.System_Calls.Initialize_Reply
-              (Parameters,
-               Parameters.Reply_Cap);
-            Rose.System_Calls.Send_Error
-              (Parameters,
-               Rose.Invocation.Exception_Raised);
-      end;
+      Rose.System_Calls.Initialize_Reply (Parameters, Parameters.Reply_Cap);
+      Rose.System_Calls.Send_Cap (Parameters, Part);
+      Rose.System_Calls.Send_Cap (Parameters, Result);
    end Handle_Split;
 
    -----------------------

@@ -109,19 +109,9 @@ package body Rose.Interfaces.Resource.Server is
      (Parameters : in out Rose.Invocation.Invocation_Record)
    is
    begin
-      begin
-         Local_Release (Parameters.Identifier);
-         Rose.Server.Remove_Instance (Server_Instance, Parameters.Identifier);
-         Rose.System_Calls.Initialize_Reply (Parameters, Parameters.Reply_Cap);
-      exception
-         when others =>
-            Rose.System_Calls.Initialize_Reply
-              (Parameters,
-               Parameters.Reply_Cap);
-            Rose.System_Calls.Send_Error
-              (Parameters,
-               Rose.Invocation.Exception_Raised);
-      end;
+      Local_Release (Parameters.Identifier);
+      Rose.Server.Remove_Instance (Server_Instance, Parameters.Identifier);
+      Rose.System_Calls.Initialize_Reply (Parameters, Parameters.Reply_Cap);
    end Handle_Release;
 
    -----------------------

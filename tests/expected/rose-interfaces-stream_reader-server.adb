@@ -106,25 +106,14 @@ package body Rose.Interfaces.Stream_Reader.Server is
    procedure Handle_Read
      (Parameters : in out Rose.Invocation.Invocation_Record)
    is
+      Buffer : System.Storage_Elements.Storage_Array
+        (1 .. Parameters.Buffer_Length)
+        with Import, Address => Parameters.Buffer_Address;
+      Last   : System.Storage_Elements.Storage_Count;
    begin
-      declare
-         Buffer : System.Storage_Elements.Storage_Array
-           (1 .. Parameters.Buffer_Length)
-           with Import, Address => Parameters.Buffer_Address;
-         Last   : System.Storage_Elements.Storage_Count;
-      begin
-         Local_Read (Parameters.Identifier, Buffer, Last);
-         Rose.System_Calls.Initialize_Reply (Parameters, Parameters.Reply_Cap);
-         Rose.System_Calls.Send_Storage_Offset (Parameters, Last);
-      exception
-         when others =>
-            Rose.System_Calls.Initialize_Reply
-              (Parameters,
-               Parameters.Reply_Cap);
-            Rose.System_Calls.Send_Error
-              (Parameters,
-               Rose.Invocation.Exception_Raised);
-      end;
+      Local_Read (Parameters.Identifier, Buffer, Last);
+      Rose.System_Calls.Initialize_Reply (Parameters, Parameters.Reply_Cap);
+      Rose.System_Calls.Send_Storage_Offset (Parameters, Last);
    end Handle_Read;
 
    -----------------------

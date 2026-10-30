@@ -177,22 +177,11 @@ package body Rose.Interfaces.Memory.Server is
    procedure Handle_Checkpoint
      (Parameters : in out Rose.Invocation.Invocation_Record)
    is
+      Append_Page : constant Rose.Capabilities.Capability :=
+        Parameters.Caps (0);
    begin
-      declare
-         Append_Page : constant Rose.Capabilities.Capability :=
-           Parameters.Caps (0);
-      begin
-         Local_Checkpoint (Parameters.Identifier, Append_Page);
-         Rose.System_Calls.Initialize_Reply (Parameters, Parameters.Reply_Cap);
-      exception
-         when others =>
-            Rose.System_Calls.Initialize_Reply
-              (Parameters,
-               Parameters.Reply_Cap);
-            Rose.System_Calls.Send_Error
-              (Parameters,
-               Rose.Invocation.Exception_Raised);
-      end;
+      Local_Checkpoint (Parameters.Identifier, Append_Page);
+      Rose.System_Calls.Initialize_Reply (Parameters, Parameters.Reply_Cap);
    end Handle_Checkpoint;
 
    ---------------------------------
@@ -326,24 +315,12 @@ package body Rose.Interfaces.Memory.Server is
    procedure Handle_New_Process
      (Parameters : in out Rose.Invocation.Invocation_Record)
    is
+      Process : constant Rose.Capabilities.Capability := Parameters.Caps (0);
+      Result  : constant Rose.Capabilities.Capability :=
+        Local_New_Process (Parameters.Identifier, Process);
    begin
-      declare
-         Process : constant Rose.Capabilities.Capability :=
-           Parameters.Caps (0);
-         Result  : constant Rose.Capabilities.Capability :=
-           Local_New_Process (Parameters.Identifier, Process);
-      begin
-         Rose.System_Calls.Initialize_Reply (Parameters, Parameters.Reply_Cap);
-         Rose.System_Calls.Send_Cap (Parameters, Result);
-      exception
-         when others =>
-            Rose.System_Calls.Initialize_Reply
-              (Parameters,
-               Parameters.Reply_Cap);
-            Rose.System_Calls.Send_Error
-              (Parameters,
-               Rose.Invocation.Exception_Raised);
-      end;
+      Rose.System_Calls.Initialize_Reply (Parameters, Parameters.Reply_Cap);
+      Rose.System_Calls.Send_Cap (Parameters, Result);
    end Handle_New_Process;
 
    -----------------------
@@ -353,34 +330,23 @@ package body Rose.Interfaces.Memory.Server is
    procedure Handle_Page_Fault
      (Parameters : in out Rose.Invocation.Invocation_Record)
    is
+      Faulting_Object : constant Rose.Objects.Object_Id :=
+        Rose.System_Calls.Get_Object_Id (Parameters, 0);
+      Virtual_Page    : constant Rose.Words.Word :=
+        Rose.System_Calls.Get_Word_32 (Parameters, 2);
+      Physical_Page   : constant Rose.Words.Word :=
+        Rose.System_Calls.Get_Word_32 (Parameters, 3);
+      Action          : constant Rose.Interfaces.Memory.Page_Access_Type :=
+        Rose.Interfaces.Memory.Page_Access_Type'Val
+          (Rose.System_Calls.Get_Word_32 (Parameters, 4));
    begin
-      declare
-         Faulting_Object : constant Rose.Objects.Object_Id :=
-           Rose.System_Calls.Get_Object_Id (Parameters, 0);
-         Virtual_Page    : constant Rose.Words.Word :=
-           Rose.System_Calls.Get_Word_32 (Parameters, 2);
-         Physical_Page   : constant Rose.Words.Word :=
-           Rose.System_Calls.Get_Word_32 (Parameters, 3);
-         Action          : constant Rose.Interfaces.Memory.Page_Access_Type :=
-           Rose.Interfaces.Memory.Page_Access_Type'Val
-             (Rose.System_Calls.Get_Word_32 (Parameters, 4));
-      begin
-         Local_Page_Fault
-           (Parameters.Identifier,
-            Faulting_Object,
-            Virtual_Page,
-            Physical_Page,
-            Action);
-         Rose.System_Calls.Initialize_Reply (Parameters, Parameters.Reply_Cap);
-      exception
-         when others =>
-            Rose.System_Calls.Initialize_Reply
-              (Parameters,
-               Parameters.Reply_Cap);
-            Rose.System_Calls.Send_Error
-              (Parameters,
-               Rose.Invocation.Exception_Raised);
-      end;
+      Local_Page_Fault
+        (Parameters.Identifier,
+         Faulting_Object,
+         Virtual_Page,
+         Physical_Page,
+         Action);
+      Rose.System_Calls.Initialize_Reply (Parameters, Parameters.Reply_Cap);
    end Handle_Page_Fault;
 
    -----------------------------
@@ -390,52 +356,41 @@ package body Rose.Interfaces.Memory.Server is
    procedure Handle_Register_Process
      (Parameters : in out Rose.Invocation.Invocation_Record)
    is
+      Process     : constant Rose.Capabilities.Capability :=
+        Parameters.Caps (0);
+      Exec_Base   : constant Rose.Words.Word :=
+        Rose.System_Calls.Get_Word_32 (Parameters, 0);
+      Exec_Bound  : constant Rose.Words.Word :=
+        Rose.System_Calls.Get_Word_32 (Parameters, 1);
+      Text_Base   : constant Rose.Words.Word :=
+        Rose.System_Calls.Get_Word_32 (Parameters, 2);
+      Text_Bound  : constant Rose.Words.Word :=
+        Rose.System_Calls.Get_Word_32 (Parameters, 3);
+      Data_Base   : constant Rose.Words.Word :=
+        Rose.System_Calls.Get_Word_32 (Parameters, 4);
+      Data_Bound  : constant Rose.Words.Word :=
+        Rose.System_Calls.Get_Word_32 (Parameters, 5);
+      Stack_Base  : constant Rose.Words.Word :=
+        Rose.System_Calls.Get_Word_32 (Parameters, 6);
+      Stack_Bound : constant Rose.Words.Word :=
+        Rose.System_Calls.Get_Word_32 (Parameters, 7);
+      Environment : System.Storage_Elements.Storage_Array
+        (1 .. Parameters.Buffer_Length)
+        with Import, Address => Parameters.Buffer_Address;
    begin
-      declare
-         Process     : constant Rose.Capabilities.Capability :=
-           Parameters.Caps (0);
-         Exec_Base   : constant Rose.Words.Word :=
-           Rose.System_Calls.Get_Word_32 (Parameters, 0);
-         Exec_Bound  : constant Rose.Words.Word :=
-           Rose.System_Calls.Get_Word_32 (Parameters, 1);
-         Text_Base   : constant Rose.Words.Word :=
-           Rose.System_Calls.Get_Word_32 (Parameters, 2);
-         Text_Bound  : constant Rose.Words.Word :=
-           Rose.System_Calls.Get_Word_32 (Parameters, 3);
-         Data_Base   : constant Rose.Words.Word :=
-           Rose.System_Calls.Get_Word_32 (Parameters, 4);
-         Data_Bound  : constant Rose.Words.Word :=
-           Rose.System_Calls.Get_Word_32 (Parameters, 5);
-         Stack_Base  : constant Rose.Words.Word :=
-           Rose.System_Calls.Get_Word_32 (Parameters, 6);
-         Stack_Bound : constant Rose.Words.Word :=
-           Rose.System_Calls.Get_Word_32 (Parameters, 7);
-         Environment : System.Storage_Elements.Storage_Array
-           (1 .. Parameters.Buffer_Length)
-           with Import, Address => Parameters.Buffer_Address;
-      begin
-         Local_Register_Process
-           (Parameters.Identifier,
-            Process,
-            Exec_Base,
-            Exec_Bound,
-            Text_Base,
-            Text_Bound,
-            Data_Base,
-            Data_Bound,
-            Stack_Base,
-            Stack_Bound,
-            Environment);
-         Rose.System_Calls.Initialize_Reply (Parameters, Parameters.Reply_Cap);
-      exception
-         when others =>
-            Rose.System_Calls.Initialize_Reply
-              (Parameters,
-               Parameters.Reply_Cap);
-            Rose.System_Calls.Send_Error
-              (Parameters,
-               Rose.Invocation.Exception_Raised);
-      end;
+      Local_Register_Process
+        (Parameters.Identifier,
+         Process,
+         Exec_Base,
+         Exec_Bound,
+         Text_Base,
+         Text_Bound,
+         Data_Base,
+         Data_Bound,
+         Stack_Base,
+         Stack_Bound,
+         Environment);
+      Rose.System_Calls.Initialize_Reply (Parameters, Parameters.Reply_Cap);
    end Handle_Register_Process;
 
    ---------------------------------
@@ -445,30 +400,15 @@ package body Rose.Interfaces.Memory.Server is
    procedure Handle_Take_Physical_Memory
      (Parameters : in out Rose.Invocation.Invocation_Record)
    is
+      Size   : constant Rose.Words.Word :=
+        Rose.System_Calls.Get_Word_32 (Parameters, 0);
+      Start  : Rose.Words.Word;
+      Amount : Rose.Words.Word;
    begin
-      declare
-         Size   : constant Rose.Words.Word :=
-           Rose.System_Calls.Get_Word_32 (Parameters, 0);
-         Start  : Rose.Words.Word;
-         Amount : Rose.Words.Word;
-      begin
-         Local_Take_Physical_Memory
-           (Parameters.Identifier,
-            Size,
-            Start,
-            Amount);
-         Rose.System_Calls.Initialize_Reply (Parameters, Parameters.Reply_Cap);
-         Rose.System_Calls.Send_Word (Parameters, Start);
-         Rose.System_Calls.Send_Word (Parameters, Amount);
-      exception
-         when others =>
-            Rose.System_Calls.Initialize_Reply
-              (Parameters,
-               Parameters.Reply_Cap);
-            Rose.System_Calls.Send_Error
-              (Parameters,
-               Rose.Invocation.Exception_Raised);
-      end;
+      Local_Take_Physical_Memory (Parameters.Identifier, Size, Start, Amount);
+      Rose.System_Calls.Initialize_Reply (Parameters, Parameters.Reply_Cap);
+      Rose.System_Calls.Send_Word (Parameters, Start);
+      Rose.System_Calls.Send_Word (Parameters, Amount);
    end Handle_Take_Physical_Memory;
 
    -----------------------
