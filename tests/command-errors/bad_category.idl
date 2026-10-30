@@ -1,0 +1,1 @@
+role Bad_Category : Stream_Writer with Category => "Hardware..ports";

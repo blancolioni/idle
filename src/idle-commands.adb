@@ -65,6 +65,11 @@ package body Idle.Commands is
       --  command".
 
       procedure Check_Arguments;
+      procedure Check_Category;
+      --  Report a Category of the role Item that is not a dotted name of
+      --  lower-case parts (Rose ADR 0021). What a category allows is the
+      --  rights broker's policy, so that is all there is to check.
+
       procedure Check_Members;
       procedure Check_Package;
       procedure Check_Roles;
@@ -312,6 +317,44 @@ package body Idle.Commands is
          end loop;
       end Check_Aspects;
 
+      --------------------
+      -- Check_Category --
+      --------------------
+
+      procedure Check_Category is
+      begin
+         for Aspect of Item.Aspects loop
+            if Same (To_String (Aspect.Name), "Category")
+              and then Aspect.Value.Kind = Idle.Syntax.String_Value
+            then
+               declare
+                  Text  : constant String := To_String (Aspect.Value.Text);
+                  Valid : Boolean := Text /= "";
+                  Start : Boolean := True;
+                  --  True at the first character of a part.
+               begin
+                  for Ch of Text loop
+                     if Ch = '.' then
+                        Valid := Valid and then not Start;
+                        Start := True;
+                     else
+                        Valid := Valid
+                          and then (Ch in 'a' .. 'z' | '0' .. '9' | '_');
+                        Start := False;
+                     end if;
+                  end loop;
+
+                  if not Valid or else Start then
+                     Error (Aspect.Value.Position,
+                            "a category is lower-case parts of letters,"
+                            & " digits and underscores, separated by dots,"
+                            & " as in hardware.ports");
+                  end if;
+               end;
+            end if;
+         end loop;
+      end Check_Category;
+
       -------------------
       -- Check_Members --
       -------------------
@@ -412,6 +455,8 @@ package body Idle.Commands is
                "", "", "a package");
          when Role_Unit =>
             Check_Roles;
+            Check_Aspects (Item.Aspects, "Category", "", "", "a role");
+            Check_Category;
             Check_Members;
          when Interface_Unit =>
             null;
@@ -571,6 +616,9 @@ package body Idle.Commands is
                  (Placed_Argument'
                     (Argument => Member,
                      Role     => Role.Name,
+                     Category =>
+                       To_Unbounded_String
+                         (Aspect (Role.Aspects, "Category")),
                      Stream   =>
                        (if Same (Name, "Standard_Input") then Input_Stream
                         elsif Same (Name, "Standard_Output")
@@ -646,6 +694,7 @@ package body Idle.Commands is
               (Placed_Argument'
                  (Argument => Argument,
                   Role     => Null_Unbounded_String,
+                  Category => Null_Unbounded_String,
                   Stream   => No_Stream,
                   System   => No_System_Cap,
                   Kind     => Kind,

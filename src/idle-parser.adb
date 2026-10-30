@@ -490,6 +490,7 @@ package body Idle.Parser is
       Item.Kind := Role_Unit;
       Item.Name := Parse_Name ("role name");
       Parse_Parents (Item);
+      Parse_Aspect_List (Item.Aspects);
 
       --  role Standard_Output : Stream_Writer; is a role with one member,
       --  named after the role, whose type is the interface after the

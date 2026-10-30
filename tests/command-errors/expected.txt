@@ -25,6 +25,7 @@ command-errors/nowhere-thing.idl:1:1: error: package Nowhere not found: no comma
 command-errors/bad_role.idl:1:1: error: Stream_Writer is not a role, so it cannot be inherited by a role
 command-errors/bad_role.idl:3:4: error: there is more than one member called log
 command-errors/bad_role.idl:4:4: error: unknown interface Nonesuch
+command-errors/bad_category.idl:1:52: error: a category is lower-case parts of letters, digits and underscores, separated by dots, as in hardware.ports
 command-errors/rose-core-modes.idl:2:16: error: the value of Live is True or False, or Live alone means True
 command-errors/rose-core-modes.idl:3:8: error: the aspect Server needs a value
 command-errors/rose-core-modes.idl:5:27: error: an out argument has no default

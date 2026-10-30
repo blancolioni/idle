@@ -1,0 +1,1 @@
+role Port_Log : Stream_Writer with Category => "hardware.ports";

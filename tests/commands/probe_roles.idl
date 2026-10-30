@@ -1,0 +1,2 @@
+role Probe_Roles : Time_Log, Port_Log, Standard_Output is
+end Probe_Roles;

@@ -86,6 +86,8 @@ package body Idle.Targets.Kernel.Commands is
       Spec_Context  : Context_List;
       Main_Context  : Context_List;
       Lines         : Unbounded_String;
+      Categorised   : Idle.Syntax.String_Vectors.Vector;
+      --  The roles whose category the metadata already has.
 
       function Call_Node return not null Syn.Node_Access
       is (F.New_Name ("Call"));
@@ -528,6 +530,19 @@ package body Idle.Targets.Kernel.Commands is
                else
                   Add_Value (Placed);
                end if;
+            end if;
+
+            --  A category grants nothing: it is for Petal, which reads the
+            --  signature before it launches (Rose ADR 0021).
+
+            if Placed.Category /= Null_Unbounded_String
+              and then not Categorised.Contains
+                             (Idle.Names.Key (To_String (Placed.Role)))
+            then
+               Categorised.Append (Idle.Names.Key (To_String (Placed.Role)));
+               Line ("category",
+                     To_String (Placed.Role) & " "
+                     & To_String (Placed.Category));
             end if;
          end;
       end loop;

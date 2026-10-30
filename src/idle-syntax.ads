@@ -148,6 +148,7 @@ package Idle.Syntax is
    --    a command      Parents are its roles, Aspects and Arguments
    --    a package      Aspects
    --    a role         Parents are its parent roles, Arguments its members
+   --                   and Aspects its Category, if it has one
    --
    --  Name is qualified for a command or a package, such as
    --  Rose.Core.Echo. Each list is in the order it is declared.

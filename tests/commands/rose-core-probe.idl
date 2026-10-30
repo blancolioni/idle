@@ -1,0 +1,8 @@
+--  Roles with a category (Rose ADR 0021): a command with a categorised
+--  role, one with a dotted category, and a composite of both and a public
+--  role. Standard_Error is public, so it has no category line.
+
+command Rose.Core.Probe : Probe_Roles, Standard_Error
+  with Summary => "Show what a command's roles need."
+is
+end Rose.Core.Probe;
