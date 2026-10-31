@@ -38,6 +38,8 @@ private package Idle.Targets.Kernel.Types is
       --  Range and derived types: converted to Word or Word_64.
       Enumeration,
       --  Sent as its position.
+      Boolean_Word,
+      --  Sent as 0 or 1; any non-zero word is True.
       Object_Id,
       --  Send_Object_Id.
       Storage_Offset,
