@@ -201,28 +201,32 @@ package body Rose.Interfaces.Flags.Server is
      (Parameters : in out Rose.Invocation.Invocation_Record)
    is
    begin
-      declare
-         Object  : constant Object_Access := Find (Parameters.Identifier);
-         Name    : String (1 .. Natural (Parameters.Buffer_Length))
-           with Import, Address => Parameters.Buffer_Address;
-         Default : constant Boolean :=
-           Rose.System_Calls.Get_Word_32 (Parameters, 0) /= 0;
-         Result  : Boolean;
       begin
-         if Object = null then
+         declare
+            Object  : constant Object_Access := Find (Parameters.Identifier);
+            Name    : String (1 .. Natural (Parameters.Buffer_Length))
+              with Import, Address => Parameters.Buffer_Address;
+            Default : constant Boolean :=
+              Rose.System_Calls.Get_Word_32 (Parameters, 0) /= 0;
+            Result  : Boolean;
+         begin
+            if Object = null then
+               Rose.System_Calls.Initialize_Reply
+                 (Parameters,
+                  Parameters.Reply_Cap);
+               Rose.System_Calls.Send_Error
+                 (Parameters,
+                  Rose.Invocation.Invalid_Operation);
+               return;
+            end if;
+            Result := Object.Is_Set (Name, Default);
             Rose.System_Calls.Initialize_Reply
               (Parameters,
                Parameters.Reply_Cap);
-            Rose.System_Calls.Send_Error
+            Rose.System_Calls.Send_Word
               (Parameters,
-               Rose.Invocation.Invalid_Operation);
-            return;
-         end if;
-         Result := Object.Is_Set (Name, Default);
-         Rose.System_Calls.Initialize_Reply (Parameters, Parameters.Reply_Cap);
-         Rose.System_Calls.Send_Word
-           (Parameters,
-            Natural (Boolean'Pos (Result)));
+               Natural (Boolean'Pos (Result)));
+         end;
       exception
          when others =>
             Rose.System_Calls.Initialize_Reply
@@ -242,28 +246,32 @@ package body Rose.Interfaces.Flags.Server is
      (Parameters : in out Rose.Invocation.Invocation_Record)
    is
    begin
-      declare
-         Object  : constant Object_Access := Find (Parameters.Identifier);
-         Index   : constant Rose.Words.Word :=
-           Rose.System_Calls.Get_Word_32 (Parameters, 0);
-         Trusted : Boolean;
-         Count   : Natural;
       begin
-         if Object = null then
+         declare
+            Object  : constant Object_Access := Find (Parameters.Identifier);
+            Index   : constant Rose.Words.Word :=
+              Rose.System_Calls.Get_Word_32 (Parameters, 0);
+            Trusted : Boolean;
+            Count   : Natural;
+         begin
+            if Object = null then
+               Rose.System_Calls.Initialize_Reply
+                 (Parameters,
+                  Parameters.Reply_Cap);
+               Rose.System_Calls.Send_Error
+                 (Parameters,
+                  Rose.Invocation.Invalid_Operation);
+               return;
+            end if;
+            Object.Query (Index, Trusted, Count);
             Rose.System_Calls.Initialize_Reply
               (Parameters,
                Parameters.Reply_Cap);
-            Rose.System_Calls.Send_Error
+            Rose.System_Calls.Send_Word
               (Parameters,
-               Rose.Invocation.Invalid_Operation);
-            return;
-         end if;
-         Object.Query (Index, Trusted, Count);
-         Rose.System_Calls.Initialize_Reply (Parameters, Parameters.Reply_Cap);
-         Rose.System_Calls.Send_Word
-           (Parameters,
-            Natural (Boolean'Pos (Trusted)));
-         Rose.System_Calls.Send_Word (Parameters, Count);
+               Natural (Boolean'Pos (Trusted)));
+            Rose.System_Calls.Send_Word (Parameters, Count);
+         end;
       exception
          when others =>
             Rose.System_Calls.Initialize_Reply
@@ -283,25 +291,29 @@ package body Rose.Interfaces.Flags.Server is
      (Parameters : in out Rose.Invocation.Invocation_Record)
    is
    begin
-      declare
-         Object : constant Object_Access := Find (Parameters.Identifier);
-         Value  : Boolean :=
-           Rose.System_Calls.Get_Word_32 (Parameters, 0) /= 0;
       begin
-         if Object = null then
+         declare
+            Object : constant Object_Access := Find (Parameters.Identifier);
+            Value  : Boolean :=
+              Rose.System_Calls.Get_Word_32 (Parameters, 0) /= 0;
+         begin
+            if Object = null then
+               Rose.System_Calls.Initialize_Reply
+                 (Parameters,
+                  Parameters.Reply_Cap);
+               Rose.System_Calls.Send_Error
+                 (Parameters,
+                  Rose.Invocation.Invalid_Operation);
+               return;
+            end if;
+            Object.Toggle (Value);
             Rose.System_Calls.Initialize_Reply
               (Parameters,
                Parameters.Reply_Cap);
-            Rose.System_Calls.Send_Error
+            Rose.System_Calls.Send_Word
               (Parameters,
-               Rose.Invocation.Invalid_Operation);
-            return;
-         end if;
-         Object.Toggle (Value);
-         Rose.System_Calls.Initialize_Reply (Parameters, Parameters.Reply_Cap);
-         Rose.System_Calls.Send_Word
-           (Parameters,
-            Natural (Boolean'Pos (Value)));
+               Natural (Boolean'Pos (Value)));
+         end;
       exception
          when others =>
             Rose.System_Calls.Initialize_Reply

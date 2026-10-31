@@ -150,28 +150,32 @@ package body Rose.Interfaces.Exchange.Server is
      (Parameters : in out Rose.Invocation.Invocation_Record)
    is
    begin
-      declare
-         Object  : constant Object_Access := Find (Parameters.Identifier);
-         Id      : constant Rose.Words.Word_64 :=
-           Rose.System_Calls.Get_Word_64 (Parameters, 0);
-         Receive : Rose.Capabilities.Capability :=
-           Rose.Capabilities.Null_Capability;
-         Send    : Rose.Capabilities.Capability :=
-           Rose.Capabilities.Null_Capability;
       begin
-         if Object = null then
+         declare
+            Object  : constant Object_Access := Find (Parameters.Identifier);
+            Id      : constant Rose.Words.Word_64 :=
+              Rose.System_Calls.Get_Word_64 (Parameters, 0);
+            Receive : Rose.Capabilities.Capability :=
+              Rose.Capabilities.Null_Capability;
+            Send    : Rose.Capabilities.Capability :=
+              Rose.Capabilities.Null_Capability;
+         begin
+            if Object = null then
+               Rose.System_Calls.Initialize_Reply
+                 (Parameters,
+                  Parameters.Reply_Cap);
+               Rose.System_Calls.Send_Error
+                 (Parameters,
+                  Rose.Invocation.Invalid_Operation);
+               return;
+            end if;
+            Object.Create_Endpoint (Id, Receive, Send);
             Rose.System_Calls.Initialize_Reply
               (Parameters,
                Parameters.Reply_Cap);
-            Rose.System_Calls.Send_Error
-              (Parameters,
-               Rose.Invocation.Invalid_Operation);
-            return;
-         end if;
-         Object.Create_Endpoint (Id, Receive, Send);
-         Rose.System_Calls.Initialize_Reply (Parameters, Parameters.Reply_Cap);
-         Rose.System_Calls.Send_Cap (Parameters, Receive);
-         Rose.System_Calls.Send_Cap (Parameters, Send);
+            Rose.System_Calls.Send_Cap (Parameters, Receive);
+            Rose.System_Calls.Send_Cap (Parameters, Send);
+         end;
       exception
          when others =>
             Rose.System_Calls.Initialize_Reply
@@ -191,27 +195,32 @@ package body Rose.Interfaces.Exchange.Server is
      (Parameters : in out Rose.Invocation.Invocation_Record)
    is
    begin
-      declare
-         Object     : constant Object_Access := Find (Parameters.Identifier);
-         Caps       : Rose.Capabilities.Capability_Array
-           (1 .. Rose.Invocation.Max_Capabilities);
-         Caps_Count : constant Natural :=
-           Rose.System_Calls.Copy_Received_Caps (Parameters, 0, Caps);
-         First      : Rose.Capabilities.Capability :=
-           Rose.Capabilities.Null_Capability;
       begin
-         if Object = null then
+         declare
+            Object     : constant Object_Access :=
+              Find (Parameters.Identifier);
+            Caps       : Rose.Capabilities.Capability_Array
+              (1 .. Rose.Invocation.Max_Capabilities);
+            Caps_Count : constant Natural :=
+              Rose.System_Calls.Copy_Received_Caps (Parameters, 0, Caps);
+            First      : Rose.Capabilities.Capability :=
+              Rose.Capabilities.Null_Capability;
+         begin
+            if Object = null then
+               Rose.System_Calls.Initialize_Reply
+                 (Parameters,
+                  Parameters.Reply_Cap);
+               Rose.System_Calls.Send_Error
+                 (Parameters,
+                  Rose.Invocation.Invalid_Operation);
+               return;
+            end if;
+            Object.Gather (Caps (1 .. Caps_Count), First);
             Rose.System_Calls.Initialize_Reply
               (Parameters,
                Parameters.Reply_Cap);
-            Rose.System_Calls.Send_Error
-              (Parameters,
-               Rose.Invocation.Invalid_Operation);
-            return;
-         end if;
-         Object.Gather (Caps (1 .. Caps_Count), First);
-         Rose.System_Calls.Initialize_Reply (Parameters, Parameters.Reply_Cap);
-         Rose.System_Calls.Send_Cap (Parameters, First);
+            Rose.System_Calls.Send_Cap (Parameters, First);
+         end;
       exception
          when others =>
             Rose.System_Calls.Initialize_Reply
@@ -332,28 +341,33 @@ package body Rose.Interfaces.Exchange.Server is
      (Parameters : in out Rose.Invocation.Invocation_Record)
    is
    begin
-      declare
-         Object       : constant Object_Access := Find (Parameters.Identifier);
-         Other        : Rose.Interfaces.Exchange.Client.Exchange_Client;
-         Label_Buffer : String (1 .. Natural (Parameters.Buffer_Length))
-           with Import, Address => Parameters.Buffer_Address;
-         Label        : Rose.Texts.Text;
-         Label_Last   : Natural := 0;
       begin
-         if Object = null then
+         declare
+            Object       : constant Object_Access :=
+              Find (Parameters.Identifier);
+            Other        : Rose.Interfaces.Exchange.Client.Exchange_Client;
+            Label_Buffer : String (1 .. Natural (Parameters.Buffer_Length))
+              with Import, Address => Parameters.Buffer_Address;
+            Label        : Rose.Texts.Text;
+            Label_Last   : Natural := 0;
+         begin
+            if Object = null then
+               Rose.System_Calls.Initialize_Reply
+                 (Parameters,
+                  Parameters.Reply_Cap);
+               Rose.System_Calls.Send_Error
+                 (Parameters,
+                  Rose.Invocation.Invalid_Operation);
+               return;
+            end if;
+            Object.Partner (Other, Label);
             Rose.System_Calls.Initialize_Reply
               (Parameters,
                Parameters.Reply_Cap);
-            Rose.System_Calls.Send_Error
-              (Parameters,
-               Rose.Invocation.Invalid_Operation);
-            return;
-         end if;
-         Object.Partner (Other, Label);
-         Rose.System_Calls.Initialize_Reply (Parameters, Parameters.Reply_Cap);
-         Rose.System_Calls.Send_Cap (Parameters, Other.Exchange_Cap);
-         Rose.Texts.Copy (Label, Label_Buffer, Label_Last);
-         Rose.System_Calls.Send_Word (Parameters, Label_Last);
+            Rose.System_Calls.Send_Cap (Parameters, Other.Exchange_Cap);
+            Rose.Texts.Copy (Label, Label_Buffer, Label_Last);
+            Rose.System_Calls.Send_Word (Parameters, Label_Last);
+         end;
       exception
          when others =>
             Rose.System_Calls.Initialize_Reply
@@ -373,28 +387,33 @@ package body Rose.Interfaces.Exchange.Server is
      (Parameters : in out Rose.Invocation.Invocation_Record)
    is
    begin
-      declare
-         Object      : constant Object_Access := Find (Parameters.Identifier);
-         Cap         : Rose.Capabilities.Capability := Parameters.Caps (0);
-         Name_Buffer : String (1 .. Natural (Parameters.Buffer_Length))
-           with Import, Address => Parameters.Buffer_Address;
-         Name        : Rose.Texts.Text := Rose.Texts.To_Text (Name_Buffer);
-         Name_Last   : Natural := 0;
       begin
-         if Object = null then
+         declare
+            Object      : constant Object_Access :=
+              Find (Parameters.Identifier);
+            Cap         : Rose.Capabilities.Capability := Parameters.Caps (0);
+            Name_Buffer : String (1 .. Natural (Parameters.Buffer_Length))
+              with Import, Address => Parameters.Buffer_Address;
+            Name        : Rose.Texts.Text := Rose.Texts.To_Text (Name_Buffer);
+            Name_Last   : Natural := 0;
+         begin
+            if Object = null then
+               Rose.System_Calls.Initialize_Reply
+                 (Parameters,
+                  Parameters.Reply_Cap);
+               Rose.System_Calls.Send_Error
+                 (Parameters,
+                  Rose.Invocation.Invalid_Operation);
+               return;
+            end if;
+            Object.Rename (Cap, Name);
             Rose.System_Calls.Initialize_Reply
               (Parameters,
                Parameters.Reply_Cap);
-            Rose.System_Calls.Send_Error
-              (Parameters,
-               Rose.Invocation.Invalid_Operation);
-            return;
-         end if;
-         Object.Rename (Cap, Name);
-         Rose.System_Calls.Initialize_Reply (Parameters, Parameters.Reply_Cap);
-         Rose.System_Calls.Send_Cap (Parameters, Cap);
-         Rose.Texts.Copy (Name, Name_Buffer, Name_Last);
-         Rose.System_Calls.Send_Word (Parameters, Name_Last);
+            Rose.System_Calls.Send_Cap (Parameters, Cap);
+            Rose.Texts.Copy (Name, Name_Buffer, Name_Last);
+            Rose.System_Calls.Send_Word (Parameters, Name_Last);
+         end;
       exception
          when others =>
             Rose.System_Calls.Initialize_Reply
@@ -414,26 +433,31 @@ package body Rose.Interfaces.Exchange.Server is
      (Parameters : in out Rose.Invocation.Invocation_Record)
    is
    begin
-      declare
-         Object : constant Object_Access := Find (Parameters.Identifier);
-         Whole  : constant Rose.Capabilities.Capability := Parameters.Caps (0);
-         Part   : Rose.Capabilities.Capability :=
-           Rose.Capabilities.Null_Capability;
-         Result : Rose.Capabilities.Capability;
       begin
-         if Object = null then
+         declare
+            Object : constant Object_Access := Find (Parameters.Identifier);
+            Whole  : constant Rose.Capabilities.Capability :=
+              Parameters.Caps (0);
+            Part   : Rose.Capabilities.Capability :=
+              Rose.Capabilities.Null_Capability;
+            Result : Rose.Capabilities.Capability;
+         begin
+            if Object = null then
+               Rose.System_Calls.Initialize_Reply
+                 (Parameters,
+                  Parameters.Reply_Cap);
+               Rose.System_Calls.Send_Error
+                 (Parameters,
+                  Rose.Invocation.Invalid_Operation);
+               return;
+            end if;
+            Result := Object.Split (Whole, Part);
             Rose.System_Calls.Initialize_Reply
               (Parameters,
                Parameters.Reply_Cap);
-            Rose.System_Calls.Send_Error
-              (Parameters,
-               Rose.Invocation.Invalid_Operation);
-            return;
-         end if;
-         Result := Object.Split (Whole, Part);
-         Rose.System_Calls.Initialize_Reply (Parameters, Parameters.Reply_Cap);
-         Rose.System_Calls.Send_Cap (Parameters, Part);
-         Rose.System_Calls.Send_Cap (Parameters, Result);
+            Rose.System_Calls.Send_Cap (Parameters, Part);
+            Rose.System_Calls.Send_Cap (Parameters, Result);
+         end;
       exception
          when others =>
             Rose.System_Calls.Initialize_Reply

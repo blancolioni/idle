@@ -149,24 +149,28 @@ package body Rose.Interfaces.Signed.Server is
      (Parameters : in out Rose.Invocation.Invocation_Record)
    is
    begin
-      declare
-         Object : constant Object_Access := Find (Parameters.Identifier);
-         Low    : Standard.Interfaces.Integer_64;
-         High   : Standard.Interfaces.Integer_64;
       begin
-         if Object = null then
+         declare
+            Object : constant Object_Access := Find (Parameters.Identifier);
+            Low    : Standard.Interfaces.Integer_64;
+            High   : Standard.Interfaces.Integer_64;
+         begin
+            if Object = null then
+               Rose.System_Calls.Initialize_Reply
+                 (Parameters,
+                  Parameters.Reply_Cap);
+               Rose.System_Calls.Send_Error
+                 (Parameters,
+                  Rose.Invocation.Invalid_Operation);
+               return;
+            end if;
+            Object.Bounds (Low, High);
             Rose.System_Calls.Initialize_Reply
               (Parameters,
                Parameters.Reply_Cap);
-            Rose.System_Calls.Send_Error
-              (Parameters,
-               Rose.Invocation.Invalid_Operation);
-            return;
-         end if;
-         Object.Bounds (Low, High);
-         Rose.System_Calls.Initialize_Reply (Parameters, Parameters.Reply_Cap);
-         Rose.System_Calls.Send_Integer_64 (Parameters, Low);
-         Rose.System_Calls.Send_Integer_64 (Parameters, High);
+            Rose.System_Calls.Send_Integer_64 (Parameters, Low);
+            Rose.System_Calls.Send_Integer_64 (Parameters, High);
+         end;
       exception
          when others =>
             Rose.System_Calls.Initialize_Reply
@@ -186,26 +190,30 @@ package body Rose.Interfaces.Signed.Server is
      (Parameters : in out Rose.Invocation.Invocation_Record)
    is
    begin
-      declare
-         Object : constant Object_Access := Find (Parameters.Identifier);
-         Value  : constant Standard.Interfaces.Integer_32 :=
-           Rose.System_Calls.Get_Integer_32 (Parameters, 0);
-         Low    : constant Standard.Interfaces.Integer_32 :=
-           Rose.System_Calls.Get_Integer_32 (Parameters, 1);
-         Result : Standard.Interfaces.Integer_32;
       begin
-         if Object = null then
+         declare
+            Object : constant Object_Access := Find (Parameters.Identifier);
+            Value  : constant Standard.Interfaces.Integer_32 :=
+              Rose.System_Calls.Get_Integer_32 (Parameters, 0);
+            Low    : constant Standard.Interfaces.Integer_32 :=
+              Rose.System_Calls.Get_Integer_32 (Parameters, 1);
+            Result : Standard.Interfaces.Integer_32;
+         begin
+            if Object = null then
+               Rose.System_Calls.Initialize_Reply
+                 (Parameters,
+                  Parameters.Reply_Cap);
+               Rose.System_Calls.Send_Error
+                 (Parameters,
+                  Rose.Invocation.Invalid_Operation);
+               return;
+            end if;
+            Result := Object.Clamp (Value, Low);
             Rose.System_Calls.Initialize_Reply
               (Parameters,
                Parameters.Reply_Cap);
-            Rose.System_Calls.Send_Error
-              (Parameters,
-               Rose.Invocation.Invalid_Operation);
-            return;
-         end if;
-         Result := Object.Clamp (Value, Low);
-         Rose.System_Calls.Initialize_Reply (Parameters, Parameters.Reply_Cap);
-         Rose.System_Calls.Send_Integer_32 (Parameters, Result);
+            Rose.System_Calls.Send_Integer_32 (Parameters, Result);
+         end;
       exception
          when others =>
             Rose.System_Calls.Initialize_Reply
@@ -225,26 +233,30 @@ package body Rose.Interfaces.Signed.Server is
      (Parameters : in out Rose.Invocation.Invocation_Record)
    is
    begin
-      declare
-         Object : constant Object_Access := Find (Parameters.Identifier);
-         Left   : constant Standard.Interfaces.Integer_64 :=
-           Rose.System_Calls.Get_Integer_64 (Parameters, 0);
-         Right  : constant Standard.Interfaces.Integer_64 :=
-           Rose.System_Calls.Get_Integer_64 (Parameters, 2);
-         Result : Standard.Interfaces.Integer_64;
       begin
-         if Object = null then
+         declare
+            Object : constant Object_Access := Find (Parameters.Identifier);
+            Left   : constant Standard.Interfaces.Integer_64 :=
+              Rose.System_Calls.Get_Integer_64 (Parameters, 0);
+            Right  : constant Standard.Interfaces.Integer_64 :=
+              Rose.System_Calls.Get_Integer_64 (Parameters, 2);
+            Result : Standard.Interfaces.Integer_64;
+         begin
+            if Object = null then
+               Rose.System_Calls.Initialize_Reply
+                 (Parameters,
+                  Parameters.Reply_Cap);
+               Rose.System_Calls.Send_Error
+                 (Parameters,
+                  Rose.Invocation.Invalid_Operation);
+               return;
+            end if;
+            Result := Object.Difference (Left, Right);
             Rose.System_Calls.Initialize_Reply
               (Parameters,
                Parameters.Reply_Cap);
-            Rose.System_Calls.Send_Error
-              (Parameters,
-               Rose.Invocation.Invalid_Operation);
-            return;
-         end if;
-         Result := Object.Difference (Left, Right);
-         Rose.System_Calls.Initialize_Reply (Parameters, Parameters.Reply_Cap);
-         Rose.System_Calls.Send_Integer_64 (Parameters, Result);
+            Rose.System_Calls.Send_Integer_64 (Parameters, Result);
+         end;
       exception
          when others =>
             Rose.System_Calls.Initialize_Reply
@@ -363,23 +375,27 @@ package body Rose.Interfaces.Signed.Server is
      (Parameters : in out Rose.Invocation.Invocation_Record)
    is
    begin
-      declare
-         Object  : constant Object_Access := Find (Parameters.Identifier);
-         Delta_X : Standard.Interfaces.Integer_32 :=
-           Rose.System_Calls.Get_Integer_32 (Parameters, 0);
       begin
-         if Object = null then
+         declare
+            Object  : constant Object_Access := Find (Parameters.Identifier);
+            Delta_X : Standard.Interfaces.Integer_32 :=
+              Rose.System_Calls.Get_Integer_32 (Parameters, 0);
+         begin
+            if Object = null then
+               Rose.System_Calls.Initialize_Reply
+                 (Parameters,
+                  Parameters.Reply_Cap);
+               Rose.System_Calls.Send_Error
+                 (Parameters,
+                  Rose.Invocation.Invalid_Operation);
+               return;
+            end if;
+            Object.Offset (Delta_X);
             Rose.System_Calls.Initialize_Reply
               (Parameters,
                Parameters.Reply_Cap);
-            Rose.System_Calls.Send_Error
-              (Parameters,
-               Rose.Invocation.Invalid_Operation);
-            return;
-         end if;
-         Object.Offset (Delta_X);
-         Rose.System_Calls.Initialize_Reply (Parameters, Parameters.Reply_Cap);
-         Rose.System_Calls.Send_Integer_32 (Parameters, Delta_X);
+            Rose.System_Calls.Send_Integer_32 (Parameters, Delta_X);
+         end;
       exception
          when others =>
             Rose.System_Calls.Initialize_Reply
@@ -399,28 +415,32 @@ package body Rose.Interfaces.Signed.Server is
      (Parameters : in out Rose.Invocation.Invocation_Record)
    is
    begin
-      declare
-         Object : constant Object_Access := Find (Parameters.Identifier);
-         Index  : constant Rose.Words.Word :=
-           Rose.System_Calls.Get_Word_32 (Parameters, 0);
-         X      : Standard.Interfaces.Integer_32;
-         Y      : Standard.Interfaces.Integer_32;
-         Count  : Natural;
       begin
-         if Object = null then
+         declare
+            Object : constant Object_Access := Find (Parameters.Identifier);
+            Index  : constant Rose.Words.Word :=
+              Rose.System_Calls.Get_Word_32 (Parameters, 0);
+            X      : Standard.Interfaces.Integer_32;
+            Y      : Standard.Interfaces.Integer_32;
+            Count  : Natural;
+         begin
+            if Object = null then
+               Rose.System_Calls.Initialize_Reply
+                 (Parameters,
+                  Parameters.Reply_Cap);
+               Rose.System_Calls.Send_Error
+                 (Parameters,
+                  Rose.Invocation.Invalid_Operation);
+               return;
+            end if;
+            Object.Position (Index, X, Y, Count);
             Rose.System_Calls.Initialize_Reply
               (Parameters,
                Parameters.Reply_Cap);
-            Rose.System_Calls.Send_Error
-              (Parameters,
-               Rose.Invocation.Invalid_Operation);
-            return;
-         end if;
-         Object.Position (Index, X, Y, Count);
-         Rose.System_Calls.Initialize_Reply (Parameters, Parameters.Reply_Cap);
-         Rose.System_Calls.Send_Integer_32 (Parameters, X);
-         Rose.System_Calls.Send_Integer_32 (Parameters, Y);
-         Rose.System_Calls.Send_Word (Parameters, Count);
+            Rose.System_Calls.Send_Integer_32 (Parameters, X);
+            Rose.System_Calls.Send_Integer_32 (Parameters, Y);
+            Rose.System_Calls.Send_Word (Parameters, Count);
+         end;
       exception
          when others =>
             Rose.System_Calls.Initialize_Reply
