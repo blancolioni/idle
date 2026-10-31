@@ -209,25 +209,27 @@ package body Rose.Interfaces.File.Server is
      (Parameters : in out Rose.Invocation.Invocation_Record)
    is
    begin
-      declare
-         Object : constant Object_Access := Find (Parameters.Identifier);
       begin
-         if Object = null then
-            Rose.System_Calls.Initialize_Reply
-              (Parameters,
-               Parameters.Reply_Cap);
-            Rose.System_Calls.Send_Error
-              (Parameters,
-               Rose.Invocation.Invalid_Operation);
-            return;
-         end if;
          declare
-            Result : File_Reader_Object_Class := Object.Open_Reader;
+            Object : constant Object_Access := Find (Parameters.Identifier);
          begin
-            Rose.System_Calls.Initialize_Reply
-              (Parameters,
-               Parameters.Reply_Cap);
-            Rose.System_Calls.Send_Cap (Parameters, Result.File_Reader_Cap);
+            if Object = null then
+               Rose.System_Calls.Initialize_Reply
+                 (Parameters,
+                  Parameters.Reply_Cap);
+               Rose.System_Calls.Send_Error
+                 (Parameters,
+                  Rose.Invocation.Invalid_Operation);
+               return;
+            end if;
+            declare
+               Result : File_Reader_Object_Class := Object.Open_Reader;
+            begin
+               Rose.System_Calls.Initialize_Reply
+                 (Parameters,
+                  Parameters.Reply_Cap);
+               Rose.System_Calls.Send_Cap (Parameters, Result.File_Reader_Cap);
+            end;
          end;
       exception
          when others =>
@@ -248,28 +250,30 @@ package body Rose.Interfaces.File.Server is
      (Parameters : in out Rose.Invocation.Invocation_Record)
    is
    begin
-      declare
-         Object : constant Object_Access := Find (Parameters.Identifier);
       begin
-         if Object = null then
-            Rose.System_Calls.Initialize_Reply
-              (Parameters,
-               Parameters.Reply_Cap);
-            Rose.System_Calls.Send_Error
-              (Parameters,
-               Rose.Invocation.Invalid_Operation);
-            return;
-         end if;
          declare
-            Result : Seekable_File_Reader_Object_Class :=
-              Object.Open_Seekable_Reader;
+            Object : constant Object_Access := Find (Parameters.Identifier);
          begin
-            Rose.System_Calls.Initialize_Reply
-              (Parameters,
-               Parameters.Reply_Cap);
-            Rose.System_Calls.Send_Cap
-              (Parameters,
-               Result.Seekable_File_Reader_Cap);
+            if Object = null then
+               Rose.System_Calls.Initialize_Reply
+                 (Parameters,
+                  Parameters.Reply_Cap);
+               Rose.System_Calls.Send_Error
+                 (Parameters,
+                  Rose.Invocation.Invalid_Operation);
+               return;
+            end if;
+            declare
+               Result : Seekable_File_Reader_Object_Class :=
+                 Object.Open_Seekable_Reader;
+            begin
+               Rose.System_Calls.Initialize_Reply
+                 (Parameters,
+                  Parameters.Reply_Cap);
+               Rose.System_Calls.Send_Cap
+                 (Parameters,
+                  Result.Seekable_File_Reader_Cap);
+            end;
          end;
       exception
          when others =>
@@ -290,22 +294,26 @@ package body Rose.Interfaces.File.Server is
      (Parameters : in out Rose.Invocation.Invocation_Record)
    is
    begin
-      declare
-         Object : constant Object_Access := Find (Parameters.Identifier);
-         Result : System.Storage_Elements.Storage_Count;
       begin
-         if Object = null then
+         declare
+            Object : constant Object_Access := Find (Parameters.Identifier);
+            Result : System.Storage_Elements.Storage_Count;
+         begin
+            if Object = null then
+               Rose.System_Calls.Initialize_Reply
+                 (Parameters,
+                  Parameters.Reply_Cap);
+               Rose.System_Calls.Send_Error
+                 (Parameters,
+                  Rose.Invocation.Invalid_Operation);
+               return;
+            end if;
+            Result := Object.Size;
             Rose.System_Calls.Initialize_Reply
               (Parameters,
                Parameters.Reply_Cap);
-            Rose.System_Calls.Send_Error
-              (Parameters,
-               Rose.Invocation.Invalid_Operation);
-            return;
-         end if;
-         Result := Object.Size;
-         Rose.System_Calls.Initialize_Reply (Parameters, Parameters.Reply_Cap);
-         Rose.System_Calls.Send_Storage_Offset (Parameters, Result);
+            Rose.System_Calls.Send_Storage_Offset (Parameters, Result);
+         end;
       exception
          when others =>
             Rose.System_Calls.Initialize_Reply

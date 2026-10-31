@@ -178,25 +178,27 @@ package body Rose.Interfaces.Partner.Server is
      (Parameters : in out Rose.Invocation.Invocation_Record)
    is
    begin
-      declare
-         Object : constant Object_Access := Find (Parameters.Identifier);
       begin
-         if Object = null then
-            Rose.System_Calls.Initialize_Reply
-              (Parameters,
-               Parameters.Reply_Cap);
-            Rose.System_Calls.Send_Error
-              (Parameters,
-               Rose.Invocation.Invalid_Operation);
-            return;
-         end if;
          declare
-            Result : Partner_Object_Class := Object.Next;
+            Object : constant Object_Access := Find (Parameters.Identifier);
          begin
-            Rose.System_Calls.Initialize_Reply
-              (Parameters,
-               Parameters.Reply_Cap);
-            Rose.System_Calls.Send_Cap (Parameters, Result.Partner_Cap);
+            if Object = null then
+               Rose.System_Calls.Initialize_Reply
+                 (Parameters,
+                  Parameters.Reply_Cap);
+               Rose.System_Calls.Send_Error
+                 (Parameters,
+                  Rose.Invocation.Invalid_Operation);
+               return;
+            end if;
+            declare
+               Result : Partner_Object_Class := Object.Next;
+            begin
+               Rose.System_Calls.Initialize_Reply
+                 (Parameters,
+                  Parameters.Reply_Cap);
+               Rose.System_Calls.Send_Cap (Parameters, Result.Partner_Cap);
+            end;
          end;
       exception
          when others =>
@@ -217,25 +219,29 @@ package body Rose.Interfaces.Partner.Server is
      (Parameters : in out Rose.Invocation.Invocation_Record)
    is
    begin
-      declare
-         Object : constant Object_Access := Find (Parameters.Identifier);
-         Other  : Rose.Interfaces.Partner.Client.Partner_Client;
-         Peer   : Rose.Interfaces.Partner.Client.Partner_Client :=
-           Rose.Interfaces.Partner.Client.From_Cap (Parameters.Caps (0));
       begin
-         if Object = null then
+         declare
+            Object : constant Object_Access := Find (Parameters.Identifier);
+            Other  : Rose.Interfaces.Partner.Client.Partner_Client;
+            Peer   : Rose.Interfaces.Partner.Client.Partner_Client :=
+              Rose.Interfaces.Partner.Client.From_Cap (Parameters.Caps (0));
+         begin
+            if Object = null then
+               Rose.System_Calls.Initialize_Reply
+                 (Parameters,
+                  Parameters.Reply_Cap);
+               Rose.System_Calls.Send_Error
+                 (Parameters,
+                  Rose.Invocation.Invalid_Operation);
+               return;
+            end if;
+            Object.Pair (Other, Peer);
             Rose.System_Calls.Initialize_Reply
               (Parameters,
                Parameters.Reply_Cap);
-            Rose.System_Calls.Send_Error
-              (Parameters,
-               Rose.Invocation.Invalid_Operation);
-            return;
-         end if;
-         Object.Pair (Other, Peer);
-         Rose.System_Calls.Initialize_Reply (Parameters, Parameters.Reply_Cap);
-         Rose.System_Calls.Send_Cap (Parameters, Other.Partner_Cap);
-         Rose.System_Calls.Send_Cap (Parameters, Peer.Partner_Cap);
+            Rose.System_Calls.Send_Cap (Parameters, Other.Partner_Cap);
+            Rose.System_Calls.Send_Cap (Parameters, Peer.Partner_Cap);
+         end;
       exception
          when others =>
             Rose.System_Calls.Initialize_Reply

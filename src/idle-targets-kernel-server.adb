@@ -1244,10 +1244,12 @@ package body Idle.Targets.Kernel.Server is
 
          if User then
             --  An exception that the object's operation raises, or that
-            --  comes from reading the arguments, is an error reply, so
-            --  the block holds the declarations and the statements. The
-            --  kernel target is for programs that can't propagate
-            --  exceptions, so it has no handler.
+            --  comes from reading the arguments, is an error reply. A
+            --  block's handlers don't cover its own declarations, which
+            --  read the arguments, so the handler is on an outer block
+            --  around the one that holds them (#73). The kernel target is
+            --  for programs that can't propagate exceptions, so it has no
+            --  handler.
 
             Bodies.Add
               (Handle (Subprogram),
@@ -1255,8 +1257,10 @@ package body Idle.Targets.Kernel.Server is
                  (Specification => Specification,
                   Statements    =>
                     [F.New_Block
-                       (Declarations => Declarations.To_Array,
-                        Statements   => Statements.To_Array,
+                       (Statements =>
+                          [F.New_Block
+                             (Declarations => Declarations.To_Array,
+                              Statements   => Statements.To_Array)],
                         Handlers     =>
                           [F.New_Handler
                              ([Call (System_Calls & "Initialize_Reply",

@@ -431,25 +431,29 @@ package body Rose.Interfaces.File_Reader.Server is
      (Parameters : in out Rose.Invocation.Invocation_Record)
    is
    begin
-      declare
-         Object : constant Object_Access := Find (Parameters.Identifier);
-         Buffer : System.Storage_Elements.Storage_Array
-           (1 .. Parameters.Buffer_Length)
-           with Import, Address => Parameters.Buffer_Address;
-         Last   : System.Storage_Elements.Storage_Count;
       begin
-         if Object = null then
+         declare
+            Object : constant Object_Access := Find (Parameters.Identifier);
+            Buffer : System.Storage_Elements.Storage_Array
+              (1 .. Parameters.Buffer_Length)
+              with Import, Address => Parameters.Buffer_Address;
+            Last   : System.Storage_Elements.Storage_Count;
+         begin
+            if Object = null then
+               Rose.System_Calls.Initialize_Reply
+                 (Parameters,
+                  Parameters.Reply_Cap);
+               Rose.System_Calls.Send_Error
+                 (Parameters,
+                  Rose.Invocation.Invalid_Operation);
+               return;
+            end if;
+            Object.Read (Buffer, Last);
             Rose.System_Calls.Initialize_Reply
               (Parameters,
                Parameters.Reply_Cap);
-            Rose.System_Calls.Send_Error
-              (Parameters,
-               Rose.Invocation.Invalid_Operation);
-            return;
-         end if;
-         Object.Read (Buffer, Last);
-         Rose.System_Calls.Initialize_Reply (Parameters, Parameters.Reply_Cap);
-         Rose.System_Calls.Send_Storage_Offset (Parameters, Last);
+            Rose.System_Calls.Send_Storage_Offset (Parameters, Last);
+         end;
       exception
          when others =>
             Rose.System_Calls.Initialize_Reply
@@ -469,21 +473,25 @@ package body Rose.Interfaces.File_Reader.Server is
      (Parameters : in out Rose.Invocation.Invocation_Record)
    is
    begin
-      declare
-         Object : constant Object_Access := Find (Parameters.Identifier);
       begin
-         if Object = null then
+         declare
+            Object : constant Object_Access := Find (Parameters.Identifier);
+         begin
+            if Object = null then
+               Rose.System_Calls.Initialize_Reply
+                 (Parameters,
+                  Parameters.Reply_Cap);
+               Rose.System_Calls.Send_Error
+                 (Parameters,
+                  Rose.Invocation.Invalid_Operation);
+               return;
+            end if;
+            Object.Release;
+            Detach (Parameters.Identifier);
             Rose.System_Calls.Initialize_Reply
               (Parameters,
                Parameters.Reply_Cap);
-            Rose.System_Calls.Send_Error
-              (Parameters,
-               Rose.Invocation.Invalid_Operation);
-            return;
-         end if;
-         Object.Release;
-         Detach (Parameters.Identifier);
-         Rose.System_Calls.Initialize_Reply (Parameters, Parameters.Reply_Cap);
+         end;
       exception
          when others =>
             Rose.System_Calls.Initialize_Reply
