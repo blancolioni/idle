@@ -1,0 +1,9 @@
+--  A Boolean only as an in parameter: the server decodes it, and the
+--  client only sends it, so the client body has no decode and needs no
+--  "use type" for Word_32 (idle#72).
+
+interface Boolean_In is
+
+   procedure Set (On : Boolean);
+
+end Boolean_In;

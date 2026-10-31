@@ -1,0 +1,9 @@
+--  A Boolean only as a result: the client decodes it, and the server only
+--  sends it, so the server body has no decode and needs no "use type"
+--  for Word_32 (idle#72).
+
+interface Boolean_Result is
+
+   function Is_Ready return Boolean;
+
+end Boolean_Result;

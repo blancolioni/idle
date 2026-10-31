@@ -1,0 +1,29 @@
+with Rose.Capabilities;
+with Rose.Objects;
+with Rose.Server;
+
+package Rose.Interfaces.Boolean_Result.Server is
+
+   type Is_Ready_Handler is access function
+     (Id : Rose.Objects.Capability_Identifier)
+      return Boolean;
+
+   procedure Create_Server
+     (Server_Context : in out Rose.Server.Server_Context;
+      Is_Ready       : Is_Ready_Handler;
+      Instanced      : Boolean := False);
+
+   procedure Attach_Interface
+     (Server_Context : in out Rose.Server.Server_Context;
+      Is_Ready       : Is_Ready_Handler;
+      Instanced      : Boolean := False);
+
+   procedure Publish_Interface
+     (Server_Context : in out Rose.Server.Server_Context;
+      Is_Ready       : Is_Ready_Handler);
+
+   function Get_Is_Ready_Cap return Rose.Capabilities.Capability;
+
+   procedure Remove_Instance (Identifier : Rose.Objects.Capability_Identifier);
+
+end Rose.Interfaces.Boolean_Result.Server;

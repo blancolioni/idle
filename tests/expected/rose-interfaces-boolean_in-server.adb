@@ -1,0 +1,153 @@
+with Rose.Invocation;
+with Rose.System_Calls;
+with Rose.Words;
+
+package body Rose.Interfaces.Boolean_In.Server is
+
+   use type Rose.Words.Word_32;
+
+   Server_Instance : Rose.Server.Server_Instance;
+
+   Local_Set       : Set_Handler;
+
+   Set_Cap         : Rose.Capabilities.Capability :=
+     Rose.Capabilities.Null_Capability;
+
+   Published_Cap   : Rose.Capabilities.Capability :=
+     Rose.Capabilities.Null_Capability;
+
+   procedure Handle_Get_Boolean_In_Interface
+     (Parameters : in out Rose.Invocation.Invocation_Record);
+
+   procedure Handle_Set
+     (Parameters : in out Rose.Invocation.Invocation_Record);
+
+   ----------------------
+   -- Attach_Interface --
+   ----------------------
+
+   procedure Attach_Interface
+     (Server_Context : in out Rose.Server.Server_Context;
+      Set            : Set_Handler;
+      Instanced      : Boolean := False)
+   is
+   begin
+      Local_Set := Set;
+      Rose.Server.Register_Handler
+        (Server_Context,
+         Boolean_In_Interface,
+         Handle_Get_Boolean_In_Interface'Access);
+      if not Instanced then
+         Set_Cap := Rose.Server.Create_Endpoint (Set_Endpoint);
+         Rose.Server.Create_Anonymous_Endpoint (Boolean_In_Interface);
+      end if;
+      Rose.Server.Register_Handler
+        (Server_Context,
+         Set_Endpoint,
+         Handle_Set'Access);
+   end Attach_Interface;
+
+   -------------------
+   -- Create_Server --
+   -------------------
+
+   procedure Create_Server
+     (Server_Context : in out Rose.Server.Server_Context;
+      Set            : Set_Handler;
+      Instanced      : Boolean := False)
+   is
+   begin
+      Attach_Interface (Server_Context, Set, Instanced);
+   end Create_Server;
+
+   -----------------
+   -- Get_Set_Cap --
+   -----------------
+
+   function Get_Set_Cap return Rose.Capabilities.Capability is (Set_Cap);
+
+   -------------------------------------
+   -- Handle_Get_Boolean_In_Interface --
+   -------------------------------------
+
+   procedure Handle_Get_Boolean_In_Interface
+     (Parameters : in out Rose.Invocation.Invocation_Record)
+   is
+      use type Rose.Capabilities.Capability;
+      Cap        : Rose.Capabilities.Capability;
+      Identifier : constant Rose.Objects.Capability_Identifier :=
+        Parameters.Identifier;
+   begin
+      Rose.System_Calls.Initialize_Reply (Parameters, Parameters.Reply_Cap);
+      if Set_Cap = Rose.Capabilities.Null_Capability then
+         if not Rose.Server.Has_Instance
+           (Server_Instance,
+            Set_Endpoint,
+            Identifier)
+         then
+            Rose.Server.Set_Instance_Cap
+              (Server_Instance,
+               Set_Endpoint,
+               Identifier,
+               Rose.Server.Create_Endpoint (Set_Endpoint, Identifier));
+         end if;
+         Cap :=
+           Rose.Server.Get_Instance_Cap
+             (Server_Instance,
+              Set_Endpoint,
+              Identifier);
+      else
+         Cap := Set_Cap;
+      end if;
+      Rose.System_Calls.Send_Cap (Parameters, Cap);
+   end Handle_Get_Boolean_In_Interface;
+
+   ----------------
+   -- Handle_Set --
+   ----------------
+
+   procedure Handle_Set
+     (Parameters : in out Rose.Invocation.Invocation_Record)
+   is
+      On : constant Boolean :=
+        Rose.System_Calls.Get_Word_32 (Parameters, 0) /= 0;
+   begin
+      Local_Set (Parameters.Identifier, On);
+      Rose.System_Calls.Initialize_Reply (Parameters, Parameters.Reply_Cap);
+   end Handle_Set;
+
+   -----------------------
+   -- Publish_Interface --
+   -----------------------
+
+   procedure Publish_Interface
+     (Server_Context : in out Rose.Server.Server_Context;
+      Set            : Set_Handler)
+   is
+   begin
+      Local_Set := Set;
+      Set_Cap := Rose.Server.Create_Endpoint (Set_Endpoint);
+      Published_Cap := Rose.Server.Create_Endpoint (Boolean_In_Interface);
+      Rose.Server.Register_Handler
+        (Server_Context,
+         Boolean_In_Interface,
+         Handle_Get_Boolean_In_Interface'Access);
+      Rose.Server.Register_Handler
+        (Server_Context,
+         Set_Endpoint,
+         Handle_Set'Access);
+      Rose.Server.Publish_Interface (Published_Cap);
+   end Publish_Interface;
+
+   ---------------------
+   -- Remove_Instance --
+   ---------------------
+
+   procedure Remove_Instance
+     (Identifier : Rose.Objects.Capability_Identifier)
+   is
+   begin
+      Rose.Server.Remove_Instance (Server_Instance, Identifier);
+   end Remove_Instance;
+
+end Rose.Interfaces.Boolean_In.Server;

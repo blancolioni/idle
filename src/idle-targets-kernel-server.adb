@@ -14,6 +14,7 @@ package body Idle.Targets.Kernel.Server is
 
    use Ada.Strings.Unbounded;
    use type Idle.Hierarchy.Interface_Vectors.Vector;
+   use type Idle.Syntax.Parameter_Mode;
    use Idle.Targets.Kernel.Support;
    use type Syn.Node_Access;
    use type Syn.Node_Array;
@@ -144,9 +145,12 @@ package body Idle.Targets.Kernel.Server is
 
       procedure Use_Type
         (Info      : Types.Type_Info;
-         Is_Result : Boolean := False);
+         Is_Result : Boolean := False;
+         Decoded   : Boolean := False);
       --  Add what the server needs to name values of type Info, or the
-      --  function result if Is_Result. For the user target, an interface
+      --  function result if Is_Result. Decoded is True for a value that
+      --  the server reads from the request: an in or in out parameter.
+      --  For the user target, an interface
       --  argument is a client of the interface, and an interface result
       --  is an object of it.
 
@@ -819,7 +823,6 @@ package body Idle.Targets.Kernel.Server is
 
       procedure Add_Handler (Member : Idle.Hierarchy.Member) is
          use all type Types.Category;
-         use type Idle.Syntax.Parameter_Mode;
 
          Subprogram     : Idle.Syntax.Subprogram renames Member.Subprogram;
          Result         : constant Types.Type_Info :=
@@ -1313,7 +1316,8 @@ package body Idle.Targets.Kernel.Server is
                Info : constant Types.Type_Info :=
                  Types.Resolve (Member.Owner, Parameter.Of_Type);
             begin
-               Use_Type (Info);
+               Use_Type
+                 (Info, Decoded => Parameter.Mode /= Idle.Syntax.Out_Mode);
                Parameters.Append
                  (F.New_Parameter
                     (Name (Parameter), F.New_Name (Server_Type_Of (Info)),
@@ -1664,7 +1668,8 @@ package body Idle.Targets.Kernel.Server is
 
       procedure Use_Type
         (Info      : Types.Type_Info;
-         Is_Result : Boolean := False)
+         Is_Result : Boolean := False;
+         Decoded   : Boolean := False)
       is
          Unit : constant String :=
            (if Info.Category not in Types.Interface_Value
@@ -1680,10 +1685,10 @@ package body Idle.Targets.Kernel.Server is
                Body_Context.Add (Unit);
             end if;
          end if;
-         if Types.Uses_Words_Unit (Info) then
+         if Types.Uses_Words_Unit (Info, Decoded) then
             Uses_Words := True;
          end if;
-         if Types.Compares_Words (Info) then
+         if Types.Compares_Words (Info, Decoded) then
             Compares_Words := True;
          end if;
       end Use_Type;
@@ -1704,7 +1709,9 @@ package body Idle.Targets.Kernel.Server is
          Add_Attached_Objects;
          for Member of Idle.Hierarchy.Members (Item) loop
             for Parameter of Member.Subprogram.Parameters loop
-               Use_Type (Types.Resolve (Member.Owner, Parameter.Of_Type));
+               Use_Type
+                 (Types.Resolve (Member.Owner, Parameter.Of_Type),
+                  Decoded => Parameter.Mode /= Idle.Syntax.Out_Mode);
             end loop;
             if Member.Subprogram.Is_Function then
                Use_Type

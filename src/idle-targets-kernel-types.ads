@@ -106,16 +106,24 @@ private package Idle.Targets.Kernel.Types is
    --  The function of an object that returns its cap for the interface
    --  Info.
 
-   function Uses_Words_Unit (Info : Type_Info) return Boolean
-   is (Info.Encoding in Converted | Boolean_Word);
-   --  True if the code that sends or decodes a value of Info names
-   --  Rose.Words.
+   function Uses_Words_Unit
+     (Info    : Type_Info;
+      Decoded : Boolean)
+      return Boolean
+   is (Info.Encoding = Converted
+       or else (Info.Encoding = Boolean_Word and then Decoded));
+   --  True if the code that sends a value of Info, or that decodes one
+   --  (Decoded), names Rose.Words. A Boolean is sent without it.
 
-   function Compares_Words (Info : Type_Info) return Boolean
-   is (Info.Encoding = Boolean_Word);
-   --  True if the code that decodes a value of Info compares a data word
-   --  with zero, so that the body needs "use type Rose.Words.Word_32" for
-   --  the comparison to be visible.
+   function Compares_Words
+     (Info    : Type_Info;
+      Decoded : Boolean)
+      return Boolean
+   is (Info.Encoding = Boolean_Word and then Decoded);
+   --  True if the code that decodes a value of Info (Decoded) compares a
+   --  data word with zero, so that the body needs "use type
+   --  Rose.Words.Word_32" for the comparison to be visible. A body that
+   --  only sends Booleans doesn't, and the clause would have no effect.
 
    function Send
      (Factory : in out Syn.Factory.Factory;

@@ -281,7 +281,8 @@ done
 # the expected files of the interfaces listed in semantic.txt against its
 # real specs, for both targets, and look the names up (-gnatc: no code).
 # This is how a missing "use type", or a name that Rose.Interfaces hides,
-# shows up (idle#68, idle#70). Run it with:
+# shows up (idle#68, idle#70), and with warnings as errors, as Rose's own
+# build has them, a "use type" that has no effect (idle#72). Run it with:
 #
 #   ROSE=$HOME/git/rose tests/run.sh
 
@@ -308,7 +309,7 @@ else
                   "$dir/rose-interfaces-$name-server.ads" \
                   "$dir/rose-interfaces-$name-server.adb"; do
         # shellcheck disable=SC2086
-        if (cd "$work" && gcc -c -gnatc -gnat2012 -m32 -nostdinc -nostdlib \
+        if (cd "$work" && gcc -c -gnatc -gnat2012 -gnatwae -m32 -nostdinc -nostdlib \
               -I"$OLDPWD/$dir" $flags "$OLDPWD/$file"); then
           pass "rose $target $(basename "$file")"
         else

@@ -1,0 +1,9 @@
+--  A Boolean only as an out parameter: the client decodes it, and the
+--  server only sends it, so the server body has no decode and needs no
+--  "use type" for Word_32 (idle#72).
+
+interface Boolean_Out is
+
+   procedure Get (On : out Boolean);
+
+end Boolean_Out;
