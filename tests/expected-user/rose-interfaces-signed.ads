@@ -1,3 +1,4 @@
+with Interfaces;
 with Rose.Capabilities;
 with Rose.Objects;
 with Rose.Words;
@@ -8,13 +9,13 @@ package Rose.Interfaces.Signed is
      16#C9BD_4EF5_794E_6919#;
 
    Clamp_Endpoint      : constant Rose.Objects.Endpoint_Id :=
-     16#CA6B_33C4_4D4B_04E3#;
+     16#8087_6C4F_CB8B_D8FA#;
 
    Position_Endpoint   : constant Rose.Objects.Endpoint_Id :=
-     16#F3D8_5E15_6C48_987A#;
+     16#C55D_DED1_F2CD_A995#;
 
    Offset_Endpoint     : constant Rose.Objects.Endpoint_Id :=
-     16#E9BD_1CBC_BB2D_CC7D#;
+     16#45FC_D3DA_8AFD_AC18#;
 
    Difference_Endpoint : constant Rose.Objects.Endpoint_Id :=
      16#F64B_7F5A_F9EA_9375#;
@@ -42,30 +43,30 @@ package Rose.Interfaces.Signed is
 
    function Clamp
      (Item  : in out Signed_Object;
-      Value : Integer;
-      Low   : Integer)
-      return Integer is abstract;
+      Value : Standard.Interfaces.Integer_32;
+      Low   : Standard.Interfaces.Integer_32)
+      return Standard.Interfaces.Integer_32 is abstract;
 
    procedure Position
      (Item  : in out Signed_Object;
       Index : Rose.Words.Word;
-      X     : out Integer;
-      Y     : out Integer;
+      X     : out Standard.Interfaces.Integer_32;
+      Y     : out Standard.Interfaces.Integer_32;
       Count : out Natural) is abstract;
 
    procedure Offset
      (Item    : in out Signed_Object;
-      Delta_X : in out Integer) is abstract;
+      Delta_X : in out Standard.Interfaces.Integer_32) is abstract;
 
    function Difference
      (Item  : in out Signed_Object;
-      Left  : Long_Long_Integer;
-      Right : Long_Long_Integer)
-      return Long_Long_Integer is abstract;
+      Left  : Standard.Interfaces.Integer_64;
+      Right : Standard.Interfaces.Integer_64)
+      return Standard.Interfaces.Integer_64 is abstract;
 
    procedure Bounds
      (Item : in out Signed_Object;
-      Low  : out Long_Long_Integer;
-      High : out Long_Long_Integer) is abstract;
+      Low  : out Standard.Interfaces.Integer_64;
+      High : out Standard.Interfaces.Integer_64) is abstract;
 
 end Rose.Interfaces.Signed;

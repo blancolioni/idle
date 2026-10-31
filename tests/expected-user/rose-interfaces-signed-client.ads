@@ -1,3 +1,4 @@
+with Interfaces;
 with Rose.Capabilities;
 with Rose.Words;
 
@@ -25,31 +26,31 @@ package Rose.Interfaces.Signed.Client is
 
    overriding function Clamp
      (Item  : in out Signed_Client;
-      Value : Integer;
-      Low   : Integer)
-      return Integer;
+      Value : Standard.Interfaces.Integer_32;
+      Low   : Standard.Interfaces.Integer_32)
+      return Standard.Interfaces.Integer_32;
 
    overriding procedure Position
      (Item  : in out Signed_Client;
       Index : Rose.Words.Word;
-      X     : out Integer;
-      Y     : out Integer;
+      X     : out Standard.Interfaces.Integer_32;
+      Y     : out Standard.Interfaces.Integer_32;
       Count : out Natural);
 
    overriding procedure Offset
      (Item    : in out Signed_Client;
-      Delta_X : in out Integer);
+      Delta_X : in out Standard.Interfaces.Integer_32);
 
    overriding function Difference
      (Item  : in out Signed_Client;
-      Left  : Long_Long_Integer;
-      Right : Long_Long_Integer)
-      return Long_Long_Integer;
+      Left  : Standard.Interfaces.Integer_64;
+      Right : Standard.Interfaces.Integer_64)
+      return Standard.Interfaces.Integer_64;
 
    overriding procedure Bounds
      (Item : in out Signed_Client;
-      Low  : out Long_Long_Integer;
-      High : out Long_Long_Integer);
+      Low  : out Standard.Interfaces.Integer_64;
+      High : out Standard.Interfaces.Integer_64);
 
    overriding function Signed_Cap
      (Item : in out Signed_Client)

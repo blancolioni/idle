@@ -1,3 +1,4 @@
+with Interfaces;
 with Rose.Capabilities;
 with Rose.Invocation;
 with Rose.Words;
@@ -22,29 +23,31 @@ package Rose.Interfaces.Signed.Client is
 
    function Clamp
      (Item  : Signed_Client;
-      Value : Integer;
-      Low   : Integer)
-      return Integer;
+      Value : Standard.Interfaces.Integer_32;
+      Low   : Standard.Interfaces.Integer_32)
+      return Standard.Interfaces.Integer_32;
 
    procedure Position
      (Item  : Signed_Client;
       Index : Rose.Words.Word;
-      X     : out Integer;
-      Y     : out Integer;
+      X     : out Standard.Interfaces.Integer_32;
+      Y     : out Standard.Interfaces.Integer_32;
       Count : out Natural);
 
-   procedure Offset (Item : Signed_Client; Delta_X : in out Integer);
+   procedure Offset
+     (Item    : Signed_Client;
+      Delta_X : in out Standard.Interfaces.Integer_32);
 
    function Difference
      (Item  : Signed_Client;
-      Left  : Long_Long_Integer;
-      Right : Long_Long_Integer)
-      return Long_Long_Integer;
+      Left  : Standard.Interfaces.Integer_64;
+      Right : Standard.Interfaces.Integer_64)
+      return Standard.Interfaces.Integer_64;
 
    procedure Bounds
      (Item : Signed_Client;
-      Low  : out Long_Long_Integer;
-      High : out Long_Long_Integer);
+      Low  : out Standard.Interfaces.Integer_64;
+      High : out Standard.Interfaces.Integer_64);
 
    function Get_Interface_Cap
      (Item : Signed_Client)

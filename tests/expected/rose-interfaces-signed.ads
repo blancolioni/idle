@@ -6,13 +6,13 @@ package Rose.Interfaces.Signed is
      16#C9BD_4EF5_794E_6919#;
 
    Clamp_Endpoint      : constant Rose.Objects.Endpoint_Id :=
-     16#CA6B_33C4_4D4B_04E3#;
+     16#8087_6C4F_CB8B_D8FA#;
 
    Position_Endpoint   : constant Rose.Objects.Endpoint_Id :=
-     16#F3D8_5E15_6C48_987A#;
+     16#C55D_DED1_F2CD_A995#;
 
    Offset_Endpoint     : constant Rose.Objects.Endpoint_Id :=
-     16#E9BD_1CBC_BB2D_CC7D#;
+     16#45FC_D3DA_8AFD_AC18#;
 
    Difference_Endpoint : constant Rose.Objects.Endpoint_Id :=
      16#F64B_7F5A_F9EA_9375#;

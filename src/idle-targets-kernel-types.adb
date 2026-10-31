@@ -103,7 +103,7 @@ package body Idle.Targets.Kernel.Types is
          when Signed =>
             return Factory.New_Call
               ((if Info.Category = Word_Value
-                then "Rose.System_Calls.Get_Integer"
+                then "Rose.System_Calls.Get_Integer_32"
                 else "Rose.System_Calls.Get_Integer_64"),
                [Factory.New_Name (Params),
                 Factory.New_Integer_Literal (Long_Long_Long_Integer (Index))]);
@@ -157,10 +157,12 @@ package body Idle.Targets.Kernel.Types is
          return Info (Word_Value, Native, Idle.Names.Ada_Name (Name), "");
       elsif Key = "boolean" then
          return Info (Word_Value, Boolean_Word, "Boolean", "");
-      elsif Key = "integer" then
-         return Info (Word_Value, Signed, "Integer", "");
+      elsif Key = "integer_32" then
+         return Info (Word_Value, Signed, "Standard.Interfaces.Integer_32",
+                      "Interfaces");
       elsif Key = "integer_64" then
-         return Info (Double_Word_Value, Signed, "Long_Long_Integer", "");
+         return Info (Double_Word_Value, Signed,
+                      "Standard.Interfaces.Integer_64", "Interfaces");
       elsif Key = "object_id" then
          return Info (Double_Word_Value, Object_Id, "Rose.Objects.Object_Id",
                       "Rose.Objects");
@@ -312,7 +314,7 @@ package body Idle.Targets.Kernel.Types is
          when Signed =>
             return Call
               ((if Info.Category = Word_Value
-                then "Send_Integer" else "Send_Integer_64"),
+                then "Send_Integer_32" else "Send_Integer_64"),
                Factory.New_Name (Value));
          when Object_Id =>
             return Call ("Send_Object_Id", Factory.New_Name (Value));

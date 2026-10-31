@@ -1,3 +1,4 @@
+with Interfaces;
 with Rose.Capabilities;
 with Rose.Objects;
 with Rose.Server;
@@ -7,31 +8,31 @@ package Rose.Interfaces.Signed.Server is
 
    type Clamp_Handler is access function
      (Id    : Rose.Objects.Capability_Identifier;
-      Value : Integer;
-      Low   : Integer)
-      return Integer;
+      Value : Standard.Interfaces.Integer_32;
+      Low   : Standard.Interfaces.Integer_32)
+      return Standard.Interfaces.Integer_32;
 
    type Position_Handler is access procedure
      (Id    : Rose.Objects.Capability_Identifier;
       Index : Rose.Words.Word;
-      X     : out Integer;
-      Y     : out Integer;
+      X     : out Standard.Interfaces.Integer_32;
+      Y     : out Standard.Interfaces.Integer_32;
       Count : out Natural);
 
    type Offset_Handler is access procedure
      (Id      : Rose.Objects.Capability_Identifier;
-      Delta_X : in out Integer);
+      Delta_X : in out Standard.Interfaces.Integer_32);
 
    type Difference_Handler is access function
      (Id    : Rose.Objects.Capability_Identifier;
-      Left  : Long_Long_Integer;
-      Right : Long_Long_Integer)
-      return Long_Long_Integer;
+      Left  : Standard.Interfaces.Integer_64;
+      Right : Standard.Interfaces.Integer_64)
+      return Standard.Interfaces.Integer_64;
 
    type Bounds_Handler is access procedure
      (Id   : Rose.Objects.Capability_Identifier;
-      Low  : out Long_Long_Integer;
-      High : out Long_Long_Integer);
+      Low  : out Standard.Interfaces.Integer_64;
+      High : out Standard.Interfaces.Integer_64);
 
    procedure Create_Server
      (Server_Context : in out Rose.Server.Server_Context;

@@ -12,8 +12,8 @@ package body Rose.Interfaces.Signed.Client is
 
    procedure Bounds
      (Item : Signed_Client;
-      Low  : out Long_Long_Integer;
-      High : out Long_Long_Integer)
+      Low  : out Standard.Interfaces.Integer_64;
+      High : out Standard.Interfaces.Integer_64)
    is
       Params : aliased Rose.Invocation.Invocation_Record;
    begin
@@ -34,22 +34,22 @@ package body Rose.Interfaces.Signed.Client is
 
    function Clamp
      (Item  : Signed_Client;
-      Value : Integer;
-      Low   : Integer)
-      return Integer
+      Value : Standard.Interfaces.Integer_32;
+      Low   : Standard.Interfaces.Integer_32)
+      return Standard.Interfaces.Integer_32
    is
       Params : aliased Rose.Invocation.Invocation_Record;
    begin
       Rose.System_Calls.Initialize_Send (Params, Item.Clamp);
-      Rose.System_Calls.Send_Integer (Params, Value);
-      Rose.System_Calls.Send_Integer (Params, Low);
+      Rose.System_Calls.Send_Integer_32 (Params, Value);
+      Rose.System_Calls.Send_Integer_32 (Params, Low);
       Rose.System_Calls.Receive_Words (Params, 1);
       Rose.System_Calls.Invoke_Capability (Params);
       Last_Error := Rose.Invocation.OK;
       if Params.Control.Flags (Rose.Invocation.Error) then
          Last_Error := Params.Error;
       end if;
-      return Rose.System_Calls.Get_Integer (Params, 0);
+      return Rose.System_Calls.Get_Integer_32 (Params, 0);
    end Clamp;
 
    -----------
@@ -73,9 +73,9 @@ package body Rose.Interfaces.Signed.Client is
 
    function Difference
      (Item  : Signed_Client;
-      Left  : Long_Long_Integer;
-      Right : Long_Long_Integer)
-      return Long_Long_Integer
+      Left  : Standard.Interfaces.Integer_64;
+      Right : Standard.Interfaces.Integer_64)
+      return Standard.Interfaces.Integer_64
    is
       Params : aliased Rose.Invocation.Invocation_Record;
    begin
@@ -163,18 +163,21 @@ package body Rose.Interfaces.Signed.Client is
    -- Offset --
    ------------
 
-   procedure Offset (Item : Signed_Client; Delta_X : in out Integer) is
+   procedure Offset
+     (Item    : Signed_Client;
+      Delta_X : in out Standard.Interfaces.Integer_32)
+   is
       Params : aliased Rose.Invocation.Invocation_Record;
    begin
       Rose.System_Calls.Initialize_Send (Params, Item.Offset);
-      Rose.System_Calls.Send_Integer (Params, Delta_X);
+      Rose.System_Calls.Send_Integer_32 (Params, Delta_X);
       Rose.System_Calls.Receive_Words (Params, 1);
       Rose.System_Calls.Invoke_Capability (Params);
       Last_Error := Rose.Invocation.OK;
       if Params.Control.Flags (Rose.Invocation.Error) then
          Last_Error := Params.Error;
       end if;
-      Delta_X := Rose.System_Calls.Get_Integer (Params, 0);
+      Delta_X := Rose.System_Calls.Get_Integer_32 (Params, 0);
    end Offset;
 
    ----------
@@ -228,8 +231,8 @@ package body Rose.Interfaces.Signed.Client is
    procedure Position
      (Item  : Signed_Client;
       Index : Rose.Words.Word;
-      X     : out Integer;
-      Y     : out Integer;
+      X     : out Standard.Interfaces.Integer_32;
+      Y     : out Standard.Interfaces.Integer_32;
       Count : out Natural)
    is
       Params : aliased Rose.Invocation.Invocation_Record;
@@ -242,8 +245,8 @@ package body Rose.Interfaces.Signed.Client is
       if Params.Control.Flags (Rose.Invocation.Error) then
          Last_Error := Params.Error;
       end if;
-      X := Rose.System_Calls.Get_Integer (Params, 0);
-      Y := Rose.System_Calls.Get_Integer (Params, 1);
+      X := Rose.System_Calls.Get_Integer_32 (Params, 0);
+      Y := Rose.System_Calls.Get_Integer_32 (Params, 1);
       Count := Natural (Rose.System_Calls.Get_Word_32 (Params, 2));
    end Position;
 

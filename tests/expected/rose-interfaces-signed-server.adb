@@ -169,8 +169,8 @@ package body Rose.Interfaces.Signed.Server is
    procedure Handle_Bounds
      (Parameters : in out Rose.Invocation.Invocation_Record)
    is
-      Low  : Long_Long_Integer;
-      High : Long_Long_Integer;
+      Low  : Standard.Interfaces.Integer_64;
+      High : Standard.Interfaces.Integer_64;
    begin
       Local_Bounds (Parameters.Identifier, Low, High);
       Rose.System_Calls.Initialize_Reply (Parameters, Parameters.Reply_Cap);
@@ -185,15 +185,15 @@ package body Rose.Interfaces.Signed.Server is
    procedure Handle_Clamp
      (Parameters : in out Rose.Invocation.Invocation_Record)
    is
-      Value  : constant Integer :=
-        Rose.System_Calls.Get_Integer (Parameters, 0);
-      Low    : constant Integer :=
-        Rose.System_Calls.Get_Integer (Parameters, 1);
-      Result : constant Integer :=
+      Value  : constant Standard.Interfaces.Integer_32 :=
+        Rose.System_Calls.Get_Integer_32 (Parameters, 0);
+      Low    : constant Standard.Interfaces.Integer_32 :=
+        Rose.System_Calls.Get_Integer_32 (Parameters, 1);
+      Result : constant Standard.Interfaces.Integer_32 :=
         Local_Clamp (Parameters.Identifier, Value, Low);
    begin
       Rose.System_Calls.Initialize_Reply (Parameters, Parameters.Reply_Cap);
-      Rose.System_Calls.Send_Integer (Parameters, Result);
+      Rose.System_Calls.Send_Integer_32 (Parameters, Result);
    end Handle_Clamp;
 
    -----------------------
@@ -203,11 +203,11 @@ package body Rose.Interfaces.Signed.Server is
    procedure Handle_Difference
      (Parameters : in out Rose.Invocation.Invocation_Record)
    is
-      Left   : constant Long_Long_Integer :=
+      Left   : constant Standard.Interfaces.Integer_64 :=
         Rose.System_Calls.Get_Integer_64 (Parameters, 0);
-      Right  : constant Long_Long_Integer :=
+      Right  : constant Standard.Interfaces.Integer_64 :=
         Rose.System_Calls.Get_Integer_64 (Parameters, 2);
-      Result : constant Long_Long_Integer :=
+      Result : constant Standard.Interfaces.Integer_64 :=
         Local_Difference (Parameters.Identifier, Left, Right);
    begin
       Rose.System_Calls.Initialize_Reply (Parameters, Parameters.Reply_Cap);
@@ -341,11 +341,12 @@ package body Rose.Interfaces.Signed.Server is
    procedure Handle_Offset
      (Parameters : in out Rose.Invocation.Invocation_Record)
    is
-      Delta_X : Integer := Rose.System_Calls.Get_Integer (Parameters, 0);
+      Delta_X : Standard.Interfaces.Integer_32 :=
+        Rose.System_Calls.Get_Integer_32 (Parameters, 0);
    begin
       Local_Offset (Parameters.Identifier, Delta_X);
       Rose.System_Calls.Initialize_Reply (Parameters, Parameters.Reply_Cap);
-      Rose.System_Calls.Send_Integer (Parameters, Delta_X);
+      Rose.System_Calls.Send_Integer_32 (Parameters, Delta_X);
    end Handle_Offset;
 
    ---------------------
@@ -357,14 +358,14 @@ package body Rose.Interfaces.Signed.Server is
    is
       Index : constant Rose.Words.Word :=
         Rose.System_Calls.Get_Word_32 (Parameters, 0);
-      X     : Integer;
-      Y     : Integer;
+      X     : Standard.Interfaces.Integer_32;
+      Y     : Standard.Interfaces.Integer_32;
       Count : Natural;
    begin
       Local_Position (Parameters.Identifier, Index, X, Y, Count);
       Rose.System_Calls.Initialize_Reply (Parameters, Parameters.Reply_Cap);
-      Rose.System_Calls.Send_Integer (Parameters, X);
-      Rose.System_Calls.Send_Integer (Parameters, Y);
+      Rose.System_Calls.Send_Integer_32 (Parameters, X);
+      Rose.System_Calls.Send_Integer_32 (Parameters, Y);
       Rose.System_Calls.Send_Word (Parameters, Count);
    end Handle_Position;
 
