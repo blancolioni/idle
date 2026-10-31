@@ -127,6 +127,9 @@ package body Idle.Targets.Kernel.Support is
          Set ("Rose.Words." & Idle.Names.Ada_Name (Name), "Rose.Words");
       elsif Key in "natural" | "positive" | "boolean" then
          Set (Idle.Names.Ada_Name (Name), "");
+      elsif Key in "integer_32" | "integer_64" then
+         Set ("Standard.Interfaces." & Idle.Names.Ada_Name (Name),
+              "Interfaces");
       elsif Key = "object_id" then
          Set ("Rose.Objects.Object_Id", "Rose.Objects");
       elsif Key = "capability" then

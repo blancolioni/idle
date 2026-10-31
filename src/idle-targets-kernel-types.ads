@@ -40,6 +40,9 @@ private package Idle.Targets.Kernel.Types is
       --  Sent as its position.
       Boolean_Word,
       --  Sent as 0 or 1; any non-zero word is True.
+      Signed,
+      --  Integer_32 and Integer_64: two's complement, in one word or two.
+      --  Send_Integer_32, Send_Integer_64, Get_Integer_32, Get_Integer_64.
       Object_Id,
       --  Send_Object_Id.
       Storage_Offset,

@@ -1,0 +1,24 @@
+--  Integer_32 and Integer_64 parameters and results: two's complement, in
+--  one data word and two (idle#68).
+
+interface Signed is
+
+   --  An in Integer_32, and an Integer_32 result.
+   function Clamp (Value : Integer_32; Low : Integer_32) return Integer_32;
+
+   --  An out Integer_32 beside other words.
+   procedure Position
+     (Index : Word;
+      X     : out Integer_32;
+      Y     : out Integer_32;
+      Count : out Natural);
+
+   --  An in out Integer_32.
+   procedure Offset (Delta_X : in out Integer_32);
+
+   --  The 64-bit type, in, out and as a result.
+   function Difference (Left : Integer_64; Right : Integer_64)
+     return Integer_64;
+   procedure Bounds (Low : out Integer_64; High : out Integer_64);
+
+end Signed;
