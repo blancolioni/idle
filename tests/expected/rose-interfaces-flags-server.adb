@@ -3,6 +3,8 @@ with Rose.System_Calls;
 
 package body Rose.Interfaces.Flags.Server is
 
+   use type Rose.Words.Word_32;
+
    Server_Instance : Rose.Server.Server_Instance;
 
    Local_Is_Set    : Is_Set_Handler;

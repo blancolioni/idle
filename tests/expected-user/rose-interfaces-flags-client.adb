@@ -4,6 +4,8 @@ with Rose.System_Calls;
 
 package body Rose.Interfaces.Flags.Client is
 
+   use type Rose.Words.Word_32;
+
    procedure Load (Item : in out Flags_Client);
 
    -----------

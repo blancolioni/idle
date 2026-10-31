@@ -107,8 +107,15 @@ private package Idle.Targets.Kernel.Types is
    --  Info.
 
    function Uses_Words_Unit (Info : Type_Info) return Boolean
-   is (Info.Encoding = Converted);
-   --  True if the code that sends a value of Info names Rose.Words.
+   is (Info.Encoding in Converted | Boolean_Word);
+   --  True if the code that sends or decodes a value of Info names
+   --  Rose.Words.
+
+   function Compares_Words (Info : Type_Info) return Boolean
+   is (Info.Encoding = Boolean_Word);
+   --  True if the code that decodes a value of Info compares a data word
+   --  with zero, so that the body needs "use type Rose.Words.Word_32" for
+   --  the comparison to be visible.
 
    function Send
      (Factory : in out Syn.Factory.Factory;
