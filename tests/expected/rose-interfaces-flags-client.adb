@@ -2,6 +2,8 @@ with Rose.System_Calls;
 
 package body Rose.Interfaces.Flags.Client is
 
+   use type Rose.Words.Word_32;
+
    use type Rose.Invocation.Invocation_Error;
 
    Last_Error : Rose.Invocation.Invocation_Error := Rose.Invocation.OK;

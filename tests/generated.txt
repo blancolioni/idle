@@ -21,3 +21,4 @@ rose/seekable_file_reader
 modes/items
 modes/flags
 modes/signed
+modes/toggle

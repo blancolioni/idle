@@ -6,6 +6,8 @@ with System;
 
 package body Rose.Interfaces.Flags.Server is
 
+   use type Rose.Words.Word_32;
+
    Server_Instance : Rose.Server.Server_Instance;
 
    type Object_Access is access all Flags_Interface'Class;

@@ -1,0 +1,10 @@
+--  An interface with nothing but Booleans, so that nothing else brings in
+--  Rose.Words (idle#70).
+
+interface Toggle is
+
+   function Is_On return Boolean;
+
+   procedure Switch (On : Boolean);
+
+end Toggle;

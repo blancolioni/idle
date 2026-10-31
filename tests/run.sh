@@ -274,4 +274,49 @@ for file in expected/*.ad[sb] expected-user/*.ad[sb]; do
   fi
 done
 
+# 5. Against Rose
+
+# The style check reads the files, but it doesn't look up what they name.
+# If ROSE is a Rose checkout whose two run-time systems are built, compile
+# the expected files of the interfaces listed in semantic.txt against its
+# real specs, for both targets, and look the names up (-gnatc: no code).
+# This is how a missing "use type", or a name that Rose.Interfaces hides,
+# shows up (idle#68, idle#70). Run it with:
+#
+#   ROSE=$HOME/git/rose tests/run.sh
+
+if [ -z "${ROSE:-}" ]; then
+  echo "SKIP semantic check against Rose (set ROSE to a built Rose checkout)"
+else
+  src=$ROSE/src
+  common="-I$src/base -I$src/library/capabilities -I$src/library/rose
+          -I$src/library/kernelapi/system-calls
+          -I$src/library/kernelapi/arch/i686"
+  kernel="$common -I$src/library/kernelapi/system-calls-boot
+          -I$ROSE/rts/build/i686/adainclude"
+  user="$common -I$src/rts/src/adainclude
+        -I$src/library/kernelapi/system-calls-user
+        -I$src/rts/build/interfaces -I$src/rts/build/i686-rose/adainclude"
+  while read -r name; do
+    [ -n "$name" ] || continue
+    for target in kernel user; do
+      if [ $target = kernel ]; then dir=expected; flags=$kernel
+      else dir=expected-user; flags=$user; fi
+      for file in "$dir/rose-interfaces-$name.ads" \
+                  "$dir/rose-interfaces-$name-client.ads" \
+                  "$dir/rose-interfaces-$name-client.adb" \
+                  "$dir/rose-interfaces-$name-server.ads" \
+                  "$dir/rose-interfaces-$name-server.adb"; do
+        # shellcheck disable=SC2086
+        if (cd "$work" && gcc -c -gnatc -gnat2012 -m32 -nostdinc -nostdlib \
+              -I"$OLDPWD/$dir" $flags "$OLDPWD/$file"); then
+          pass "rose $target $(basename "$file")"
+        else
+          fail "rose $target $(basename "$file")"
+        fi
+      done
+    done
+  done < semantic.txt
+fi
+
 exit $status

@@ -46,6 +46,8 @@ package body Idle.Targets.Kernel.Client is
       Body_Context : Context_List;
       Uses_Words   : Boolean := False;
       --  True if the body converts values to Rose.Words types.
+      Tests_Zero   : Boolean := False;
+      --  True if the body compares a data word with zero.
       Public_Part  : Node_List;
       Components   : Node_List;
       Body_Specs   : Node_List;
@@ -1193,6 +1195,9 @@ package body Idle.Targets.Kernel.Client is
          if Types.Uses_Words_Unit (Info) then
             Uses_Words := True;
          end if;
+         if Types.Compares_Words (Info) then
+            Tests_Zero := True;
+         end if;
       end Use_Type;
 
       -----------------------
@@ -1380,7 +1385,10 @@ package body Idle.Targets.Kernel.Client is
               F.New_Package_Body
                 (Name         => Package_Name,
                  Declarations =>
-                   (if User
+                   (if Tests_Zero
+                    then [F.New_Use ("Rose.Words.Word_32", Use_Type => True)]
+                    else Syn.No_Nodes)
+                   & (if User
                     then Body_Specs.To_Array
                     else [F.New_Use ("Rose.Invocation.Invocation_Error",
                                      Use_Type => True),

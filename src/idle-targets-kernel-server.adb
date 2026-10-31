@@ -48,6 +48,8 @@ package body Idle.Targets.Kernel.Server is
       F              : Syn.Factory.Factory;
       Spec_Context   : Context_List;
       Body_Context   : Context_List;
+      Compares_Words : Boolean := False;
+      --  True if the body compares a data word with zero.
       Uses_Words     : Boolean := False;
       --  True if the body converts values to Rose.Words types.
       Public_Part    : Node_List;
@@ -1677,6 +1679,9 @@ package body Idle.Targets.Kernel.Server is
          if Types.Uses_Words_Unit (Info) then
             Uses_Words := True;
          end if;
+         if Types.Compares_Words (Info) then
+            Compares_Words := True;
+         end if;
       end Use_Type;
 
    begin
@@ -1750,7 +1755,10 @@ package body Idle.Targets.Kernel.Server is
               F.New_Package_Body
                 (Name         => Package_Name,
                  Declarations =>
-                   Objects.To_Array
+                   (if Compares_Words
+                    then [F.New_Use ("Rose.Words.Word_32", Use_Type => True)]
+                    else Syn.No_Nodes)
+                   & Objects.To_Array
                    & Handler_Specs.To_Array
                    & Bodies.To_Array)),
          Output_Directory);
