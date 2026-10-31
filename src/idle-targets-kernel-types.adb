@@ -97,6 +97,9 @@ package body Idle.Targets.Kernel.Types is
             return Factory.New_Call
               (Factory.New_Attribute (Factory.New_Name (Type_Name), "Val"),
                [Word]);
+         when Boolean_Word =>
+            return Factory.New_Binary
+              (Word, "/=", Factory.New_Integer_Literal (0));
          when Object_Id =>
             return Factory.New_Call
               ("Rose.System_Calls.Get_Object_Id",
@@ -145,6 +148,8 @@ package body Idle.Targets.Kernel.Types is
                       "Rose.Words");
       elsif Key in "natural" | "positive" then
          return Info (Word_Value, Native, Idle.Names.Ada_Name (Name), "");
+      elsif Key = "boolean" then
+         return Info (Word_Value, Boolean_Word, "Boolean", "");
       elsif Key = "object_id" then
          return Info (Double_Word_Value, Object_Id, "Rose.Objects.Object_Id",
                       "Rose.Objects");
@@ -283,6 +288,15 @@ package body Idle.Targets.Kernel.Types is
                   [Factory.New_Call
                      (Factory.New_Attribute
                         (Factory.New_Name (Type_Name), "Pos"),
+                      [Factory.New_Name (Value)])]));
+         when Boolean_Word =>
+            return Call
+              ("Send_Word",
+               Factory.New_Call
+                 ("Natural",
+                  [Factory.New_Call
+                     (Factory.New_Attribute
+                        (Factory.New_Name ("Boolean"), "Pos"),
                       [Factory.New_Name (Value)])]));
          when Object_Id =>
             return Call ("Send_Object_Id", Factory.New_Name (Value));

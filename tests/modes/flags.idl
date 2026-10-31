@@ -1,0 +1,15 @@
+--  Boolean parameters and results, each a data word that is 0 or 1
+--  (idle#63).
+
+interface Flags is
+
+   --  An in Boolean, and a Boolean result.
+   function Is_Set (Name : String; Default : Boolean) return Boolean;
+
+   --  An out Boolean beside other words.
+   procedure Query (Index : Word; Trusted : out Boolean; Count : out Natural);
+
+   --  An in out Boolean.
+   procedure Toggle (Value : in out Boolean);
+
+end Flags;
