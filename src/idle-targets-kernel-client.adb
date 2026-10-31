@@ -125,9 +125,12 @@ package body Idle.Targets.Kernel.Client is
       procedure Use_Type
         (Info      : Types.Type_Info;
          Is_Out    : Boolean := False;
-         Is_Result : Boolean := False);
+         Is_Result : Boolean := False;
+         Decoded   : Boolean := False);
       --  Add what the client needs to name values of type Info, an out
-      --  parameter if Is_Out, or the function result if Is_Result. For
+      --  parameter if Is_Out, or the function result if Is_Result.
+      --  Decoded is True for a value that the client reads from the
+      --  reply: a result, and an out or in out parameter. For
       --  the user target, the spec names an interface by its object
       --  type, or for an out interface by its client, through a limited
       --  with clause, so that two clients can name each other; the body
@@ -725,7 +728,8 @@ package body Idle.Targets.Kernel.Client is
             begin
                Use_Type
                  (Parameter_Info,
-                  Is_Out => Parameter.Mode = Idle.Syntax.Out_Mode);
+                  Is_Out  => Parameter.Mode = Idle.Syntax.Out_Mode,
+                  Decoded => Parameter.Mode /= Idle.Syntax.In_Mode);
 
                if Packed and then Types.Is_Buffer (Parameter_Info) then
                   Statements.Append
@@ -826,7 +830,7 @@ package body Idle.Targets.Kernel.Client is
          end loop;
 
          if Subprogram.Is_Function then
-            Use_Type (Result, Is_Result => True);
+            Use_Type (Result, Is_Result => True, Decoded => True);
             Reply_Words :=
               Reply_Words
               + (if Returns_String then 1 else Types.Words (Result));
@@ -1167,7 +1171,8 @@ package body Idle.Targets.Kernel.Client is
       procedure Use_Type
         (Info      : Types.Type_Info;
          Is_Out    : Boolean := False;
-         Is_Result : Boolean := False)
+         Is_Result : Boolean := False;
+         Decoded   : Boolean := False)
       is
          Unit : constant String := To_String (Info.Unit);
       begin
@@ -1192,10 +1197,10 @@ package body Idle.Targets.Kernel.Client is
          then
             Spec_Context.Add (Unit);
          end if;
-         if Types.Uses_Words_Unit (Info) then
+         if Types.Uses_Words_Unit (Info, Decoded) then
             Uses_Words := True;
          end if;
-         if Types.Compares_Words (Info) then
+         if Types.Compares_Words (Info, Decoded) then
             Tests_Zero := True;
          end if;
       end Use_Type;

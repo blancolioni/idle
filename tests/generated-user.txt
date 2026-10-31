@@ -27,3 +27,6 @@ modes/items
 modes/flags
 modes/signed
 modes/toggle
+modes/boolean_result
+modes/boolean_in
+modes/boolean_out
