@@ -25,3 +25,4 @@ rose/file_reader
 rose/seekable_file_reader
 modes/items
 modes/flags
+modes/signed
