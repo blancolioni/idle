@@ -18,6 +18,7 @@ begin
       Rose.Command_Line.Launch.Cap_Argument (Call, 1));
    Rose.System_Calls.Use_Capabilities
      (Create_Endpoint => Rose.Command_Line.Launch.Cap_Argument (Call, 0));
+   Rose.Command_Line.Launch.Set_Command_Line ("Rose.Core.Serve");
    Rose.Core.Serve
      (Name => Rose.Command_Line.Launch.String_Argument (Call, 1),
       Home => Home,

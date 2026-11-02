@@ -13,6 +13,7 @@ begin
    Rose.Interfaces.Writable_Directory.Client.Open
      (Directory,
       Rose.Command_Line.Launch.Cap_Argument (Call, 0));
+   Rose.Command_Line.Launch.Set_Command_Line ("Rose.Core.Touch");
    Rose.Core.Touch
      (Name => Rose.Command_Line.Launch.String_Argument (Call, 1),
       Directory => Directory);

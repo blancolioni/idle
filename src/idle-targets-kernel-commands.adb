@@ -79,6 +79,9 @@ package body Idle.Targets.Kernel.Commands is
       Declarations  : Node_List;
       Statements    : Node_List;
       Arguments     : Node_List;
+      Line_Arguments : Node_List;
+      --  The arguments of the call that gives the run-time system the
+      --  command's name and arguments.
       Results       : Node_List;
       Serve         : Node_List;
       --  For a server, the call that serves after the reply.
@@ -596,6 +599,23 @@ package body Idle.Targets.Kernel.Commands is
       Main_Context.Add (Name);
       Main_Context.Add (Metadata_Name);
 
+      --  Ada.Command_Line reports the command's full name and its list
+      --  argument, if it has one, which is the only one it can have.
+
+      Line_Arguments.Append (String_Value (F, Name));
+      for Placed of Signature loop
+         if Placed.Kind = String_List_Argument
+           and then Idle.Syntax."="
+             (Placed.Argument.Mode, Idle.Syntax.In_Mode)
+         then
+            Line_Arguments.Append
+              (F.New_Call
+                 (Launch & "String_List_Argument",
+                  [Call_Node, Literal (Placed.Where.Index),
+                   Literal (Placed.Where.Count)]));
+         end if;
+      end loop;
+
       if Idle.Commands.Has_Aspect (Item.Aspects, "Server") then
          declare
             Server : constant String :=
@@ -632,6 +652,10 @@ package body Idle.Targets.Kernel.Commands is
                       (F.New_Call
                          (Launch & "Receive", [Call_Node]))]
                    & Statements.To_Array
+                   & [F.New_Call_Statement
+                        (F.New_Call
+                           (Launch & "Set_Command_Line",
+                            Line_Arguments.To_Array))]
                    & [F.New_Call_Statement
                         (if Arguments.To_Array'Length = 0
                          then F.New_Name (Name)

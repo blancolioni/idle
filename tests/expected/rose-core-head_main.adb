@@ -10,6 +10,9 @@ begin
    Rose.Command_Line.Launch.Use_Standard_Input (Call, 0);
    Rose.Command_Line.Launch.Use_Standard_Output (Call, 1);
    Rose.Command_Line.Launch.Use_Standard_Error (Call, 2);
+   Rose.Command_Line.Launch.Set_Command_Line
+     ("Rose.Core.Head",
+      Rose.Command_Line.Launch.String_List_Argument (Call, 3, 3));
    Rose.Core.Head
      (Lines => Positive (Rose.Command_Line.Launch.Natural_Argument (Call, 0)),
       Skip => Rose.Command_Line.Launch.Natural_Argument (Call, 1),

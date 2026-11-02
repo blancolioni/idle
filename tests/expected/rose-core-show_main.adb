@@ -22,6 +22,7 @@ begin
       Rose.Command_Line.Launch.Cap_Argument (Call, 3));
    Rose.System_Calls.Use_Capabilities
      (Delete_Cap => Rose.Command_Line.Launch.Cap_Argument (Call, 2));
+   Rose.Command_Line.Launch.Set_Command_Line ("Rose.Core.Show");
    Rose.Core.Show (Logging => Logging, Source => Source, Count => Count);
    Rose.Command_Line.Launch.Natural_Result (Call, 1, Count);
    Rose.Command_Line.Launch.Complete (Call);

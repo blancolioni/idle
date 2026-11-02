@@ -18,6 +18,7 @@ begin
       Rose.Command_Line.Launch.Cap_Argument (Call, 1));
    Rose.Command_Line.Launch.Use_Standard_Output (Call, 2);
    Rose.Command_Line.Launch.Use_Standard_Error (Call, 3);
+   Rose.Command_Line.Launch.Set_Command_Line ("Rose.Core.Probe");
    Rose.Core.Probe (Time_Log => Time_Log, Port_Log => Port_Log);
    Rose.Command_Line.Launch.Complete (Call);
 end Rose.Core.Probe_Main;
