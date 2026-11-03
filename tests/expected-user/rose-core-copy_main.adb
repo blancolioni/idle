@@ -38,6 +38,7 @@ begin
    Rose.System_Calls.Use_Capabilities
      (Create_Endpoint => Rose.Command_Line.Launch.Cap_Argument (Call, 2),
       Delete_Cap => Rose.Command_Line.Launch.Cap_Argument (Call, 3));
+   Rose.Command_Line.Launch.Set_Command_Line ("Rose.Core.Copy");
    Rose.Core.Copy
      (Logging => Logging,
       Source => Source,
