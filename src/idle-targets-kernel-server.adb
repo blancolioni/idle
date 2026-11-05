@@ -244,9 +244,10 @@ package body Idle.Targets.Kernel.Server is
       --------------------------
 
       --  For the user target: the interface of a served object, and a
-      --  table of the attached objects. Each object has an identifier
-      --  from Rose.Server.New_Identifier, unique in the process, so that
-      --  the packages of interfaces with a common ancestor can share its
+      --  table of the attached objects, a vector that grows with them
+      --  (idle#83). Each object has an identifier from
+      --  Rose.Server.New_Identifier, unique in the process, so that the
+      --  packages of interfaces with a common ancestor can share its
       --  endpoints: each handler serves the identifiers that Owns finds
       --  (idle#84). Identifier 0, which is that of a cap that is not
       --  instanced and of a restore notice, names the object in the first
@@ -282,7 +283,7 @@ package body Idle.Targets.Kernel.Server is
                  ("Identifier",
                   F.New_Name ("Rose.Objects.Capability_Identifier"))]);
          Count : constant not null Syn.Node_Access :=
-           F.New_Name ("Attached_Count");
+           F.New_Call ("Natural", [F.New_Name ("Attached.Length")]);
          Cap_Of : constant not null Syn.Node_Access :=
            F.New_Function
              ("Cap_Of", F.New_Name (Capability_Name),
@@ -353,24 +354,12 @@ package body Idle.Targets.Kernel.Server is
                            F.New_Name ("False"))]
                   else Syn.No_Nodes)));
          Objects.Append
-           (F.New_Object
-              ("Max_Attached", Initial_Value => F.New_Integer_Literal (16),
-               Is_Constant => True));
-         Objects.Append
-           (F.New_Array_Type
-              ("Attached_Array",
-               F.New_Binary
-                 (F.New_Integer_Literal (0), "..",
-                  F.New_Binary
-                    (F.New_Name ("Max_Attached"), "-",
-                     F.New_Integer_Literal (1))),
-               F.New_Name ("Attached_Object")));
-         Objects.Append
-           (F.New_Object ("Attached", F.New_Name ("Attached_Array")));
+           (F.New_Raw
+              ("package Attached_Vectors is" & ASCII.LF
+               & "  new Ada.Containers.Vectors (Natural, Attached_Object);"));
          Objects.Append
            (F.New_Object
-              ("Attached_Count", F.New_Name ("Natural"),
-               F.New_Integer_Literal (0)));
+              ("Attached", F.New_Name ("Attached_Vectors.Vector")));
          Objects.Append
            (F.New_Object
               ("Registered", F.New_Name ("Boolean"), F.New_Name ("False")));
@@ -378,16 +367,16 @@ package body Idle.Targets.Kernel.Server is
          Handler_Specs.Append (Find);
          Handler_Specs.Append (Owns);
 
-         --  An object is attached at the next slot, or for a resource at
-         --  the first free one, since a released object frees its slot.
-         --  Its identifier is the process's, not the slot's.
+         --  An object is attached at a new slot at the end, or for a
+         --  resource at the first free one, since a released object frees
+         --  its slot. Its identifier is the process's, not the slot's.
 
          declare
             Slot     : constant String :=
-              (if Resource then "Slot" else "Attached_Count");
+              (if Resource then "Slot" else "Attached.Last_Index");
             Next     : constant not null Syn.Node_Access :=
-              F.New_Assignment
-                (Count, F.New_Binary (Count, "+", F.New_Integer_Literal (1)));
+              Call ("Attached.Append",
+                    [F.New_Raw ("Attached_Object'(others => <>)")]);
          begin
             Bodies.Add
               ("Attach",
@@ -409,16 +398,13 @@ package body Idle.Targets.Kernel.Server is
                           & [F.New_Assignment
                                (F.New_Name ("Registered"),
                                 F.New_Name ("True"))]),
-                     F.New_If
-                       (Condition =>
-                          F.New_Binary
-                            (F.New_Name (Slot), "=",
-                             F.New_Name ("Max_Attached")),
-                        Then_Part =>
-                          [F.New_Raise
-                             (F.New_Name ("Constraint_Error"),
-                              F.New_String_Literal
-                                (Ada_Name & ".Server: too many objects"))]),
+                     (if Resource
+                      then F.New_If
+                             (Condition =>
+                                F.New_Binary
+                                  (F.New_Name ("Slot"), "=", Count),
+                              Then_Part => [Next])
+                      else Next),
                      F.New_Assignment
                        (F.New_Name ("Attached (" & Slot & ").Object"),
                         F.New_Call
@@ -432,14 +418,7 @@ package body Idle.Targets.Kernel.Server is
                           (Server & "Create_Endpoint",
                            [F.New_Name (Id (Item)),
                             F.New_Name
-                              ("Attached (" & Slot & ").Identifier")])),
-                     (if Resource
-                      then F.New_If
-                             (Condition =>
-                                F.New_Binary
-                                  (F.New_Name ("Slot"), "=", Count),
-                              Then_Part => [Next])
-                      else Next)]));
+                              ("Attached (" & Slot & ").Identifier")]))]));
          end;
 
          if Resource then
@@ -521,7 +500,10 @@ package body Idle.Targets.Kernel.Server is
                          (F.New_Name ("Identifier"), "=",
                           F.New_Integer_Literal (0)),
                      Then_Part =>
-                       [F.New_Return (F.New_Name ("Attached (0).Object"))]),
+                       [F.New_If
+                          (Condition => F.New_Name ("Attached.Is_Empty"),
+                           Then_Part => [F.New_Return (F.New_Name ("null"))]),
+                        F.New_Return (F.New_Name ("Attached (0).Object"))]),
                   F.New_For_Of_Loop
                     ("Item", F.New_Name ("Attached"),
                      [F.New_If
@@ -1452,7 +1434,7 @@ package body Idle.Targets.Kernel.Server is
       --  the object's identifier in Rose.Server, unless the object was
       --  released through identifier 0, which leaves caps for its own
       --  identifier that it can't find (idle#84). Slot_Of finds the slot
-      --  of an identifier.
+      --  of an identifier. Both return the length of the table for none.
 
       procedure Add_Release_Support is
          Identifier_Parameter : constant not null Syn.Node_Access :=
@@ -1467,6 +1449,8 @@ package body Idle.Targets.Kernel.Server is
          Detach    : constant not null Syn.Node_Access :=
            F.New_Procedure ("Detach", [Identifier_Parameter]);
          Slot     : constant String := "Attached (Slot)";
+         Count    : constant not null Syn.Node_Access :=
+           F.New_Call ("Natural", [F.New_Name ("Attached.Length")]);
          Rescind  : constant not null Syn.Node_Access :=
            F.New_Name (System_Calls & "Rescind_Cap_Capability");
          Null_Cap : constant not null Syn.Node_Access :=
@@ -1551,7 +1535,7 @@ package body Idle.Targets.Kernel.Server is
                          F.New_Binary
                            (F.New_Name ("Index"), "+",
                             F.New_Integer_Literal (1)))]),
-                  F.New_Return (F.New_Name ("Max_Attached"))]));
+                  F.New_Return (Count)]));
 
          Bodies.Add
            ("Free_Slot",
@@ -1568,13 +1552,8 @@ package body Idle.Targets.Kernel.Server is
                         (Condition =>
                            F.New_Binary
                              (F.New_Binary
-                                (F.New_Binary
-                                   (F.New_Name ("Index"), "<",
-                                    F.New_Name ("Attached_Count")),
-                                 "and then",
-                                 F.New_Binary
-                                   (F.New_Name ("Item.Object"), "=",
-                                    F.New_Name ("null"))),
+                                (F.New_Name ("Item.Object"), "=",
+                                 F.New_Name ("null")),
                               "and then",
                               F.New_Unary
                                 ("not", F.New_Name ("Item.Retired"))),
@@ -1584,7 +1563,7 @@ package body Idle.Targets.Kernel.Server is
                          F.New_Binary
                            (F.New_Name ("Index"), "+",
                             F.New_Integer_Literal (1)))]),
-                  F.New_Return (F.New_Name ("Attached_Count"))]));
+                  F.New_Return (Count)]));
 
          Bodies.Add
            ("Detach",
@@ -1602,9 +1581,7 @@ package body Idle.Targets.Kernel.Server is
                Statements    =>
                  [F.New_If
                     (Condition =>
-                       F.New_Binary
-                         (F.New_Name ("Slot"), "=",
-                          F.New_Name ("Max_Attached")),
+                       F.New_Binary (F.New_Name ("Slot"), ">=", Count),
                      Then_Part => [F.New_Return]),
                   F.New_If
                     (Condition => F.New_Binary (Rescind, "=", Null_Cap),
@@ -1846,7 +1823,8 @@ package body Idle.Targets.Kernel.Server is
       Body_Context.Add ("Rose.Invocation");
       Body_Context.Add ("Rose.System_Calls");
       if User then
-         --  For Cap_Of.
+         --  For the table of attached objects, and Cap_Of.
+         Body_Context.Add ("Ada.Containers.Vectors");
          Body_Context.Add ("Rose.Interfaces.Objects");
          Body_Context.Add ("System");
       end if;
