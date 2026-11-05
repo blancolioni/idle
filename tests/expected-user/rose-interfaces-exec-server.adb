@@ -16,8 +16,9 @@ package body Rose.Interfaces.Exec.Server is
    type Object_Access is access all Exec_Interface'Class;
 
    type Attached_Object is record
-      Object : Object_Access;
-      Cap    : Rose.Capabilities.Capability :=
+      Object     : Object_Access;
+      Identifier : Rose.Objects.Capability_Identifier := 0;
+      Cap        : Rose.Capabilities.Capability :=
         Rose.Capabilities.Null_Capability;
    end record;
 
@@ -40,6 +41,10 @@ package body Rose.Interfaces.Exec.Server is
    function Find
      (Identifier : Rose.Objects.Capability_Identifier)
       return Object_Access;
+
+   function Owns
+     (Identifier : Rose.Objects.Capability_Identifier)
+      return Boolean;
 
    procedure Handle_Get_Launch_Interface
      (Parameters : in out Rose.Invocation.Invocation_Record);
@@ -75,41 +80,49 @@ package body Rose.Interfaces.Exec.Server is
          Rose.Server.Register_Handler
            (Server_Context,
             Rose.Interfaces.Exec.Launch_Interface,
-            Handle_Get_Launch_Interface'Access);
+            Handle_Get_Launch_Interface'Access,
+            Owns'Access);
          Rose.Server.Register_Handler
            (Server_Context,
             Rose.Interfaces.Exec.Exec_Interface,
-            Handle_Get_Exec_Interface'Access);
+            Handle_Get_Exec_Interface'Access,
+            Owns'Access);
          Rose.Server.Register_Handler
            (Server_Context,
             Launch_Endpoint,
-            Handle_Launch'Access);
+            Handle_Launch'Access,
+            Owns'Access);
          Rose.Server.Register_Handler
            (Server_Context,
             Launch_Command_Endpoint,
-            Handle_Launch_Command'Access);
+            Handle_Launch_Command'Access,
+            Owns'Access);
          Rose.Server.Register_Handler
            (Server_Context,
             Metadata_Endpoint,
-            Handle_Metadata'Access);
+            Handle_Metadata'Access,
+            Owns'Access);
          Rose.Server.Register_Handler
            (Server_Context,
             Install_Endpoint,
-            Handle_Install'Access);
+            Handle_Install'Access,
+            Owns'Access);
          Rose.Server.Register_Handler
            (Server_Context,
             Set_Standard_Output_Endpoint,
-            Handle_Set_Standard_Output'Access);
+            Handle_Set_Standard_Output'Access,
+            Owns'Access);
          Registered := True;
       end if;
       if Attached_Count = Max_Attached then
          raise Constraint_Error with "Exec.Server: too many objects";
       end if;
       Attached (Attached_Count).Object := Object_Access (Object);
+      Attached (Attached_Count).Identifier := Rose.Server.New_Identifier;
       Attached (Attached_Count).Cap :=
         Rose.Server.Create_Endpoint
           (Rose.Interfaces.Exec.Exec_Interface,
-           Rose.Objects.Capability_Identifier (Attached_Count));
+           Attached (Attached_Count).Identifier);
       Attached_Count := Attached_Count + 1;
    end Attach;
 
@@ -124,9 +137,7 @@ package body Rose.Interfaces.Exec.Server is
       return Rose.Capabilities.Capability
    is
       use type System.Address;
-      use type Rose.Objects.Capability_Identifier;
       use type Rose.Objects.Endpoint_Id;
-      Identifier : Rose.Objects.Capability_Identifier := 0;
    begin
       for Item of Attached loop
          if Item.Object /= null
@@ -139,24 +150,23 @@ package body Rose.Interfaces.Exec.Server is
                   if not Rose.Server.Has_Instance
                     (Server_Instance,
                      Interface_Id,
-                     Identifier)
+                     Item.Identifier)
                   then
                      Rose.Server.Set_Instance_Cap
                        (Server_Instance,
                         Interface_Id,
-                        Identifier,
+                        Item.Identifier,
                         Rose.Server.Create_Endpoint
                           (Interface_Id,
-                           Identifier));
+                           Item.Identifier));
                   end if;
                   return Rose.Server.Get_Instance_Cap
                     (Server_Instance,
                      Interface_Id,
-                     Identifier);
+                     Item.Identifier);
                end if;
             end if;
          end if;
-         Identifier := Identifier + 1;
       end loop;
       raise Rose.Interfaces.Objects.Not_Served
         with "Rose.Interfaces.Exec.Server.Cap_Of";
@@ -172,10 +182,15 @@ package body Rose.Interfaces.Exec.Server is
    is
       use type Rose.Objects.Capability_Identifier;
    begin
-      if Identifier >= Rose.Objects.Capability_Identifier (Attached_Count) then
-         return null;
+      if Identifier = 0 then
+         return Attached (0).Object;
       end if;
-      return Attached (Natural (Identifier)).Object;
+      for Item of Attached loop
+         if Item.Object /= null and then Item.Identifier = Identifier then
+            return Item.Object;
+         end if;
+      end loop;
+      return null;
    end Find;
 
    -------------------------------
@@ -628,6 +643,18 @@ package body Rose.Interfaces.Exec.Server is
       end loop;
       return Rose.Capabilities.Null_Capability;
    end Interface_Cap;
+
+   ----------
+   -- Owns --
+   ----------
+
+   function Owns
+     (Identifier : Rose.Objects.Capability_Identifier)
+      return Boolean
+   is
+   begin
+      return Find (Identifier) /= null;
+   end Owns;
 
    -------------
    -- Publish --

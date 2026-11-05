@@ -12,8 +12,9 @@ package body Rose.Interfaces.Items.Server is
    type Object_Access is access all Items_Interface'Class;
 
    type Attached_Object is record
-      Object : Object_Access;
-      Cap    : Rose.Capabilities.Capability :=
+      Object     : Object_Access;
+      Identifier : Rose.Objects.Capability_Identifier := 0;
+      Cap        : Rose.Capabilities.Capability :=
         Rose.Capabilities.Null_Capability;
    end record;
 
@@ -30,6 +31,10 @@ package body Rose.Interfaces.Items.Server is
    function Find
      (Identifier : Rose.Objects.Capability_Identifier)
       return Object_Access;
+
+   function Owns
+     (Identifier : Rose.Objects.Capability_Identifier)
+      return Boolean;
 
    procedure Handle_Get_Items_Interface
      (Parameters : in out Rose.Invocation.Invocation_Record);
@@ -56,29 +61,34 @@ package body Rose.Interfaces.Items.Server is
          Rose.Server.Register_Handler
            (Server_Context,
             Rose.Interfaces.Items.Items_Interface,
-            Handle_Get_Items_Interface'Access);
+            Handle_Get_Items_Interface'Access,
+            Owns'Access);
          Rose.Server.Register_Handler
            (Server_Context,
             Pair_Endpoint,
-            Handle_Pair'Access);
+            Handle_Pair'Access,
+            Owns'Access);
          Rose.Server.Register_Handler
            (Server_Context,
             Store_Endpoint,
-            Handle_Store'Access);
+            Handle_Store'Access,
+            Owns'Access);
          Rose.Server.Register_Handler
            (Server_Context,
             Single_Endpoint,
-            Handle_Single'Access);
+            Handle_Single'Access,
+            Owns'Access);
          Registered := True;
       end if;
       if Attached_Count = Max_Attached then
          raise Constraint_Error with "Items.Server: too many objects";
       end if;
       Attached (Attached_Count).Object := Object_Access (Object);
+      Attached (Attached_Count).Identifier := Rose.Server.New_Identifier;
       Attached (Attached_Count).Cap :=
         Rose.Server.Create_Endpoint
           (Rose.Interfaces.Items.Items_Interface,
-           Rose.Objects.Capability_Identifier (Attached_Count));
+           Attached (Attached_Count).Identifier);
       Attached_Count := Attached_Count + 1;
    end Attach;
 
@@ -93,9 +103,7 @@ package body Rose.Interfaces.Items.Server is
       return Rose.Capabilities.Capability
    is
       use type System.Address;
-      use type Rose.Objects.Capability_Identifier;
       use type Rose.Objects.Endpoint_Id;
-      Identifier : Rose.Objects.Capability_Identifier := 0;
    begin
       for Item of Attached loop
          if Item.Object /= null
@@ -105,7 +113,6 @@ package body Rose.Interfaces.Items.Server is
                return Item.Cap;
             end if;
          end if;
-         Identifier := Identifier + 1;
       end loop;
       raise Rose.Interfaces.Objects.Not_Served
         with "Rose.Interfaces.Items.Server.Cap_Of";
@@ -121,10 +128,15 @@ package body Rose.Interfaces.Items.Server is
    is
       use type Rose.Objects.Capability_Identifier;
    begin
-      if Identifier >= Rose.Objects.Capability_Identifier (Attached_Count) then
-         return null;
+      if Identifier = 0 then
+         return Attached (0).Object;
       end if;
-      return Attached (Natural (Identifier)).Object;
+      for Item of Attached loop
+         if Item.Object /= null and then Item.Identifier = Identifier then
+            return Item.Object;
+         end if;
+      end loop;
+      return null;
    end Find;
 
    --------------------------------
@@ -345,6 +357,18 @@ package body Rose.Interfaces.Items.Server is
       end loop;
       return Rose.Capabilities.Null_Capability;
    end Interface_Cap;
+
+   ----------
+   -- Owns --
+   ----------
+
+   function Owns
+     (Identifier : Rose.Objects.Capability_Identifier)
+      return Boolean
+   is
+   begin
+      return Find (Identifier) /= null;
+   end Owns;
 
    -------------
    -- Publish --

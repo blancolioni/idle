@@ -13,8 +13,9 @@ package body Rose.Interfaces.Directory.Server is
    type Object_Access is access all Directory_Interface'Class;
 
    type Attached_Object is record
-      Object : Object_Access;
-      Cap    : Rose.Capabilities.Capability :=
+      Object     : Object_Access;
+      Identifier : Rose.Objects.Capability_Identifier := 0;
+      Cap        : Rose.Capabilities.Capability :=
         Rose.Capabilities.Null_Capability;
    end record;
 
@@ -37,6 +38,10 @@ package body Rose.Interfaces.Directory.Server is
    function Find
      (Identifier : Rose.Objects.Capability_Identifier)
       return Object_Access;
+
+   function Owns
+     (Identifier : Rose.Objects.Capability_Identifier)
+      return Boolean;
 
    procedure Handle_Get_Directory_Interface
      (Parameters : in out Rose.Invocation.Invocation_Record);
@@ -75,45 +80,54 @@ package body Rose.Interfaces.Directory.Server is
          Rose.Server.Register_Handler
            (Server_Context,
             Rose.Interfaces.Directory.Directory_Interface,
-            Handle_Get_Directory_Interface'Access);
+            Handle_Get_Directory_Interface'Access,
+            Owns'Access);
          Rose.Server.Register_Handler
            (Server_Context,
             Directory_Entry_Count_Endpoint,
-            Handle_Directory_Entry_Count'Access);
+            Handle_Directory_Entry_Count'Access,
+            Owns'Access);
          Rose.Server.Register_Handler
            (Server_Context,
             Directory_Entry_Name_Endpoint,
-            Handle_Directory_Entry_Name'Access);
+            Handle_Directory_Entry_Name'Access,
+            Owns'Access);
          Rose.Server.Register_Handler
            (Server_Context,
             Directory_Entry_Kind_Endpoint,
-            Handle_Directory_Entry_Kind'Access);
+            Handle_Directory_Entry_Kind'Access,
+            Owns'Access);
          Rose.Server.Register_Handler
            (Server_Context,
             Directory_Entry_Size_Endpoint,
-            Handle_Directory_Entry_Size'Access);
+            Handle_Directory_Entry_Size'Access,
+            Owns'Access);
          Rose.Server.Register_Handler
            (Server_Context,
             Find_Entry_Endpoint,
-            Handle_Find_Entry'Access);
+            Handle_Find_Entry'Access,
+            Owns'Access);
          Rose.Server.Register_Handler
            (Server_Context,
             Get_Ordinary_File_Endpoint,
-            Handle_Get_Ordinary_File'Access);
+            Handle_Get_Ordinary_File'Access,
+            Owns'Access);
          Rose.Server.Register_Handler
            (Server_Context,
             Get_Directory_Endpoint,
-            Handle_Get_Directory'Access);
+            Handle_Get_Directory'Access,
+            Owns'Access);
          Registered := True;
       end if;
       if Attached_Count = Max_Attached then
          raise Constraint_Error with "Directory.Server: too many objects";
       end if;
       Attached (Attached_Count).Object := Object_Access (Object);
+      Attached (Attached_Count).Identifier := Rose.Server.New_Identifier;
       Attached (Attached_Count).Cap :=
         Rose.Server.Create_Endpoint
           (Rose.Interfaces.Directory.Directory_Interface,
-           Rose.Objects.Capability_Identifier (Attached_Count));
+           Attached (Attached_Count).Identifier);
       Attached_Count := Attached_Count + 1;
    end Attach;
 
@@ -128,9 +142,7 @@ package body Rose.Interfaces.Directory.Server is
       return Rose.Capabilities.Capability
    is
       use type System.Address;
-      use type Rose.Objects.Capability_Identifier;
       use type Rose.Objects.Endpoint_Id;
-      Identifier : Rose.Objects.Capability_Identifier := 0;
    begin
       for Item of Attached loop
          if Item.Object /= null
@@ -141,7 +153,6 @@ package body Rose.Interfaces.Directory.Server is
                return Item.Cap;
             end if;
          end if;
-         Identifier := Identifier + 1;
       end loop;
       raise Rose.Interfaces.Objects.Not_Served
         with "Rose.Interfaces.Directory.Server.Cap_Of";
@@ -157,10 +168,15 @@ package body Rose.Interfaces.Directory.Server is
    is
       use type Rose.Objects.Capability_Identifier;
    begin
-      if Identifier >= Rose.Objects.Capability_Identifier (Attached_Count) then
-         return null;
+      if Identifier = 0 then
+         return Attached (0).Object;
       end if;
-      return Attached (Natural (Identifier)).Object;
+      for Item of Attached loop
+         if Item.Object /= null and then Item.Identifier = Identifier then
+            return Item.Object;
+         end if;
+      end loop;
+      return null;
    end Find;
 
    ----------------------------------
@@ -618,6 +634,18 @@ package body Rose.Interfaces.Directory.Server is
       end loop;
       return Rose.Capabilities.Null_Capability;
    end Interface_Cap;
+
+   ----------
+   -- Owns --
+   ----------
+
+   function Owns
+     (Identifier : Rose.Objects.Capability_Identifier)
+      return Boolean
+   is
+   begin
+      return Find (Identifier) /= null;
+   end Owns;
 
    -------------
    -- Publish --
