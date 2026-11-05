@@ -1,0 +1,5 @@
+--  An interface that inherits Transactional through one of its parents,
+--  so that an argument of this type is transactional too (idle#78).
+
+interface Journal : Transactional_Writable_File is
+end Journal;

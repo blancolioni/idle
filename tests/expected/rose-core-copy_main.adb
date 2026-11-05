@@ -3,7 +3,10 @@ with Rose.Command_Line.Launch;
 with Rose.Core.Copy;
 with Rose.Core.Copy_Metadata;
 with Rose.Interfaces.File.Client;
+with Rose.Interfaces.Journal.Client;
 with Rose.Interfaces.Stream_Writer.Client;
+with Rose.Interfaces.Transactional.Client;
+with Rose.Interfaces.Transactional_Writable_File.Client;
 with Rose.Interfaces.Writable_Directory.Client;
 with Rose.Interfaces.Writable_File.Client;
 with Rose.System_Calls;
@@ -16,6 +19,10 @@ procedure Rose.Core.Copy_Main is
    Target      : Rose.Interfaces.Writable_File.Client.Writable_File_Client;
    Root        : Rose.Interfaces.Writable_Directory.Client
      .Writable_Directory_Client;
+   Batch       : Rose.Interfaces.Transactional.Client.Transactional_Client;
+   Draft       : Rose.Interfaces.Transactional_Writable_File.Client
+     .Transactional_Writable_File_Client;
+   Ledger      : Rose.Interfaces.Journal.Client.Journal_Client;
    Copied      : Rose.Capabilities.Capability;
    Count       : Natural;
    Report      : String (1 .. Rose.Command_Line.Launch.Max_Result_Length);
@@ -35,6 +42,15 @@ begin
    Rose.Interfaces.Writable_Directory.Client.Open
      (Root,
       Rose.Command_Line.Launch.Cap_Argument (Call, 6));
+   Rose.Interfaces.Transactional.Client.Open
+     (Batch,
+      Rose.Command_Line.Launch.Cap_Argument (Call, 7));
+   Rose.Interfaces.Transactional_Writable_File.Client.Open
+     (Draft,
+      Rose.Command_Line.Launch.Cap_Argument (Call, 8));
+   Rose.Interfaces.Journal.Client.Open
+     (Ledger,
+      Rose.Command_Line.Launch.Cap_Argument (Call, 9));
    Rose.System_Calls.Use_Capabilities
      (Create_Endpoint => Rose.Command_Line.Launch.Cap_Argument (Call, 2),
       Delete_Cap => Rose.Command_Line.Launch.Cap_Argument (Call, 3));
@@ -44,6 +60,9 @@ begin
       Source => Source,
       Target => Target,
       Root => Root,
+      Batch => Batch,
+      Draft => Draft,
+      Ledger => Ledger,
       Copied => Copied,
       Count => Count,
       Verbose => Rose.Command_Line.Launch.Boolean_Argument (Call, 0),

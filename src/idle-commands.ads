@@ -63,6 +63,14 @@ package Idle.Commands is
    --  objects the shell can version and commit: the interface has the
    --  Versioned aspect, or inherits from one that has.
 
+   function Is_Transactional
+     (Near : Idle.Syntax.Interface_Declaration;
+      Item : Idle.Syntax.Argument)
+      return Boolean;
+   --  True if Item, an argument declared by Near, is an interface that is
+   --  Transactional or inherits from it: the shell gives the command a
+   --  version, which the command commits itself (Rose ADR 0026).
+
    function Is_Live (Item : Idle.Syntax.Interface_Declaration) return Boolean;
    --  True if the command Item has the Live aspect: the shell passes it
    --  its own caps, not versions of its Versioned arguments, and the

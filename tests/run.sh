@@ -98,7 +98,12 @@ rose-core-copy_metadata.ads rose-core-serve.ads rose-core-serve_main.adb
 rose-core-serve_metadata.ads rose-core-show.ads rose-core-show_main.adb
 rose-core-show_metadata.ads rose-core-touch.ads rose-core-touch_main.adb
 rose-core-touch_metadata.ads rose-core-probe.ads
-rose-core-probe_main.adb rose-core-probe_metadata.ads"
+rose-core-probe_main.adb rose-core-probe_metadata.ads
+rose-interfaces-journal.ads rose-interfaces-journal-client.ads
+rose-interfaces-journal-client.adb
+rose-interfaces-journal-client-conversions.ads
+rose-interfaces-journal-client-conversions.adb
+rose-interfaces-journal-server.ads rose-interfaces-journal-server.adb"
 rm -rf output/commands && mkdir output/commands
 if $idle --target kernel -I rose -o output/commands commands/*.idl; then
   for file in $commands; do

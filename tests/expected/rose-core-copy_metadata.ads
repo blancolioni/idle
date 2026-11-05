@@ -69,6 +69,40 @@ package Rose.Core.Copy_Metadata is
      & ASCII.LF
      & "help where the new file goes"
      & ASCII.LF
+     & "argument Batch"
+     & ASCII.LF
+     & "type interface Transactional"
+     & ASCII.LF
+     & "transactional true"
+     & ASCII.LF
+     & "place cap 7"
+     & ASCII.LF
+     & "help a transaction"
+     & ASCII.LF
+     & "argument Draft"
+     & ASCII.LF
+     & "type interface Transactional_Writable_File"
+     & ASCII.LF
+     & "versioned true"
+     & ASCII.LF
+     & "transactional true"
+     & ASCII.LF
+     & "place cap 8"
+     & ASCII.LF
+     & "help a version of a file"
+     & ASCII.LF
+     & "argument Ledger"
+     & ASCII.LF
+     & "type interface Journal"
+     & ASCII.LF
+     & "versioned true"
+     & ASCII.LF
+     & "transactional true"
+     & ASCII.LF
+     & "place cap 9"
+     & ASCII.LF
+     & "help a journal"
+     & ASCII.LF
      & "argument Copied"
      & ASCII.LF
      & "type interface Writable_File"

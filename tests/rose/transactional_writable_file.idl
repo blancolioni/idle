@@ -1,0 +1,5 @@
+--  A version of a file, which the file's process serves, and which its
+--  holder commits (Rose ADR 0026).
+
+interface Transactional_Writable_File : Writable_File, Transactional, Resource is
+end Transactional_Writable_File;

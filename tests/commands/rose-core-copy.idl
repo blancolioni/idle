@@ -1,7 +1,9 @@
 --  Interface arguments, out arguments, and roles whose members are not
 --  standard streams (idle#27). Target and Root are versioned, since the
 --  command is not live, and Copied is a writable cap the command returns
---  (Rose ADR 0012).
+--  (Rose ADR 0012). Batch, Draft and Ledger are transactional: Batch is
+--  a Transactional, Draft inherits it, and Ledger inherits it through
+--  Draft's type (Rose ADR 0026, idle#78). Source is not.
 
 command Rose.Core.Copy : Standard_Error, Logging, Create_Endpoint, Delete_Cap
   with Summary => "Copy a file."
@@ -12,6 +14,12 @@ is
      with Help => "the new file";
    Root : in Writable_Directory
      with Help => "where the new file goes";
+   Batch : in Transactional
+     with Help => "a transaction";
+   Draft : in Transactional_Writable_File
+     with Help => "a version of a file";
+   Ledger : in Journal
+     with Help => "a journal";
    Copied : out Writable_File
      with Help => "the copy";
    Count : out Natural

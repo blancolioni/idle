@@ -551,6 +551,29 @@ package body Idle.Commands is
       return False;
    end Is_One_Of;
 
+   ----------------------
+   -- Is_Transactional --
+   ----------------------
+
+   function Is_Transactional
+     (Near : Idle.Syntax.Interface_Declaration;
+      Item : Idle.Syntax.Argument)
+      return Boolean
+   is
+      use all type Idle.Syntax.Unit_Kind;
+      Found : Idle.Syntax.Interface_Declaration;
+   begin
+      if not Idle.Hierarchy.Find (Near, To_String (Item.Of_Type.Name), Found)
+        or else Found.Kind /= Interface_Unit
+      then
+         return False;
+      end if;
+
+      return Same (To_String (Found.Name), "Transactional")
+        or else (for some Ancestor of Idle.Hierarchy.Ancestors (Found) =>
+                   Same (To_String (Ancestor.Name), "Transactional"));
+   end Is_Transactional;
+
    ------------------
    -- Is_Versioned --
    ------------------
