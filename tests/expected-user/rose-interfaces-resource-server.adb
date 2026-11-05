@@ -10,10 +10,11 @@ package body Rose.Interfaces.Resource.Server is
    type Object_Access is access all Resource_Interface'Class;
 
    type Attached_Object is record
-      Object  : Object_Access;
-      Cap     : Rose.Capabilities.Capability :=
+      Object     : Object_Access;
+      Identifier : Rose.Objects.Capability_Identifier := 0;
+      Cap        : Rose.Capabilities.Capability :=
         Rose.Capabilities.Null_Capability;
-      Retired : Boolean := False;
+      Retired    : Boolean := False;
    end record;
 
    Max_Attached    : constant := 16;
@@ -30,7 +31,15 @@ package body Rose.Interfaces.Resource.Server is
      (Identifier : Rose.Objects.Capability_Identifier)
       return Object_Access;
 
+   function Owns
+     (Identifier : Rose.Objects.Capability_Identifier)
+      return Boolean;
+
    function Free_Slot return Natural;
+
+   function Slot_Of
+     (Identifier : Rose.Objects.Capability_Identifier)
+      return Natural;
 
    procedure Detach (Identifier : Rose.Objects.Capability_Identifier);
 
@@ -54,21 +63,24 @@ package body Rose.Interfaces.Resource.Server is
          Rose.Server.Register_Handler
            (Server_Context,
             Rose.Interfaces.Resource.Resource_Interface,
-            Handle_Get_Resource_Interface'Access);
+            Handle_Get_Resource_Interface'Access,
+            Owns'Access);
          Rose.Server.Register_Handler
            (Server_Context,
             Release_Endpoint,
-            Handle_Release'Access);
+            Handle_Release'Access,
+            Owns'Access);
          Registered := True;
       end if;
       if Slot = Max_Attached then
          raise Constraint_Error with "Resource.Server: too many objects";
       end if;
       Attached (Slot).Object := Object_Access (Object);
+      Attached (Slot).Identifier := Rose.Server.New_Identifier;
       Attached (Slot).Cap :=
         Rose.Server.Create_Endpoint
           (Rose.Interfaces.Resource.Resource_Interface,
-           Rose.Objects.Capability_Identifier (Slot));
+           Attached (Slot).Identifier);
       if Slot = Attached_Count then
          Attached_Count := Attached_Count + 1;
       end if;
@@ -85,9 +97,7 @@ package body Rose.Interfaces.Resource.Server is
       return Rose.Capabilities.Capability
    is
       use type System.Address;
-      use type Rose.Objects.Capability_Identifier;
       use type Rose.Objects.Endpoint_Id;
-      Identifier : Rose.Objects.Capability_Identifier := 0;
    begin
       for Item of Attached loop
          if Item.Object /= null
@@ -97,7 +107,6 @@ package body Rose.Interfaces.Resource.Server is
                return Item.Cap;
             end if;
          end if;
-         Identifier := Identifier + 1;
       end loop;
       raise Rose.Interfaces.Objects.Not_Served
         with "Rose.Interfaces.Resource.Server.Cap_Of";
@@ -109,13 +118,18 @@ package body Rose.Interfaces.Resource.Server is
 
    procedure Detach (Identifier : Rose.Objects.Capability_Identifier) is
       use type Rose.Capabilities.Capability;
+      use type Rose.Objects.Capability_Identifier;
+      Slot : constant Natural := Slot_Of (Identifier);
    begin
+      if Slot = Max_Attached then
+         return;
+      end if;
       if Rose.System_Calls.Rescind_Cap_Capability = Rose.Capabilities
         .Null_Capability
       then
-         Attached (Natural (Identifier)).Retired := True;
+         Attached (Slot).Retired := True;
       else
-         Rose.System_Calls.Rescind_Cap (Attached (Natural (Identifier)).Cap);
+         Rose.System_Calls.Rescind_Cap (Attached (Slot).Cap);
          if Rose.Server.Has_Instance
            (Server_Instance,
             Release_Endpoint,
@@ -138,11 +152,14 @@ package body Rose.Interfaces.Resource.Server is
                   Rose.Interfaces.Resource.Resource_Interface,
                   Identifier));
          end if;
+         if Identifier /= 0 then
+            Rose.Server.Free_Identifier (Identifier);
+         end if;
       end if;
       Rose.Server.Remove_Instance (Server_Instance, Identifier);
-      Rose.System_Calls.Delete_Cap (Attached (Natural (Identifier)).Cap);
-      Attached (Natural (Identifier)).Object := null;
-      Attached (Natural (Identifier)).Cap := Rose.Capabilities.Null_Capability;
+      Rose.System_Calls.Delete_Cap (Attached (Slot).Cap);
+      Attached (Slot).Object := null;
+      Attached (Slot).Cap := Rose.Capabilities.Null_Capability;
    end Detach;
 
    ----------
@@ -155,10 +172,15 @@ package body Rose.Interfaces.Resource.Server is
    is
       use type Rose.Objects.Capability_Identifier;
    begin
-      if Identifier >= Rose.Objects.Capability_Identifier (Attached_Count) then
-         return null;
+      if Identifier = 0 then
+         return Attached (0).Object;
       end if;
-      return Attached (Natural (Identifier)).Object;
+      for Item of Attached loop
+         if Item.Object /= null and then Item.Identifier = Identifier then
+            return Item.Object;
+         end if;
+      end loop;
+      return null;
    end Find;
 
    ---------------
@@ -265,6 +287,18 @@ package body Rose.Interfaces.Resource.Server is
       return Rose.Capabilities.Null_Capability;
    end Interface_Cap;
 
+   ----------
+   -- Owns --
+   ----------
+
+   function Owns
+     (Identifier : Rose.Objects.Capability_Identifier)
+      return Boolean
+   is
+   begin
+      return Find (Identifier) /= null;
+   end Owns;
+
    -------------
    -- Publish --
    -------------
@@ -277,5 +311,28 @@ package body Rose.Interfaces.Resource.Server is
       Attach (Server_Context, Object);
       Rose.Server.Publish_Interface (Interface_Cap (Object));
    end Publish;
+
+   -------------
+   -- Slot_Of --
+   -------------
+
+   function Slot_Of
+     (Identifier : Rose.Objects.Capability_Identifier)
+      return Natural
+   is
+      use type Rose.Objects.Capability_Identifier;
+      Index : Natural := 0;
+   begin
+      if Identifier = 0 then
+         return 0;
+      end if;
+      for Item of Attached loop
+         if Item.Object /= null and then Item.Identifier = Identifier then
+            return Index;
+         end if;
+         Index := Index + 1;
+      end loop;
+      return Max_Attached;
+   end Slot_Of;
 
 end Rose.Interfaces.Resource.Server;

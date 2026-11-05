@@ -244,10 +244,13 @@ package body Idle.Targets.Kernel.Server is
       --------------------------
 
       --  For the user target: the interface of a served object, and a
-      --  table of the attached objects. An object's identifier is its
-      --  position in the table, so the first is 0, which is the
-      --  identifier of a cap that is not instanced, and of a restore
-      --  notice. Each object has an interface cap for its identifier.
+      --  table of the attached objects. Each object has an identifier
+      --  from Rose.Server.New_Identifier, unique in the process, so that
+      --  the packages of interfaces with a common ancestor can share its
+      --  endpoints: each handler serves the identifiers that Owns finds
+      --  (idle#84). Identifier 0, which is that of a cap that is not
+      --  instanced and of a restore notice, names the object in the first
+      --  slot. Each object has an interface cap for its identifier.
 
       procedure Add_Attached_Objects is
          Object_Parameter : constant not null Syn.Node_Access :=
@@ -269,6 +272,12 @@ package body Idle.Targets.Kernel.Server is
          Find : constant not null Syn.Node_Access :=
            F.New_Function
              ("Find", F.New_Name ("Object_Access"),
+              [F.New_Parameter
+                 ("Identifier",
+                  F.New_Name ("Rose.Objects.Capability_Identifier"))]);
+         Owns : constant not null Syn.Node_Access :=
+           F.New_Function
+             ("Owns", F.New_Name ("Boolean"),
               [F.New_Parameter
                  ("Identifier",
                   F.New_Name ("Rose.Objects.Capability_Identifier"))]);
@@ -302,14 +311,14 @@ package body Idle.Targets.Kernel.Server is
          Instance : constant Syn.Node_Array :=
            [F.New_Name ("Server_Instance"),
             F.New_Name ("Interface_Id"),
-            F.New_Name ("Identifier")];
+            F.New_Name ("Item.Identifier")];
          Ancestor_Cap : constant Syn.Node_Array :=
            [Call (Server & "Set_Instance_Cap",
                   Instance
                   & [F.New_Call
                        (Server & "Create_Endpoint",
                         [F.New_Name ("Interface_Id"),
-                         F.New_Name ("Identifier")])])];
+                         F.New_Name ("Item.Identifier")])])];
          --  The ancestor's interface cap for the object, made the first
          --  time, as the handler of the object's interface cap makes it.
       begin
@@ -331,6 +340,10 @@ package body Idle.Targets.Kernel.Server is
            (F.New_Record_Type
               ("Attached_Object",
                [F.New_Component ("Object", F.New_Name ("Object_Access")),
+                F.New_Component
+                  ("Identifier",
+                   F.New_Name ("Rose.Objects.Capability_Identifier"),
+                   F.New_Integer_Literal (0)),
                 F.New_Component
                   ("Cap", F.New_Name (Capability_Name),
                    F.New_Name ("Rose.Capabilities.Null_Capability"))]
@@ -363,9 +376,11 @@ package body Idle.Targets.Kernel.Server is
               ("Registered", F.New_Name ("Boolean"), F.New_Name ("False")));
 
          Handler_Specs.Append (Find);
+         Handler_Specs.Append (Owns);
 
          --  An object is attached at the next slot, or for a resource at
          --  the first free one, since a released object frees its slot.
+         --  Its identifier is the process's, not the slot's.
 
          declare
             Slot     : constant String :=
@@ -409,13 +424,15 @@ package body Idle.Targets.Kernel.Server is
                         F.New_Call
                           ("Object_Access", [F.New_Name ("Object")])),
                      F.New_Assignment
+                       (F.New_Name ("Attached (" & Slot & ").Identifier"),
+                        F.New_Name (Server & "New_Identifier")),
+                     F.New_Assignment
                        (F.New_Name ("Attached (" & Slot & ").Cap"),
                         F.New_Call
                           (Server & "Create_Endpoint",
                            [F.New_Name (Id (Item)),
-                            F.New_Call
-                              ("Rose.Objects.Capability_Identifier",
-                               [F.New_Name (Slot)])])),
+                            F.New_Name
+                              ("Attached (" & Slot & ").Identifier")])),
                      (if Resource
                       then F.New_If
                              (Condition =>
@@ -440,13 +457,7 @@ package body Idle.Targets.Kernel.Server is
               (Specification => Cap_Of,
                Declarations  =>
                  [F.New_Use ("System.Address", Use_Type => True),
-                  F.New_Use ("Rose.Objects.Capability_Identifier",
-                             Use_Type => True),
-                  F.New_Use ("Rose.Objects.Endpoint_Id", Use_Type => True),
-                  F.New_Object
-                      ("Identifier",
-                       F.New_Name ("Rose.Objects.Capability_Identifier"),
-                       F.New_Integer_Literal (0))],
+                  F.New_Use ("Rose.Objects.Endpoint_Id", Use_Type => True)],
                Statements    =>
                  [F.New_For_Of_Loop
                     ("Item", F.New_Name ("Attached"),
@@ -491,12 +502,7 @@ package body Idle.Targets.Kernel.Server is
                                            F.New_Return
                                              (F.New_Call
                                                 (Server & "Get_Instance_Cap",
-                                                 Instance))])]))]),
-                      F.New_Assignment
-                        (F.New_Name ("Identifier"),
-                         F.New_Binary
-                           (F.New_Name ("Identifier"), "+",
-                            F.New_Integer_Literal (1)))]),
+                                                 Instance))])]))])]),
                   F.New_Raise
                     (F.New_Name ("Rose.Interfaces.Objects.Not_Served"),
                      F.New_String_Literal (Package_Name & ".Cap_Of"))]));
@@ -512,12 +518,35 @@ package body Idle.Targets.Kernel.Server is
                  [F.New_If
                     (Condition =>
                        F.New_Binary
-                         (F.New_Name ("Identifier"), ">=",
-                          F.New_Call
-                            ("Rose.Objects.Capability_Identifier", [Count])),
-                     Then_Part => [F.New_Return (F.New_Name ("null"))]),
-                  F.New_Return
-                    (F.New_Name ("Attached (Natural (Identifier)).Object"))]));
+                         (F.New_Name ("Identifier"), "=",
+                          F.New_Integer_Literal (0)),
+                     Then_Part =>
+                       [F.New_Return (F.New_Name ("Attached (0).Object"))]),
+                  F.New_For_Of_Loop
+                    ("Item", F.New_Name ("Attached"),
+                     [F.New_If
+                        (Condition =>
+                           F.New_Binary
+                             (F.New_Binary
+                                (F.New_Name ("Item.Object"), "/=",
+                                 F.New_Name ("null")),
+                              "and then",
+                              F.New_Binary
+                                (F.New_Name ("Item.Identifier"), "=",
+                                 F.New_Name ("Identifier"))),
+                         Then_Part =>
+                           [F.New_Return (F.New_Name ("Item.Object"))])]),
+                  F.New_Return (F.New_Name ("null"))]));
+
+         Bodies.Add
+           ("Owns",
+            F.New_Subprogram_Body
+              (Specification => Owns,
+               Statements    =>
+                 [F.New_Return
+                    (F.New_Binary
+                       (F.New_Call ("Find", [F.New_Name ("Identifier")]),
+                        "/=", F.New_Name ("null")))]));
 
          Bodies.Add
            ("Interface_Cap",
@@ -1419,18 +1448,25 @@ package body Idle.Targets.Kernel.Server is
       --  the slot next. Without the rescind cap, it retires the slot
       --  instead, so that it is not used again. It deletes and rescinds
       --  through Rose.System_Calls, which does nothing if the program
-      --  has no cap to do it with.
+      --  has no cap to do it with. Once it has rescinded them, it frees
+      --  the object's identifier in Rose.Server, unless the object was
+      --  released through identifier 0, which leaves caps for its own
+      --  identifier that it can't find (idle#84). Slot_Of finds the slot
+      --  of an identifier.
 
       procedure Add_Release_Support is
+         Identifier_Parameter : constant not null Syn.Node_Access :=
+           F.New_Parameter
+             ("Identifier",
+              F.New_Name ("Rose.Objects.Capability_Identifier"));
          Free_Slot : constant not null Syn.Node_Access :=
            F.New_Function ("Free_Slot", F.New_Name ("Natural"));
+         Slot_Of   : constant not null Syn.Node_Access :=
+           F.New_Function
+             ("Slot_Of", F.New_Name ("Natural"), [Identifier_Parameter]);
          Detach    : constant not null Syn.Node_Access :=
-           F.New_Procedure
-             ("Detach",
-              [F.New_Parameter
-                 ("Identifier",
-                  F.New_Name ("Rose.Objects.Capability_Identifier"))]);
-         Slot     : constant String := "Attached (Natural (Identifier))";
+           F.New_Procedure ("Detach", [Identifier_Parameter]);
+         Slot     : constant String := "Attached (Slot)";
          Rescind  : constant not null Syn.Node_Access :=
            F.New_Name (System_Calls & "Rescind_Cap_Capability");
          Null_Cap : constant not null Syn.Node_Access :=
@@ -1465,9 +1501,57 @@ package body Idle.Targets.Kernel.Server is
          for For_Interface of Interfaces loop
             Rescinds.Append (Rescind_Instance (Id (For_Interface)));
          end loop;
+         Rescinds.Append
+           (F.New_If
+              (Condition =>
+                 F.New_Binary
+                   (F.New_Name ("Identifier"), "/=",
+                    F.New_Integer_Literal (0)),
+               Then_Part =>
+                 [Call (Server & "Free_Identifier",
+                        [F.New_Name ("Identifier")])]));
 
          Handler_Specs.Append (Free_Slot);
+         Handler_Specs.Append (Slot_Of);
          Handler_Specs.Append (Detach);
+
+         Bodies.Add
+           ("Slot_Of",
+            F.New_Subprogram_Body
+              (Specification => Slot_Of,
+               Declarations  =>
+                 [F.New_Use ("Rose.Objects.Capability_Identifier",
+                             Use_Type => True),
+                  F.New_Object
+                    ("Index", F.New_Name ("Natural"),
+                     F.New_Integer_Literal (0))],
+               Statements    =>
+                 [F.New_If
+                    (Condition =>
+                       F.New_Binary
+                         (F.New_Name ("Identifier"), "=",
+                          F.New_Integer_Literal (0)),
+                     Then_Part =>
+                       [F.New_Return (F.New_Integer_Literal (0))]),
+                  F.New_For_Of_Loop
+                    ("Item", F.New_Name ("Attached"),
+                     [F.New_If
+                        (Condition =>
+                           F.New_Binary
+                             (F.New_Binary
+                                (F.New_Name ("Item.Object"), "/=",
+                                 F.New_Name ("null")),
+                              "and then",
+                              F.New_Binary
+                                (F.New_Name ("Item.Identifier"), "=",
+                                 F.New_Name ("Identifier"))),
+                         Then_Part => [F.New_Return (F.New_Name ("Index"))]),
+                      F.New_Assignment
+                        (F.New_Name ("Index"),
+                         F.New_Binary
+                           (F.New_Name ("Index"), "+",
+                            F.New_Integer_Literal (1)))]),
+                  F.New_Return (F.New_Name ("Max_Attached"))]));
 
          Bodies.Add
            ("Free_Slot",
@@ -1508,9 +1592,21 @@ package body Idle.Targets.Kernel.Server is
               (Specification => Detach,
                Declarations  =>
                  [F.New_Use ("Rose.Capabilities.Capability",
-                             Use_Type => True)],
+                             Use_Type => True),
+                  F.New_Use ("Rose.Objects.Capability_Identifier",
+                             Use_Type => True),
+                  F.New_Object
+                    ("Slot", F.New_Name ("Natural"),
+                     F.New_Call ("Slot_Of", [F.New_Name ("Identifier")]),
+                     Is_Constant => True)],
                Statements    =>
                  [F.New_If
+                    (Condition =>
+                       F.New_Binary
+                         (F.New_Name ("Slot"), "=",
+                          F.New_Name ("Max_Attached")),
+                     Then_Part => [F.New_Return]),
+                  F.New_If
                     (Condition => F.New_Binary (Rescind, "=", Null_Cap),
                      Then_Part =>
                        [F.New_Assignment
@@ -1603,10 +1699,18 @@ package body Idle.Targets.Kernel.Server is
         return not null Syn.Node_Access
       is
       begin
+         --  A user-target handler serves only its own package's objects,
+         --  so that packages whose interfaces share an ancestor can share
+         --  its endpoints (idle#84).
+
          return Call (Server & "Register_Handler",
                       [F.New_Name ("Server_Context"),
                        F.New_Name (Endpoint),
-                       F.New_Attribute (F.New_Name (Handler), "Access")]);
+                       F.New_Attribute (F.New_Name (Handler), "Access")]
+                      & (if User
+                         then [F.New_Attribute (F.New_Name ("Owns"),
+                                                "Access")]
+                         else Syn.No_Nodes));
       end Register;
 
       -------------------
