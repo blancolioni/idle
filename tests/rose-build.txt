@@ -5,6 +5,8 @@ directory
 file
 writable_directory
 writable_file
+transactional
+transactional_writable_file
 user
 resource
 file_reader

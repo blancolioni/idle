@@ -1,0 +1,13 @@
+--  An object whose changes are committed, or rolled back, by whoever
+--  holds it (Rose ADR 0026).
+
+interface Transactional is
+
+   procedure Commit;
+   --  Make the changes since the last Commit the object's contents. The
+   --  object stays open, for more changes.
+
+   procedure Rollback;
+   --  Drop the changes since the last Commit. The object stays open.
+
+end Transactional;

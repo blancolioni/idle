@@ -349,10 +349,15 @@ package body Idle.Targets.Kernel.Commands is
             function Object_Unit return String
             is ("Rose.Interfaces." & Idle.Names.Ada_Name (Type_Name));
 
-            function Object_Class return String
-            is (Object_Unit & "." & Idle.Names.Ada_Name (Type_Name)
-                & "_Object'Class");
-            --  For the user target, the type of the command's parameter.
+            function Object_Class return not null Syn.Node_Access
+            is (F.New_Attribute
+                  (F.New_Name
+                     (Object_Unit & "." & Idle.Names.Ada_Name (Type_Name)
+                      & "_Object"),
+                   "Class"));
+            --  For the user target, the type of the command's parameter:
+            --  an attribute of the name, so that the name can break
+            --  before a dot.
 
             function Cap_Argument return not null Syn.Node_Access
             is (F.New_Call
@@ -416,7 +421,7 @@ package body Idle.Targets.Kernel.Commands is
                if Target = User_Target then
                   Parameters.Append
                     (F.New_Parameter
-                       (Argument_Name, F.New_Name (Object_Class),
+                       (Argument_Name, Object_Class,
                         Syn.In_Out_Mode));
                else
                   Parameters.Append
@@ -476,11 +481,16 @@ package body Idle.Targets.Kernel.Commands is
                       else Type_Name));
                if Argument.Mode = Out_Mode then
                   Line ("mode", "out");
-               elsif Placed.Kind = Interface_Argument
-                 and then Idle.Commands.Is_Versioned (Item, Argument)
-               then
-                  --  The shell versions it, unless the command is live.
-                  Line ("versioned", "true");
+               elsif Placed.Kind = Interface_Argument then
+                  if Idle.Commands.Is_Versioned (Item, Argument) then
+                     --  The shell versions it, unless the command is live.
+                     Line ("versioned", "true");
+                  end if;
+                  if Idle.Commands.Is_Transactional (Item, Argument) then
+                     --  The shell gives it a version, which the command
+                     --  commits (Rose ADR 0026).
+                     Line ("transactional", "true");
+                  end if;
                end if;
                if Where.Kind /= No_Place then
                   Line ("place",
