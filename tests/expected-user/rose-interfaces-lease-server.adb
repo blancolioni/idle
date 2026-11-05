@@ -1,3 +1,4 @@
+with Ada.Containers.Vectors;
 with Rose.Interfaces.Objects;
 with Rose.Invocation;
 with Rose.System_Calls;
@@ -18,13 +19,10 @@ package body Rose.Interfaces.Lease.Server is
       Retired    : Boolean := False;
    end record;
 
-   Max_Attached    : constant := 16;
+   package Attached_Vectors is
+     new Ada.Containers.Vectors (Natural, Attached_Object);
 
-   type Attached_Array is array (0 .. (Max_Attached - 1)) of Attached_Object;
-
-   Attached        : Attached_Array;
-
-   Attached_Count  : Natural := 0;
+   Attached        : Attached_Vectors.Vector;
 
    Registered      : Boolean := False;
 
@@ -129,8 +127,8 @@ package body Rose.Interfaces.Lease.Server is
             Owns'Access);
          Registered := True;
       end if;
-      if Slot = Max_Attached then
-         raise Constraint_Error with "Lease.Server: too many objects";
+      if Slot = Natural (Attached.Length) then
+         Attached.Append (Attached_Object'(others => <>));
       end if;
       Attached (Slot).Object := Object_Access (Object);
       Attached (Slot).Identifier := Rose.Server.New_Identifier;
@@ -138,9 +136,6 @@ package body Rose.Interfaces.Lease.Server is
         Rose.Server.Create_Endpoint
           (Rose.Interfaces.Lease.Lease_Interface,
            Attached (Slot).Identifier);
-      if Slot = Attached_Count then
-         Attached_Count := Attached_Count + 1;
-      end if;
    end Attach;
 
    ------------
@@ -202,7 +197,7 @@ package body Rose.Interfaces.Lease.Server is
       use type Rose.Objects.Capability_Identifier;
       Slot : constant Natural := Slot_Of (Identifier);
    begin
-      if Slot = Max_Attached then
+      if Slot >= Natural (Attached.Length) then
          return;
       end if;
       if Rose.System_Calls.Rescind_Cap_Capability = Rose.Capabilities
@@ -331,6 +326,9 @@ package body Rose.Interfaces.Lease.Server is
       use type Rose.Objects.Capability_Identifier;
    begin
       if Identifier = 0 then
+         if Attached.Is_Empty then
+            return null;
+         end if;
          return Attached (0).Object;
       end if;
       for Item of Attached loop
@@ -349,14 +347,12 @@ package body Rose.Interfaces.Lease.Server is
       Index : Natural := 0;
    begin
       for Item of Attached loop
-         if Index < Attached_Count and then Item.Object = null
-           and then not Item.Retired
-         then
+         if Item.Object = null and then not Item.Retired then
             return Index;
          end if;
          Index := Index + 1;
       end loop;
-      return Attached_Count;
+      return Natural (Attached.Length);
    end Free_Slot;
 
    ------------------
@@ -945,7 +941,7 @@ package body Rose.Interfaces.Lease.Server is
          end if;
          Index := Index + 1;
       end loop;
-      return Max_Attached;
+      return Natural (Attached.Length);
    end Slot_Of;
 
 end Rose.Interfaces.Lease.Server;

@@ -1,3 +1,4 @@
+with Ada.Containers.Vectors;
 with Rose.Interfaces.Objects;
 with Rose.Invocation;
 with Rose.System_Calls;
@@ -18,13 +19,10 @@ package body Rose.Interfaces.Block_Device.Server is
         Rose.Capabilities.Null_Capability;
    end record;
 
-   Max_Attached    : constant := 16;
+   package Attached_Vectors is
+     new Ada.Containers.Vectors (Natural, Attached_Object);
 
-   type Attached_Array is array (0 .. (Max_Attached - 1)) of Attached_Object;
-
-   Attached        : Attached_Array;
-
-   Attached_Count  : Natural := 0;
+   Attached        : Attached_Vectors.Vector;
 
    Registered      : Boolean := False;
 
@@ -80,16 +78,13 @@ package body Rose.Interfaces.Block_Device.Server is
             Owns'Access);
          Registered := True;
       end if;
-      if Attached_Count = Max_Attached then
-         raise Constraint_Error with "Block_Device.Server: too many objects";
-      end if;
-      Attached (Attached_Count).Object := Object_Access (Object);
-      Attached (Attached_Count).Identifier := Rose.Server.New_Identifier;
-      Attached (Attached_Count).Cap :=
+      Attached.Append (Attached_Object'(others => <>));
+      Attached (Attached.Last_Index).Object := Object_Access (Object);
+      Attached (Attached.Last_Index).Identifier := Rose.Server.New_Identifier;
+      Attached (Attached.Last_Index).Cap :=
         Rose.Server.Create_Endpoint
           (Rose.Interfaces.Block_Device.Block_Device_Interface,
-           Attached (Attached_Count).Identifier);
-      Attached_Count := Attached_Count + 1;
+           Attached (Attached.Last_Index).Identifier);
    end Attach;
 
    ------------
@@ -131,6 +126,9 @@ package body Rose.Interfaces.Block_Device.Server is
       use type Rose.Objects.Capability_Identifier;
    begin
       if Identifier = 0 then
+         if Attached.Is_Empty then
+            return null;
+         end if;
          return Attached (0).Object;
       end if;
       for Item of Attached loop
