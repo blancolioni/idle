@@ -130,6 +130,8 @@ package body Rose.Interfaces.Journal.Client.Conversions is
             Item.Open_Reader,
             Item.Open_Seekable_Reader,
             Item.Write,
+            Item.Truncate,
+            Item.New_Version,
             Item.Commit,
             Item.Rollback,
             Item.Release);
@@ -163,7 +165,9 @@ package body Rose.Interfaces.Journal.Client.Conversions is
             Item.Size,
             Item.Open_Reader,
             Item.Open_Seekable_Reader,
-            Item.Write);
+            Item.Write,
+            Item.Truncate,
+            Item.New_Version);
       else
          Rose.System_Calls.Initialize_Send (Params, Item.Interface_Cap);
          Rose.System_Calls.Send_Word (Params, Natural (3));

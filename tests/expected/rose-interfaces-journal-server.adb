@@ -25,6 +25,16 @@ package body Rose.Interfaces.Journal.Server is
    Write_Cap                  : Rose.Capabilities.Capability :=
      Rose.Capabilities.Null_Capability;
 
+   Local_Truncate             : Truncate_Handler;
+
+   Truncate_Cap               : Rose.Capabilities.Capability :=
+     Rose.Capabilities.Null_Capability;
+
+   Local_New_Version          : New_Version_Handler;
+
+   New_Version_Cap            : Rose.Capabilities.Capability :=
+     Rose.Capabilities.Null_Capability;
+
    Local_Commit               : Commit_Handler;
 
    Commit_Cap                 : Rose.Capabilities.Capability :=
@@ -76,6 +86,12 @@ package body Rose.Interfaces.Journal.Server is
    procedure Handle_Write
      (Parameters : in out Rose.Invocation.Invocation_Record);
 
+   procedure Handle_Truncate
+     (Parameters : in out Rose.Invocation.Invocation_Record);
+
+   procedure Handle_New_Version
+     (Parameters : in out Rose.Invocation.Invocation_Record);
+
    procedure Handle_Commit
      (Parameters : in out Rose.Invocation.Invocation_Record);
 
@@ -95,6 +111,8 @@ package body Rose.Interfaces.Journal.Server is
       Open_Reader          : Open_Reader_Handler;
       Open_Seekable_Reader : Open_Seekable_Reader_Handler;
       Write                : Write_Handler;
+      Truncate             : Truncate_Handler;
+      New_Version          : New_Version_Handler;
       Commit               : Commit_Handler;
       Rollback             : Rollback_Handler;
       Release              : Release_Handler;
@@ -105,6 +123,8 @@ package body Rose.Interfaces.Journal.Server is
       Local_Open_Reader := Open_Reader;
       Local_Open_Seekable_Reader := Open_Seekable_Reader;
       Local_Write := Write;
+      Local_Truncate := Truncate;
+      Local_New_Version := New_Version;
       Local_Commit := Commit;
       Local_Rollback := Rollback;
       Local_Release := Release;
@@ -142,6 +162,8 @@ package body Rose.Interfaces.Journal.Server is
          Open_Seekable_Reader_Cap :=
            Rose.Server.Create_Endpoint (Open_Seekable_Reader_Endpoint);
          Write_Cap := Rose.Server.Create_Endpoint (Write_Endpoint);
+         Truncate_Cap := Rose.Server.Create_Endpoint (Truncate_Endpoint);
+         New_Version_Cap := Rose.Server.Create_Endpoint (New_Version_Endpoint);
          Commit_Cap := Rose.Server.Create_Endpoint (Commit_Endpoint);
          Rollback_Cap := Rose.Server.Create_Endpoint (Rollback_Endpoint);
          Release_Cap := Rose.Server.Create_Endpoint (Release_Endpoint);
@@ -172,6 +194,14 @@ package body Rose.Interfaces.Journal.Server is
          Handle_Write'Access);
       Rose.Server.Register_Handler
         (Server_Context,
+         Truncate_Endpoint,
+         Handle_Truncate'Access);
+      Rose.Server.Register_Handler
+        (Server_Context,
+         New_Version_Endpoint,
+         Handle_New_Version'Access);
+      Rose.Server.Register_Handler
+        (Server_Context,
          Commit_Endpoint,
          Handle_Commit'Access);
       Rose.Server.Register_Handler
@@ -194,6 +224,8 @@ package body Rose.Interfaces.Journal.Server is
       Open_Reader          : Open_Reader_Handler;
       Open_Seekable_Reader : Open_Seekable_Reader_Handler;
       Write                : Write_Handler;
+      Truncate             : Truncate_Handler;
+      New_Version          : New_Version_Handler;
       Commit               : Commit_Handler;
       Rollback             : Rollback_Handler;
       Release              : Release_Handler;
@@ -206,6 +238,8 @@ package body Rose.Interfaces.Journal.Server is
          Open_Reader,
          Open_Seekable_Reader,
          Write,
+         Truncate,
+         New_Version,
          Commit,
          Rollback,
          Release,
@@ -217,6 +251,14 @@ package body Rose.Interfaces.Journal.Server is
    --------------------
 
    function Get_Commit_Cap return Rose.Capabilities.Capability is (Commit_Cap);
+
+   -------------------------
+   -- Get_New_Version_Cap --
+   -------------------------
+
+   function Get_New_Version_Cap
+      return Rose.Capabilities.Capability
+   is (New_Version_Cap);
 
    -------------------------
    -- Get_Open_Reader_Cap --
@@ -255,6 +297,14 @@ package body Rose.Interfaces.Journal.Server is
    ------------------
 
    function Get_Size_Cap return Rose.Capabilities.Capability is (Size_Cap);
+
+   ----------------------
+   -- Get_Truncate_Cap --
+   ----------------------
+
+   function Get_Truncate_Cap
+      return Rose.Capabilities.Capability
+   is (Truncate_Cap);
 
    -------------------
    -- Get_Write_Cap --
@@ -458,6 +508,50 @@ package body Rose.Interfaces.Journal.Server is
                  Identifier);
          else
             Cap := Write_Cap;
+         end if;
+         Rose.System_Calls.Send_Cap (Parameters, Cap);
+         if Truncate_Cap = Rose.Capabilities.Null_Capability then
+            if not Rose.Server.Has_Instance
+              (Server_Instance,
+               Truncate_Endpoint,
+               Identifier)
+            then
+               Rose.Server.Set_Instance_Cap
+                 (Server_Instance,
+                  Truncate_Endpoint,
+                  Identifier,
+                  Rose.Server.Create_Endpoint (Truncate_Endpoint, Identifier));
+            end if;
+            Cap :=
+              Rose.Server.Get_Instance_Cap
+                (Server_Instance,
+                 Truncate_Endpoint,
+                 Identifier);
+         else
+            Cap := Truncate_Cap;
+         end if;
+         Rose.System_Calls.Send_Cap (Parameters, Cap);
+         if New_Version_Cap = Rose.Capabilities.Null_Capability then
+            if not Rose.Server.Has_Instance
+              (Server_Instance,
+               New_Version_Endpoint,
+               Identifier)
+            then
+               Rose.Server.Set_Instance_Cap
+                 (Server_Instance,
+                  New_Version_Endpoint,
+                  Identifier,
+                  Rose.Server.Create_Endpoint
+                    (New_Version_Endpoint,
+                     Identifier));
+            end if;
+            Cap :=
+              Rose.Server.Get_Instance_Cap
+                (Server_Instance,
+                 New_Version_Endpoint,
+                 Identifier);
+         else
+            Cap := New_Version_Cap;
          end if;
          Rose.System_Calls.Send_Cap (Parameters, Cap);
          if Commit_Cap = Rose.Capabilities.Null_Capability then
@@ -895,6 +989,50 @@ package body Rose.Interfaces.Journal.Server is
             Cap := Write_Cap;
          end if;
          Rose.System_Calls.Send_Cap (Parameters, Cap);
+         if Truncate_Cap = Rose.Capabilities.Null_Capability then
+            if not Rose.Server.Has_Instance
+              (Server_Instance,
+               Truncate_Endpoint,
+               Identifier)
+            then
+               Rose.Server.Set_Instance_Cap
+                 (Server_Instance,
+                  Truncate_Endpoint,
+                  Identifier,
+                  Rose.Server.Create_Endpoint (Truncate_Endpoint, Identifier));
+            end if;
+            Cap :=
+              Rose.Server.Get_Instance_Cap
+                (Server_Instance,
+                 Truncate_Endpoint,
+                 Identifier);
+         else
+            Cap := Truncate_Cap;
+         end if;
+         Rose.System_Calls.Send_Cap (Parameters, Cap);
+         if New_Version_Cap = Rose.Capabilities.Null_Capability then
+            if not Rose.Server.Has_Instance
+              (Server_Instance,
+               New_Version_Endpoint,
+               Identifier)
+            then
+               Rose.Server.Set_Instance_Cap
+                 (Server_Instance,
+                  New_Version_Endpoint,
+                  Identifier,
+                  Rose.Server.Create_Endpoint
+                    (New_Version_Endpoint,
+                     Identifier));
+            end if;
+            Cap :=
+              Rose.Server.Get_Instance_Cap
+                (Server_Instance,
+                 New_Version_Endpoint,
+                 Identifier);
+         else
+            Cap := New_Version_Cap;
+         end if;
+         Rose.System_Calls.Send_Cap (Parameters, Cap);
          if Commit_Cap = Rose.Capabilities.Null_Capability then
             if not Rose.Server.Has_Instance
               (Server_Instance,
@@ -1179,6 +1317,50 @@ package body Rose.Interfaces.Journal.Server is
             Cap := Write_Cap;
          end if;
          Rose.System_Calls.Send_Cap (Parameters, Cap);
+         if Truncate_Cap = Rose.Capabilities.Null_Capability then
+            if not Rose.Server.Has_Instance
+              (Server_Instance,
+               Truncate_Endpoint,
+               Identifier)
+            then
+               Rose.Server.Set_Instance_Cap
+                 (Server_Instance,
+                  Truncate_Endpoint,
+                  Identifier,
+                  Rose.Server.Create_Endpoint (Truncate_Endpoint, Identifier));
+            end if;
+            Cap :=
+              Rose.Server.Get_Instance_Cap
+                (Server_Instance,
+                 Truncate_Endpoint,
+                 Identifier);
+         else
+            Cap := Truncate_Cap;
+         end if;
+         Rose.System_Calls.Send_Cap (Parameters, Cap);
+         if New_Version_Cap = Rose.Capabilities.Null_Capability then
+            if not Rose.Server.Has_Instance
+              (Server_Instance,
+               New_Version_Endpoint,
+               Identifier)
+            then
+               Rose.Server.Set_Instance_Cap
+                 (Server_Instance,
+                  New_Version_Endpoint,
+                  Identifier,
+                  Rose.Server.Create_Endpoint
+                    (New_Version_Endpoint,
+                     Identifier));
+            end if;
+            Cap :=
+              Rose.Server.Get_Instance_Cap
+                (Server_Instance,
+                 New_Version_Endpoint,
+                 Identifier);
+         else
+            Cap := New_Version_Cap;
+         end if;
+         Rose.System_Calls.Send_Cap (Parameters, Cap);
       else
          if Ancestor = 1 then
             if not Rose.Server.Has_Instance
@@ -1227,6 +1409,20 @@ package body Rose.Interfaces.Journal.Server is
          end if;
       end if;
    end Handle_Get_Writable_File_Interface;
+
+   ------------------------
+   -- Handle_New_Version --
+   ------------------------
+
+   procedure Handle_New_Version
+     (Parameters : in out Rose.Invocation.Invocation_Record)
+   is
+      Result : constant Rose.Capabilities.Capability :=
+        Local_New_Version (Parameters.Identifier);
+   begin
+      Rose.System_Calls.Initialize_Reply (Parameters, Parameters.Reply_Cap);
+      Rose.System_Calls.Send_Cap (Parameters, Result);
+   end Handle_New_Version;
 
    ------------------------
    -- Handle_Open_Reader --
@@ -1295,6 +1491,21 @@ package body Rose.Interfaces.Journal.Server is
       Rose.System_Calls.Send_Storage_Offset (Parameters, Result);
    end Handle_Size;
 
+   ---------------------
+   -- Handle_Truncate --
+   ---------------------
+
+   procedure Handle_Truncate
+     (Parameters : in out Rose.Invocation.Invocation_Record)
+   is
+      Size : constant System.Storage_Elements.Storage_Count :=
+        System.Storage_Elements.Storage_Count
+          (Rose.System_Calls.Get_Word_32 (Parameters, 0));
+   begin
+      Local_Truncate (Parameters.Identifier, Size);
+      Rose.System_Calls.Initialize_Reply (Parameters, Parameters.Reply_Cap);
+   end Handle_Truncate;
+
    ------------------
    -- Handle_Write --
    ------------------
@@ -1320,6 +1531,8 @@ package body Rose.Interfaces.Journal.Server is
       Open_Reader          : Open_Reader_Handler;
       Open_Seekable_Reader : Open_Seekable_Reader_Handler;
       Write                : Write_Handler;
+      Truncate             : Truncate_Handler;
+      New_Version          : New_Version_Handler;
       Commit               : Commit_Handler;
       Rollback             : Rollback_Handler;
       Release              : Release_Handler)
@@ -1329,6 +1542,8 @@ package body Rose.Interfaces.Journal.Server is
       Local_Open_Reader := Open_Reader;
       Local_Open_Seekable_Reader := Open_Seekable_Reader;
       Local_Write := Write;
+      Local_Truncate := Truncate;
+      Local_New_Version := New_Version;
       Local_Commit := Commit;
       Local_Rollback := Rollback;
       Local_Release := Release;
@@ -1337,6 +1552,8 @@ package body Rose.Interfaces.Journal.Server is
       Open_Seekable_Reader_Cap :=
         Rose.Server.Create_Endpoint (Open_Seekable_Reader_Endpoint);
       Write_Cap := Rose.Server.Create_Endpoint (Write_Endpoint);
+      Truncate_Cap := Rose.Server.Create_Endpoint (Truncate_Endpoint);
+      New_Version_Cap := Rose.Server.Create_Endpoint (New_Version_Endpoint);
       Commit_Cap := Rose.Server.Create_Endpoint (Commit_Endpoint);
       Rollback_Cap := Rose.Server.Create_Endpoint (Rollback_Endpoint);
       Release_Cap := Rose.Server.Create_Endpoint (Release_Endpoint);
@@ -1385,6 +1602,14 @@ package body Rose.Interfaces.Journal.Server is
         (Server_Context,
          Write_Endpoint,
          Handle_Write'Access);
+      Rose.Server.Register_Handler
+        (Server_Context,
+         Truncate_Endpoint,
+         Handle_Truncate'Access);
+      Rose.Server.Register_Handler
+        (Server_Context,
+         New_Version_Endpoint,
+         Handle_New_Version'Access);
       Rose.Server.Register_Handler
         (Server_Context,
          Commit_Endpoint,

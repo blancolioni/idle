@@ -25,3 +25,5 @@ modes/toggle
 modes/boolean_result
 modes/boolean_in
 modes/boolean_out
+rose/writable_file
+rose/transactional_writable_file

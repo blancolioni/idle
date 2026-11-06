@@ -20,6 +20,8 @@ package body Rose.Interfaces.Journal.Client is
       Rose.System_Calls.Delete_Cap (Client.Open_Reader);
       Rose.System_Calls.Delete_Cap (Client.Open_Seekable_Reader);
       Rose.System_Calls.Delete_Cap (Client.Write);
+      Rose.System_Calls.Delete_Cap (Client.Truncate);
+      Rose.System_Calls.Delete_Cap (Client.New_Version);
       Rose.System_Calls.Delete_Cap (Client.Commit);
       Rose.System_Calls.Delete_Cap (Client.Rollback);
       Rose.System_Calls.Delete_Cap (Client.Release);
@@ -68,6 +70,15 @@ package body Rose.Interfaces.Journal.Client is
    is (Last_Error);
 
    -------------------------
+   -- Get_New_Version_Cap --
+   -------------------------
+
+   function Get_New_Version_Cap
+     (Item : Journal_Client)
+      return Rose.Capabilities.Capability
+   is (Item.New_Version);
+
+   -------------------------
    -- Get_Open_Reader_Cap --
    -------------------------
 
@@ -112,6 +123,15 @@ package body Rose.Interfaces.Journal.Client is
       return Rose.Capabilities.Capability
    is (Item.Size);
 
+   ----------------------
+   -- Get_Truncate_Cap --
+   ----------------------
+
+   function Get_Truncate_Cap
+     (Item : Journal_Client)
+      return Rose.Capabilities.Capability
+   is (Item.Truncate);
+
    -------------------
    -- Get_Write_Cap --
    -------------------
@@ -126,6 +146,36 @@ package body Rose.Interfaces.Journal.Client is
    ---------------
 
    function Has_Error return Boolean is (Last_Error /= Rose.Invocation.OK);
+
+   -----------------
+   -- New_Version --
+   -----------------
+
+   function New_Version
+     (Item : Journal_Client)
+      return
+        Rose.Interfaces.Transactional_Writable_File.Client
+          .Transactional_Writable_File_Client
+   is
+      Params : aliased Rose.Invocation.Invocation_Record;
+   begin
+      Rose.System_Calls.Initialize_Send (Params, Item.New_Version);
+      Rose.System_Calls.Receive_Caps (Params, 1);
+      Rose.System_Calls.Invoke_Capability (Params);
+      Last_Error := Rose.Invocation.OK;
+      if Params.Control.Flags (Rose.Invocation.Error) then
+         Last_Error := Params.Error;
+      end if;
+      declare
+         Result : Rose.Interfaces.Transactional_Writable_File.Client
+           .Transactional_Writable_File_Client;
+      begin
+         Rose.Interfaces.Transactional_Writable_File.Client.Open
+           (Result,
+            Params.Caps (0));
+         return Result;
+      end;
+   end New_Version;
 
    ----------
    -- Open --
@@ -146,6 +196,8 @@ package body Rose.Interfaces.Journal.Client is
       Client.Open_Reader := Params.Caps (Open_Reader_Index);
       Client.Open_Seekable_Reader := Params.Caps (Open_Seekable_Reader_Index);
       Client.Write := Params.Caps (Write_Index);
+      Client.Truncate := Params.Caps (Truncate_Index);
+      Client.New_Version := Params.Caps (New_Version_Index);
       Client.Commit := Params.Caps (Commit_Index);
       Client.Rollback := Params.Caps (Rollback_Index);
       Client.Release := Params.Caps (Release_Index);
@@ -162,6 +214,8 @@ package body Rose.Interfaces.Journal.Client is
       Open_Reader          : Rose.Capabilities.Capability;
       Open_Seekable_Reader : Rose.Capabilities.Capability;
       Write                : Rose.Capabilities.Capability;
+      Truncate             : Rose.Capabilities.Capability;
+      New_Version          : Rose.Capabilities.Capability;
       Commit               : Rose.Capabilities.Capability;
       Rollback             : Rose.Capabilities.Capability;
       Release              : Rose.Capabilities.Capability)
@@ -171,6 +225,8 @@ package body Rose.Interfaces.Journal.Client is
       Client.Open_Reader := Open_Reader;
       Client.Open_Seekable_Reader := Open_Seekable_Reader;
       Client.Write := Write;
+      Client.Truncate := Truncate;
+      Client.New_Version := New_Version;
       Client.Commit := Commit;
       Client.Rollback := Rollback;
       Client.Release := Release;
@@ -281,6 +337,25 @@ package body Rose.Interfaces.Journal.Client is
       return System.Storage_Elements.Storage_Count
         (Rose.System_Calls.Get_Word_32 (Params, 0));
    end Size;
+
+   --------------
+   -- Truncate --
+   --------------
+
+   procedure Truncate
+     (Item : Journal_Client;
+      Size : System.Storage_Elements.Storage_Count)
+   is
+      Params : aliased Rose.Invocation.Invocation_Record;
+   begin
+      Rose.System_Calls.Initialize_Send (Params, Item.Truncate);
+      Rose.System_Calls.Send_Storage_Offset (Params, Size);
+      Rose.System_Calls.Invoke_Capability (Params);
+      Last_Error := Rose.Invocation.OK;
+      if Params.Control.Flags (Rose.Invocation.Error) then
+         Last_Error := Params.Error;
+      end if;
+   end Truncate;
 
    -----------
    -- Write --

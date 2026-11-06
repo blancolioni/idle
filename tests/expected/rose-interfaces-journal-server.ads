@@ -21,6 +21,14 @@ package Rose.Interfaces.Journal.Server is
      (Id     : Rose.Objects.Capability_Identifier;
       Buffer : System.Storage_Elements.Storage_Array);
 
+   type Truncate_Handler is access procedure
+     (Id   : Rose.Objects.Capability_Identifier;
+      Size : System.Storage_Elements.Storage_Count);
+
+   type New_Version_Handler is access function
+     (Id : Rose.Objects.Capability_Identifier)
+      return Rose.Capabilities.Capability;
+
    type Commit_Handler is access procedure
      (Id : Rose.Objects.Capability_Identifier);
 
@@ -36,6 +44,8 @@ package Rose.Interfaces.Journal.Server is
       Open_Reader          : Open_Reader_Handler;
       Open_Seekable_Reader : Open_Seekable_Reader_Handler;
       Write                : Write_Handler;
+      Truncate             : Truncate_Handler;
+      New_Version          : New_Version_Handler;
       Commit               : Commit_Handler;
       Rollback             : Rollback_Handler;
       Release              : Release_Handler;
@@ -47,6 +57,8 @@ package Rose.Interfaces.Journal.Server is
       Open_Reader          : Open_Reader_Handler;
       Open_Seekable_Reader : Open_Seekable_Reader_Handler;
       Write                : Write_Handler;
+      Truncate             : Truncate_Handler;
+      New_Version          : New_Version_Handler;
       Commit               : Commit_Handler;
       Rollback             : Rollback_Handler;
       Release              : Release_Handler;
@@ -58,6 +70,8 @@ package Rose.Interfaces.Journal.Server is
       Open_Reader          : Open_Reader_Handler;
       Open_Seekable_Reader : Open_Seekable_Reader_Handler;
       Write                : Write_Handler;
+      Truncate             : Truncate_Handler;
+      New_Version          : New_Version_Handler;
       Commit               : Commit_Handler;
       Rollback             : Rollback_Handler;
       Release              : Release_Handler);
@@ -69,6 +83,10 @@ package Rose.Interfaces.Journal.Server is
    function Get_Open_Seekable_Reader_Cap return Rose.Capabilities.Capability;
 
    function Get_Write_Cap return Rose.Capabilities.Capability;
+
+   function Get_Truncate_Cap return Rose.Capabilities.Capability;
+
+   function Get_New_Version_Cap return Rose.Capabilities.Capability;
 
    function Get_Commit_Cap return Rose.Capabilities.Capability;
 

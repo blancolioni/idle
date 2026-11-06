@@ -1,3 +1,4 @@
+with Ada.Strings.Fixed;
 with Ada.Strings.Unbounded;
 
 with Syn;
@@ -1730,15 +1731,26 @@ package body Idle.Targets.Kernel.Server is
       --------------------
 
       function Result_Subtype (Info : Types.Type_Info) return String is
-         Name : constant String :=
+         Name   : constant String :=
            To_String (Info.Interface_Name) & "_Object_Class";
+         Target : constant String := Types.Object_Class (Info);
+         Dot    : constant Natural :=
+           Ada.Strings.Fixed.Index
+             (Target, ".", Going => Ada.Strings.Backward);
+         --  The declaration is raw text, which Syn can't break, so a
+         --  type that doesn't fit after the indent breaks here, before
+         --  its last selector, as Syn breaks a name.
       begin
          if not Result_Types.Contains (Name) then
             Result_Types.Add (Name);
             Objects.Append
               (F.New_Raw
-                 ("subtype " & Name & " is" & ASCII.LF
-                  & "  " & Types.Object_Class (Info) & ";"));
+                 ("subtype " & Name & " is" & ASCII.LF & "  "
+                  & (if 6 + Target'Length + 1 <= 79 or else Dot = 0
+                     then Target
+                     else Target (Target'First .. Dot - 1) & ASCII.LF
+                          & "    " & Target (Dot .. Target'Last))
+                  & ";"));
          end if;
          return Name;
       end Result_Subtype;

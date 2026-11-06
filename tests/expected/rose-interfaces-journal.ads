@@ -35,6 +35,12 @@ package Rose.Interfaces.Journal is
    Write_Endpoint                        : constant Rose.Objects.Endpoint_Id :=
      16#C5CD_0953_4A8B_BC37#;
 
+   Truncate_Endpoint                     : constant Rose.Objects.Endpoint_Id :=
+     16#87FC_81AD_DC91_1DB9#;
+
+   New_Version_Endpoint                  : constant Rose.Objects.Endpoint_Id :=
+     16#9485_9E3C_A2FA_C7E8#;
+
    Commit_Endpoint                       : constant Rose.Objects.Endpoint_Id :=
      16#893C_52C0_D783_084D#;
 
@@ -52,12 +58,16 @@ package Rose.Interfaces.Journal is
 
    Write_Index                           : constant := 3;
 
-   Commit_Index                          : constant := 4;
+   Truncate_Index                        : constant := 4;
 
-   Rollback_Index                        : constant := 5;
+   New_Version_Index                     : constant := 5;
 
-   Release_Index                         : constant := 6;
+   Commit_Index                          : constant := 6;
 
-   Subprogram_Count                      : constant := 7;
+   Rollback_Index                        : constant := 7;
+
+   Release_Index                         : constant := 8;
+
+   Subprogram_Count                      : constant := 9;
 
 end Rose.Interfaces.Journal;

@@ -359,6 +359,13 @@ package body Idle.Targets.Kernel.Client is
            F.New_Function
              ("From_Cap", F.New_Name (Client_Type),
               [F.New_Parameter ("Cap", F.New_Name (Capability_Name))]);
+         Aggregate     : constant String :=
+           "(Interface_Cap => Cap, others => <>)";
+         Fits          : constant Boolean :=
+           Client_Type'Length + Aggregate'Length + 10 <= 79;
+         --  The expression is raw text, which Syn can't break, so it is
+         --  broken here if "   is (" and it, with "'" and ");", would
+         --  be too long.
       begin
          Public_Part.Append (Specification);
          Bodies.Add
@@ -366,8 +373,9 @@ package body Idle.Targets.Kernel.Client is
             F.New_Expression_Function
               (Specification,
                F.New_Raw
-                 (Client_Type
-                  & "'(Interface_Cap => Cap, others => <>)")));
+                 (Client_Type & "'"
+                  & (if Fits then "" else ASCII.LF & "      ")
+                  & Aggregate)));
       end Add_From_Cap;
 
       -----------------
