@@ -7,4 +7,5 @@ is
    Input : File := Nothing;
    Who : in out Named;
    Count : in out Natural;
+   Source : in File := Standard_Input;
 end Rose.Core.Modes;

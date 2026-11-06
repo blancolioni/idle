@@ -371,7 +371,9 @@ package body Idle.Targets.Kernel.Commands is
 
             procedure Use_Client;
             --  Pass the cap of the argument to the command as a client of
-            --  its interface.
+            --  its interface. An argument that defaults to Standard_Input
+            --  is passed the cap of its stream's subprogram, as the role
+            --  is, so the client is opened from that (idle#52).
 
             ----------------
             -- Return_Cap --
@@ -414,7 +416,10 @@ package body Idle.Targets.Kernel.Commands is
                Statements.Append
                  (F.New_Call_Statement
                     (F.New_Call
-                       (Client_Unit & ".Open",
+                       (Client_Unit
+                        & (if Idle.Commands.Defaults_To_Standard_Input
+                                (Argument)
+                           then ".Open_Cap_Set" else ".Open"),
                         [F.New_Name (Argument_Name), Cap_Argument])));
                Arguments.Append
                  (F.New_Named (Argument_Name, F.New_Name (Argument_Name)));

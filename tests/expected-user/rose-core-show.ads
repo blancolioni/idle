@@ -1,7 +1,9 @@
 with Rose.Interfaces.File;
+with Rose.Interfaces.Stream_Reader;
 with Rose.Interfaces.Stream_Writer;
 
 procedure Rose.Core.Show
   (Logging : in out Rose.Interfaces.Stream_Writer.Stream_Writer_Object'Class;
    Source  : in out Rose.Interfaces.File.File_Object'Class;
-   Count   : out Natural);
+   Count   : out Natural;
+   Input   : in out Rose.Interfaces.Stream_Reader.Stream_Reader_Object'Class);
