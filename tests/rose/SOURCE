@@ -1,1 +1,2 @@
 Snapshot of Rose interfaces/ at blancolioni/rose 1e29d92.
+writable_file.idl, transactional.idl and transactional_writable_file.idl are from blancolioni/rose#754 (branch transactional-754).

@@ -1,6 +1,7 @@
 with Rose.Capabilities;
 with Rose.Interfaces.File_Reader.Client;
 with Rose.Interfaces.Seekable_File_Reader.Client;
+with Rose.Interfaces.Transactional_Writable_File.Client;
 with Rose.Invocation;
 with System.Storage_Elements;
 
@@ -14,6 +15,8 @@ package Rose.Interfaces.Journal.Client is
       Open_Reader          : Rose.Capabilities.Capability;
       Open_Seekable_Reader : Rose.Capabilities.Capability;
       Write                : Rose.Capabilities.Capability;
+      Truncate             : Rose.Capabilities.Capability;
+      New_Version          : Rose.Capabilities.Capability;
       Commit               : Rose.Capabilities.Capability;
       Rollback             : Rose.Capabilities.Capability;
       Release              : Rose.Capabilities.Capability);
@@ -42,6 +45,16 @@ package Rose.Interfaces.Journal.Client is
      (Item   : Journal_Client;
       Buffer : System.Storage_Elements.Storage_Array);
 
+   procedure Truncate
+     (Item : Journal_Client;
+      Size : System.Storage_Elements.Storage_Count);
+
+   function New_Version
+     (Item : Journal_Client)
+      return
+        Rose.Interfaces.Transactional_Writable_File.Client
+          .Transactional_Writable_File_Client;
+
    procedure Commit (Item : Journal_Client);
 
    procedure Rollback (Item : Journal_Client);
@@ -65,6 +78,14 @@ package Rose.Interfaces.Journal.Client is
       return Rose.Capabilities.Capability;
 
    function Get_Write_Cap
+     (Item : Journal_Client)
+      return Rose.Capabilities.Capability;
+
+   function Get_Truncate_Cap
+     (Item : Journal_Client)
+      return Rose.Capabilities.Capability;
+
+   function Get_New_Version_Cap
      (Item : Journal_Client)
       return Rose.Capabilities.Capability;
 
@@ -97,6 +118,10 @@ private
       Open_Seekable_Reader : Rose.Capabilities.Capability :=
         Rose.Capabilities.Null_Capability;
       Write                : Rose.Capabilities.Capability :=
+        Rose.Capabilities.Null_Capability;
+      Truncate             : Rose.Capabilities.Capability :=
+        Rose.Capabilities.Null_Capability;
+      New_Version          : Rose.Capabilities.Capability :=
         Rose.Capabilities.Null_Capability;
       Commit               : Rose.Capabilities.Capability :=
         Rose.Capabilities.Null_Capability;
