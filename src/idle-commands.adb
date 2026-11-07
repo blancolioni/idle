@@ -74,6 +74,11 @@ package body Idle.Commands is
       procedure Check_Package;
       procedure Check_Roles;
 
+      procedure Check_Standard_Input (Argument : Idle.Syntax.Argument);
+      --  Report the default Standard_Input of Argument unless Argument is
+      --  in, and its type is that of the Standard_Input role's member
+      --  (idle#52).
+
       ---------------------
       -- Check_Arguments --
       ---------------------
@@ -137,9 +142,12 @@ package body Idle.Commands is
                             & " Positive, String, String_List or"
                             & " interface");
                   when Interface_Argument =>
-                     if Argument.Has_Default then
+                     if Defaults_To_Standard_Input (Argument) then
+                        Check_Standard_Input (Argument);
+                     elsif Argument.Has_Default then
                         Error (Argument.Default.Position,
-                               "an interface argument has no default");
+                               "an interface argument has no default,"
+                               & " other than Standard_Input");
                      end if;
                   when String_List_Argument =>
                      if Argument.Mode = Out_Mode then
@@ -425,6 +433,35 @@ package body Idle.Commands is
 
       end Check_Roles;
 
+      --------------------------
+      -- Check_Standard_Input --
+      --------------------------
+
+      procedure Check_Standard_Input (Argument : Idle.Syntax.Argument) is
+         use all type Idle.Syntax.Parameter_Mode;
+         Role : Idle.Syntax.Interface_Declaration;
+      begin
+         --  An out argument has no default, which is reported already.
+
+         if Argument.Mode /= In_Mode then
+            null;
+         elsif not Idle.Hierarchy.Find (Item, "Standard_Input", Role)
+           or else Role.Kind /= Role_Unit
+           or else Natural (Role.Arguments.Length) /= 1
+         then
+            Error (Argument.Default.Position,
+                   "Standard_Input is not a role with one member");
+         elsif not Same
+                     (To_String (Argument.Of_Type.Name),
+                      To_String (Role.Arguments.First_Element.Of_Type.Name))
+         then
+            Error (Argument.Default.Position,
+                   "only an argument of type "
+                   & To_String (Role.Arguments.First_Element.Of_Type.Name)
+                   & " can default to Standard_Input");
+         end if;
+      end Check_Standard_Input;
+
       -----------
       -- Error --
       -----------
@@ -463,6 +500,17 @@ package body Idle.Commands is
       end case;
       return Idle.Diagnostics.Error_Count = Errors_Before;
    end Check;
+
+   --------------------------------
+   -- Defaults_To_Standard_Input --
+   --------------------------------
+
+   function Defaults_To_Standard_Input
+     (Item : Idle.Syntax.Argument)
+      return Boolean
+   is (Item.Has_Default
+       and then Item.Default.Kind = Idle.Syntax.Name_Value
+       and then Same (To_String (Item.Default.Text), "Standard_Input"));
 
    ------------
    -- Detail --

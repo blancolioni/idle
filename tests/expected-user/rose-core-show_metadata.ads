@@ -55,6 +55,16 @@ package Rose.Core.Show_Metadata is
      & ASCII.LF
      & "help the number of bytes shown"
      & ASCII.LF
+     & "argument Input"
+     & ASCII.LF
+     & "type interface Stream_Reader"
+     & ASCII.LF
+     & "place cap 4"
+     & ASCII.LF
+     & "default Standard_Input"
+     & ASCII.LF
+     & "help what to show after the file"
+     & ASCII.LF
      with Linker_Section => ".rose_command";
 
 end Rose.Core.Show_Metadata;

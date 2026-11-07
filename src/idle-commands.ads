@@ -71,6 +71,17 @@ package Idle.Commands is
    --  Transactional or inherits from it: the shell gives the command a
    --  version, which the command commits itself (Rose ADR 0026).
 
+   function Defaults_To_Standard_Input
+     (Item : Idle.Syntax.Argument)
+      return Boolean;
+   --  True if the default of the argument Item is the name Standard_Input
+   --  (idle#52): an in argument of the type of the Standard_Input role's
+   --  member, such as File : in Reader := Standard_Input. If it is not
+   --  given, the shell passes the job's standard input; if it is, a
+   --  stream that the shell opens. Either way the command is passed the
+   --  cap of the stream's one subprogram, as for the role, and not an
+   --  interface cap.
+
    function Is_Live (Item : Idle.Syntax.Interface_Declaration) return Boolean;
    --  True if the command Item has the Live aspect: the shell passes it
    --  its own caps, not versions of its Versioned arguments, and the

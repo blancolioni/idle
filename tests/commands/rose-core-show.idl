@@ -1,5 +1,5 @@
 --  An interface argument, a role member that is an interface, and a
---  system cap (idle#44).
+--  system cap (idle#44). Input defaults to standard input (idle#52).
 
 command Rose.Core.Show : Standard_Output, Logging, Delete_Cap
   with Summary => "Show a file."
@@ -8,4 +8,6 @@ is
      with Help => "the file to show";
    Count : out Natural
      with Help => "the number of bytes shown";
+   Input : in Stream_Reader := Standard_Input
+     with Help => "what to show after the file";
 end Rose.Core.Show;
