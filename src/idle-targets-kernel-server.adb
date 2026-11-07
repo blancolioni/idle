@@ -129,11 +129,12 @@ package body Idle.Targets.Kernel.Server is
 
       function Uses_Text (Member : Idle.Hierarchy.Member) return Boolean
       is ((Member.Subprogram.Is_Function
-           and then Types.Resolve (Member.Owner, Member.Subprogram.Result)
+           and then Types.Resolve
+                      (Member.Owner, Member.Subprogram.Result, User)
                       .Category in Types.String_Value)
           or else
             (for some Parameter of Member.Subprogram.Parameters =>
-               Types.Resolve (Member.Owner, Parameter.Of_Type).Category
+               Types.Resolve (Member.Owner, Parameter.Of_Type, User).Category
                  in Types.String_Value
                and then Parameter.Mode not in Idle.Syntax.In_Mode));
       --  For the user target: True if the handler of Member copies a
@@ -839,7 +840,7 @@ package body Idle.Targets.Kernel.Server is
          Subprogram     : Idle.Syntax.Subprogram renames Member.Subprogram;
          Result         : constant Types.Type_Info :=
            (if Subprogram.Is_Function
-            then Types.Resolve (Member.Owner, Subprogram.Result)
+            then Types.Resolve (Member.Owner, Subprogram.Result, User)
             else (others => <>));
          Returns_String : constant Boolean :=
            Subprogram.Is_Function and then Result.Category = String_Value;
@@ -877,12 +878,21 @@ package body Idle.Targets.Kernel.Server is
                       ("Natural",
                        [F.New_Name ("Parameters.Buffer_Length")]))]));
 
-         function Storage_Type return not null Syn.Node_Access
+         function Storage_Type
+           (Info   : Types.Type_Info;
+            Length : not null Syn.Node_Access)
+            return not null Syn.Node_Access
          is (F.New_Call
-               ("System.Storage_Elements.Storage_Array",
+               (To_String (Info.Ada_Name),
                 [F.New_Binary
                    (Literal (1), "..",
-                    F.New_Name ("Parameters.Buffer_Length"))]));
+                    (if Types.Is_Stream_Array (Info)
+                     then F.New_Call
+                            ("Ada.Streams.Stream_Element_Offset", [Length])
+                     else Length))]));
+         --  The array type Info, from 1 to Length, a Storage_Count: a
+         --  Storage_Array, or for the user target a Stream_Element_Array
+         --  (idle#77).
 
          Packed : constant Boolean :=
            Types.Packs_Buffers (Member.Owner, Subprogram);
@@ -892,9 +902,9 @@ package body Idle.Targets.Kernel.Server is
 
          procedure Add_Item_Overlay
            (Object_Name : String;
-            Is_String   : Boolean);
-         --  Declare Object_Name, a string or a storage array, at the next
-         --  item in the invocation buffer.
+            Info        : Types.Type_Info);
+         --  Declare Object_Name, a string or an array of type Info, at the
+         --  next item in the invocation buffer.
 
          Declarations : Node_List;
          Arguments    : Node_List;
@@ -913,7 +923,7 @@ package body Idle.Targets.Kernel.Server is
 
          procedure Add_Item_Overlay
            (Object_Name : String;
-            Is_String   : Boolean)
+            Info        : Types.Type_Info)
          is
             Item_Name : constant String := Object_Name & "_Item";
             Length    : constant not null Syn.Node_Access :=
@@ -929,15 +939,13 @@ package body Idle.Targets.Kernel.Server is
             Declarations.Append
               (F.New_Object
                  (Object_Name,
-                  (if Is_String
+                  (if Info.Category = String_Value
                    then F.New_Call
                           ("String",
                            [F.New_Binary
                               (Literal (1), "..",
                                F.New_Call ("Natural", [Length]))])
-                   else F.New_Call
-                          ("System.Storage_Elements.Storage_Array",
-                           [F.New_Binary (Literal (1), "..", Length)])),
+                   else Storage_Type (Info, Length)),
                   Aspects =>
                     [F.New_Aspect ("Import"),
                      F.New_Aspect
@@ -960,7 +968,7 @@ package body Idle.Targets.Kernel.Server is
          for Parameter of Subprogram.Parameters loop
             declare
                Info        : constant Types.Type_Info :=
-                 Types.Resolve (Member.Owner, Parameter.Of_Type);
+                 Types.Resolve (Member.Owner, Parameter.Of_Type, User);
                Object_Name : constant String := Name (Parameter);
                Object_Type : constant not null Syn.Node_Access :=
                  F.New_Name (Server_Type_Of (Info));
@@ -969,8 +977,7 @@ package body Idle.Targets.Kernel.Server is
                if Packed and then Parameter.Mode = Idle.Syntax.In_Mode
                  and then Types.Is_Buffer (Info)
                then
-                  Add_Item_Overlay
-                    (Object_Name, Info.Category = String_Value);
+                  Add_Item_Overlay (Object_Name, Info);
                else
                   case Info.Category is
                      when Word_Value | Double_Word_Value =>
@@ -1075,7 +1082,11 @@ package body Idle.Targets.Kernel.Server is
                         end if;
                      when Storage_Value =>
                         Declarations.Append
-                          (Buffer_Overlay (Object_Name, Storage_Type));
+                          (Buffer_Overlay
+                             (Object_Name,
+                              Storage_Type
+                                (Info,
+                                 F.New_Name ("Parameters.Buffer_Length"))));
                      when Unknown =>
                         raise Program_Error;
                   end case;
@@ -1179,7 +1190,7 @@ package body Idle.Targets.Kernel.Server is
             if Parameter.Mode /= Idle.Syntax.In_Mode then
                declare
                   Info : constant Types.Type_Info :=
-                    Types.Resolve (Member.Owner, Parameter.Of_Type);
+                    Types.Resolve (Member.Owner, Parameter.Of_Type, User);
                begin
                   case Info.Category is
                      when Word_Value | Double_Word_Value =>
@@ -1304,7 +1315,7 @@ package body Idle.Targets.Kernel.Server is
          Subprogram     : Idle.Syntax.Subprogram renames Member.Subprogram;
          Result         : constant Types.Type_Info :=
            (if Subprogram.Is_Function
-            then Types.Resolve (Member.Owner, Subprogram.Result)
+            then Types.Resolve (Member.Owner, Subprogram.Result, User)
             else (others => <>));
          Returns_String : constant Boolean :=
            Subprogram.Is_Function
@@ -1326,7 +1337,7 @@ package body Idle.Targets.Kernel.Server is
          for Parameter of Subprogram.Parameters loop
             declare
                Info : constant Types.Type_Info :=
-                 Types.Resolve (Member.Owner, Parameter.Of_Type);
+                 Types.Resolve (Member.Owner, Parameter.Of_Type, User);
             begin
                Use_Type
                  (Info, Decoded => Parameter.Mode /= Idle.Syntax.Out_Mode);
@@ -1803,12 +1814,12 @@ package body Idle.Targets.Kernel.Server is
          for Member of Idle.Hierarchy.Members (Item) loop
             for Parameter of Member.Subprogram.Parameters loop
                Use_Type
-                 (Types.Resolve (Member.Owner, Parameter.Of_Type),
+                 (Types.Resolve (Member.Owner, Parameter.Of_Type, User),
                   Decoded => Parameter.Mode /= Idle.Syntax.Out_Mode);
             end loop;
             if Member.Subprogram.Is_Function then
                Use_Type
-                 (Types.Resolve (Member.Owner, Member.Subprogram.Result),
+                 (Types.Resolve (Member.Owner, Member.Subprogram.Result, User),
                   Is_Result => True);
             end if;
             if Uses_Text (Member) then

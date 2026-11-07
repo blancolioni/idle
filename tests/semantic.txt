@@ -4,3 +4,5 @@ signed
 boolean_result
 boolean_in
 boolean_out
+reader
+stream_writer

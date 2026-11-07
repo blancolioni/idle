@@ -591,7 +591,7 @@ package body Idle.Targets.Kernel.Client is
          Subprogram_Name : constant String := Name (Subprogram);
          Result          : constant Types.Type_Info :=
            (if Subprogram.Is_Function
-            then Types.Resolve (Member.Owner, Subprogram.Result)
+            then Types.Resolve (Member.Owner, Subprogram.Result, User)
             else (others => <>));
          Returns_String  : constant Boolean :=
            Subprogram.Is_Function and then Result.Category = String_Value;
@@ -602,7 +602,7 @@ package body Idle.Targets.Kernel.Client is
          function Info
            (Parameter : Idle.Syntax.Parameter)
             return Types.Type_Info
-         is (Types.Resolve (Member.Owner, Parameter.Of_Type));
+         is (Types.Resolve (Member.Owner, Parameter.Of_Type, User));
 
          function Mode
            (Parameter : Idle.Syntax.Parameter)
@@ -705,6 +705,7 @@ package body Idle.Targets.Kernel.Client is
             else F.New_Procedure
                    (Subprogram_Name, Parameters, Indicator => Indicator));
 
+         Declarations : Node_List;
          Statements  : Node_List;
          Reply_Words : Natural := 0;
          Reply_Caps  : Natural := 0;
@@ -733,7 +734,30 @@ package body Idle.Targets.Kernel.Client is
                Parameter_Info : constant Types.Type_Info := Info (Parameter);
                Value          : constant not null Syn.Node_Access :=
                  F.New_Name (Name (Parameter));
+               Sent           : Syn.Node_Access := Value;
+               --  What is sent: Value, or for a stream array, a storage
+               --  array at its address (idle#77).
             begin
+               if Types.Is_Stream_Array (Parameter_Info)
+                 and then Parameter.Mode /= Idle.Syntax.Out_Mode
+               then
+                  Body_Context.Add ("System.Storage_Elements");
+                  Declarations.Append
+                    (F.New_Object
+                       (Name (Parameter) & "_Storage",
+                        F.New_Call
+                          ("System.Storage_Elements.Storage_Array",
+                           [F.New_Binary
+                              (F.New_Integer_Literal (1), "..",
+                               F.New_Attribute (Value, "Length"))]),
+                        Aspects =>
+                          [F.New_Aspect ("Import"),
+                           F.New_Aspect
+                             ("Address",
+                              F.New_Attribute (Value, "Address"))]));
+                  Sent := F.New_Name (Name (Parameter) & "_Storage");
+               end if;
+
                Use_Type
                  (Parameter_Info,
                   Is_Out  => Parameter.Mode = Idle.Syntax.Out_Mode,
@@ -745,7 +769,7 @@ package body Idle.Targets.Kernel.Client is
                            & (if Parameter_Info.Category = String_Value
                               then "Send_Text_Item"
                               else "Send_Storage_Item"),
-                           [Params, Value]));
+                           [Params, Sent]));
                elsif Parameter.Mode /= Idle.Syntax.Out_Mode then
                   case Parameter_Info.Category is
                      when Word_Value | Double_Word_Value =>
@@ -798,7 +822,7 @@ package body Idle.Targets.Kernel.Client is
                      when Storage_Value =>
                         Statements.Append
                           (Call (System_Calls & "Send_Storage_Array",
-                                 [Params, Value,
+                                 [Params, Sent,
                                   F.New_Name
                                     (if Parameter.Mode = Idle.Syntax.In_Mode
                                      then "False" else "True")]));
@@ -1070,7 +1094,8 @@ package body Idle.Targets.Kernel.Client is
                Declarations  =>
                  [F.New_Object
                     ("Params", F.New_Name (Record_Name),
-                     Is_Aliased => True)],
+                     Is_Aliased => True)]
+                 & Declarations.To_Array,
                Statements    => Statements.To_Array));
       end Add_Subprogram;
 
@@ -1205,7 +1230,9 @@ package body Idle.Targets.Kernel.Client is
          then
             Spec_Context.Add (Unit);
          end if;
-         if Types.Uses_Words_Unit (Info, Decoded) then
+         if Types.Uses_Words_Unit
+              (Info, Decoded, Sent => not Is_Out and then not Is_Result)
+         then
             Uses_Words := True;
          end if;
          if Types.Compares_Words (Info, Decoded) then

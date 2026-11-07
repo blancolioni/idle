@@ -1,6 +1,7 @@
 with Rose.Interfaces.Objects;
 with Rose.Invocation;
 with Rose.System_Calls;
+with System.Storage_Elements;
 
 package body Rose.Interfaces.Stream.Client is
 
@@ -227,15 +228,18 @@ package body Rose.Interfaces.Stream.Client is
 
    overriding procedure Write
      (Item   : in out Stream_Client;
-      Buffer : System.Storage_Elements.Storage_Array)
+      Buffer : Ada.Streams.Stream_Element_Array)
    is
-      Params : aliased Rose.Invocation.Invocation_Record;
+      Params         : aliased Rose.Invocation.Invocation_Record;
+      Buffer_Storage : System.Storage_Elements.Storage_Array
+        (1 .. Buffer'Length)
+        with Import, Address => Buffer'Address;
    begin
       if not Item.Is_Open then
          Load (Item);
       end if;
       Rose.System_Calls.Initialize_Send (Params, Item.Write);
-      Rose.System_Calls.Send_Storage_Array (Params, Buffer, False);
+      Rose.System_Calls.Send_Storage_Array (Params, Buffer_Storage, False);
       Rose.System_Calls.Invoke_Capability (Params);
       if Params.Control.Flags (Rose.Invocation.Error) then
          raise Rose.Interfaces.Objects.Invocation_Error with "Stream.Write";

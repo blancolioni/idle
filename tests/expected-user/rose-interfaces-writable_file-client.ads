@@ -1,3 +1,4 @@
+with Ada.Streams;
 with Rose.Capabilities;
 with Rose.Interfaces.File_Reader;
 with Rose.Interfaces.Seekable_File_Reader;
@@ -44,7 +45,7 @@ package Rose.Interfaces.Writable_File.Client is
 
    overriding procedure Write
      (Item   : in out Writable_File_Client;
-      Buffer : System.Storage_Elements.Storage_Array);
+      Buffer : Ada.Streams.Stream_Element_Array);
 
    overriding procedure Truncate
      (Item : in out Writable_File_Client;
