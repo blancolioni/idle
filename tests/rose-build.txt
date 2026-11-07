@@ -54,3 +54,4 @@ standard_output
 standard_error
 standard_io
 create_endpoint
+reader

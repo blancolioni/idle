@@ -1,6 +1,6 @@
+with Ada.Streams;
 with Rose.Capabilities;
 with Rose.Objects;
-with System.Storage_Elements;
 
 package Rose.Interfaces.Stream_Writer is
 
@@ -22,6 +22,6 @@ package Rose.Interfaces.Stream_Writer is
 
    procedure Write
      (Item   : in out Stream_Writer_Object;
-      Buffer : System.Storage_Elements.Storage_Array) is abstract;
+      Buffer : Ada.Streams.Stream_Element_Array) is abstract;
 
 end Rose.Interfaces.Stream_Writer;

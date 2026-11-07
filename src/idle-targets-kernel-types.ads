@@ -63,11 +63,24 @@ private package Idle.Targets.Kernel.Types is
 
    function Resolve
      (Owner     : Idle.Syntax.Interface_Declaration;
-      Reference : Idle.Syntax.Type_Reference)
+      Reference : Idle.Syntax.Type_Reference;
+      User      : Boolean := False)
       return Type_Info;
    --  The type named by Reference in a subprogram of Owner. Owner's own
    --  types are found first, then those of its ancestors, and then the
    --  predefined types. Category is Unknown if there is no such type.
+   --  For the user target (User), Stream_Element_Array,
+   --  Stream_Element_Offset and Stream_Element_Count are the types of
+   --  Ada.Streams (idle#77); for the kernel target, whose run-time system
+   --  has no Ada.Streams, they are other names for the types of
+   --  System.Storage_Elements.
+
+   function Is_Stream_Array (Info : Type_Info) return Boolean
+   is (Info.Category = Storage_Value
+       and then To_String (Info.Ada_Name)
+                  = "Ada.Streams.Stream_Element_Array");
+   --  True if Info is Ada.Streams.Stream_Element_Array, which is passed to
+   --  Rose.System_Calls through a Storage_Array at the same address.
 
    function Words (Info : Type_Info) return Natural
    is (case Info.Category is
@@ -108,12 +121,14 @@ private package Idle.Targets.Kernel.Types is
 
    function Uses_Words_Unit
      (Info    : Type_Info;
-      Decoded : Boolean)
+      Decoded : Boolean;
+      Sent    : Boolean := True)
       return Boolean
-   is (Info.Encoding = Converted
+   is ((Info.Encoding = Converted and then Sent)
        or else (Info.Encoding = Boolean_Word and then Decoded));
-   --  True if the code that sends a value of Info, or that decodes one
-   --  (Decoded), names Rose.Words. A Boolean is sent without it.
+   --  True if the code that sends a value of Info (Sent), or that decodes
+   --  one (Decoded), names Rose.Words. A Boolean is sent without it, and
+   --  a converted value is decoded without it.
 
    function Compares_Words
      (Info    : Type_Info;

@@ -787,7 +787,9 @@ package body Idle.Targets.Kernel is
                   for Parameter of Subprogram.Parameters loop
                      declare
                         Info : constant Types.Type_Info :=
-                          Types.Resolve (Member.Owner, Parameter.Of_Type);
+                          Types.Resolve
+                            (Member.Owner, Parameter.Of_Type,
+                             User => Target = User_Target);
                      begin
                         if Info.Category = Types.Interface_Value then
                            Parameters.Append
@@ -830,7 +832,9 @@ package body Idle.Targets.Kernel is
                   if Subprogram.Is_Function then
                      declare
                         Info : constant Types.Type_Info :=
-                          Types.Resolve (Member.Owner, Subprogram.Result);
+                          Types.Resolve
+                            (Member.Owner, Subprogram.Result,
+                             User => Target = User_Target);
                      begin
                         Result.Append
                           (F.New_Function
