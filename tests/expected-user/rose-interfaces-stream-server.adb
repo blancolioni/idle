@@ -1,4 +1,5 @@
 with Ada.Containers.Vectors;
+with Ada.Streams;
 with Rose.Interfaces.Objects;
 with Rose.Invocation;
 with Rose.System_Calls;
@@ -384,8 +385,9 @@ package body Rose.Interfaces.Stream.Server is
       begin
          declare
             Object : constant Object_Access := Find (Parameters.Identifier);
-            Buffer : System.Storage_Elements.Storage_Array
-              (1 .. Parameters.Buffer_Length)
+            Buffer : Ada.Streams.Stream_Element_Array
+              (1 .. Ada.Streams.Stream_Element_Offset
+                 (Parameters.Buffer_Length))
               with Import, Address => Parameters.Buffer_Address;
          begin
             if Object = null then

@@ -27,3 +27,5 @@ modes/boolean_in
 modes/boolean_out
 rose/writable_file
 rose/transactional_writable_file
+rose/reader
+rose/stream_writer

@@ -299,10 +299,11 @@ else
           -I$src/library/kernelapi/system-calls
           -I$src/library/kernelapi/arch/i686"
   kernel="$common -I$src/library/kernelapi/system-calls-boot
-          -I$ROSE/rts/build/i686/adainclude"
-  user="$common -I$src/rts/src/adainclude
+          -I$ROSE/rts/kernel/build/i686/adainclude"
+  user="$common -I$ROSE/rts/user/src/adainclude
         -I$src/library/kernelapi/system-calls-user
-        -I$src/rts/build/interfaces -I$src/rts/build/i686-rose/adainclude"
+        -I$ROSE/rts/user/build/interfaces
+        -I$ROSE/rts/user/build/i686-rose/adainclude"
   while read -r name; do
     [ -n "$name" ] || continue
     for target in kernel user; do

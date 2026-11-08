@@ -21,8 +21,9 @@ package body Idle.Targets.Kernel.Types is
        Unit           => To_Unbounded_String (Unit),
        Interface_Name => Null_Unbounded_String);
 
-   function Predefined (Name : String) return Type_Info;
-   --  The predefined type Name, or a Type_Info whose Category is Unknown.
+   function Predefined (Name : String; User : Boolean) return Type_Info;
+   --  The predefined type Name, for the user target if User, or a
+   --  Type_Info whose Category is Unknown.
 
    --------------
    -- Declared --
@@ -143,10 +144,21 @@ package body Idle.Targets.Kernel.Types is
    -- Predefined --
    ----------------
 
-   function Predefined (Name : String) return Type_Info is
+   function Predefined (Name : String; User : Boolean) return Type_Info is
       Key : constant String := Idle.Names.Key (Name);
    begin
-      if Key in "word" | "word_32" then
+      if User
+        and then Key in "stream_element_count" | "stream_element_offset"
+      then
+         --  Sent as a word, as Endpoint_Id is: Rose.System_Calls only
+         --  knows System.Storage_Elements.
+         return Info (Word_Value, Converted,
+                      "Ada.Streams." & Idle.Names.Ada_Name (Name),
+                      "Ada.Streams");
+      elsif User and then Key = "stream_element_array" then
+         return Info (Storage_Value, Not_A_Word,
+                      "Ada.Streams.Stream_Element_Array", "Ada.Streams");
+      elsif Key in "word" | "word_32" then
          return Info (Word_Value, Native,
                       "Rose.Words." & Idle.Names.Ada_Name (Name),
                       "Rose.Words");
@@ -201,7 +213,8 @@ package body Idle.Targets.Kernel.Types is
 
    function Resolve
      (Owner     : Idle.Syntax.Interface_Declaration;
-      Reference : Idle.Syntax.Type_Reference)
+      Reference : Idle.Syntax.Type_Reference;
+      User      : Boolean := False)
       return Type_Info
    is
       Name : constant String := To_String (Reference.Name);
@@ -259,7 +272,7 @@ package body Idle.Targets.Kernel.Types is
             return Result;
          end if;
       end loop;
-      return Predefined (Name);
+      return Predefined (Name, User);
    end Resolve;
 
    ----------

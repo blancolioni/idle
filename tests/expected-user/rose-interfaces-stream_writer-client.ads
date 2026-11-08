@@ -1,5 +1,5 @@
+with Ada.Streams;
 with Rose.Capabilities;
-with System.Storage_Elements;
 
 package Rose.Interfaces.Stream_Writer.Client is
 
@@ -23,7 +23,7 @@ package Rose.Interfaces.Stream_Writer.Client is
 
    overriding procedure Write
      (Item   : in out Stream_Writer_Client;
-      Buffer : System.Storage_Elements.Storage_Array);
+      Buffer : Ada.Streams.Stream_Element_Array);
 
    overriding function Stream_Writer_Cap
      (Item : in out Stream_Writer_Client)
