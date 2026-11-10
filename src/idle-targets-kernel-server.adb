@@ -916,6 +916,47 @@ package body Idle.Targets.Kernel.Server is
          --  the reply.
          Next_Word    : Natural := 0;
          Next_Cap     : Natural := 0;
+         Takes_Caps   : Boolean := False;
+         --  Set if the call brings caps: an array of them, or Next_Cap is
+         --  past zero.
+
+         --  The kernel puts the caps that come with a call in the server's
+         --  table before the server runs, so when the call fails they are
+         --  the server's to delete (idle#95). They are copied at the
+         --  start, before the reply can change Parameters, and deleted if
+         --  there is no object or an exception is raised. An operation
+         --  that raises must not keep them.
+
+         function Received_Declarations return Syn.Node_Array
+         is (if not Takes_Caps
+             then Syn.No_Nodes
+             else [F.New_Object
+                     ("Received",
+                      F.New_Call
+                        (Capability_Name & "_Array",
+                         [F.New_Binary
+                            (Literal (1), "..",
+                             F.New_Name
+                               ("Rose.Invocation.Max_Capabilities"))])),
+                   F.New_Object
+                     ("Received_Count", F.New_Name ("Natural"),
+                      F.New_Call
+                        (System_Calls & "Copy_Received_Caps",
+                         [Parameters, Literal (0), F.New_Name ("Received")]),
+                      Is_Constant => True)]);
+
+         function Delete_Received return Syn.Node_Array
+         is (if not Takes_Caps
+             then Syn.No_Nodes
+             else [F.New_For_Of_Loop
+                     ("Cap",
+                      F.New_Call
+                        ("Received",
+                         [F.New_Binary
+                            (Literal (1), "..",
+                             F.New_Name ("Received_Count"))]),
+                      [Call (System_Calls & "Delete_Cap",
+                             [F.New_Name ("Cap")])])]);
 
          ----------------------
          -- Add_Item_Overlay --
@@ -1029,6 +1070,7 @@ package body Idle.Targets.Kernel.Server is
                            Next_Cap := Next_Cap + 1;
                         end if;
                      when Capability_Array_Value =>
+                        Takes_Caps := True;
                         Declarations.Append
                           (F.New_Object
                              (Object_Name,
@@ -1101,6 +1143,8 @@ package body Idle.Targets.Kernel.Server is
             end;
          end loop;
 
+         Takes_Caps := Takes_Caps or else Next_Cap > 0;
+
          if Returns_String then
             Declarations.Append
               (F.New_Object
@@ -1122,13 +1166,15 @@ package body Idle.Targets.Kernel.Server is
                     F.New_Binary
                       (F.New_Name ("Object"), "=", F.New_Name ("null")),
                   Then_Part =>
-                    [Call (System_Calls & "Initialize_Reply",
-                           [Parameters,
-                            F.New_Name ("Parameters.Reply_Cap")]),
-                     Call (System_Calls & "Send_Error",
-                           [Parameters,
-                            F.New_Name ("Rose.Invocation.Invalid_Operation")]),
-                     F.New_Return]));
+                    Delete_Received
+                    & [Call (System_Calls & "Initialize_Reply",
+                             [Parameters,
+                              F.New_Name ("Parameters.Reply_Cap")]),
+                       Call (System_Calls & "Send_Error",
+                             [Parameters,
+                              F.New_Name
+                                ("Rose.Invocation.Invalid_Operation")]),
+                       F.New_Return]));
 
             declare
                Callee : constant String := "Object." & Name (Subprogram);
@@ -1281,6 +1327,7 @@ package body Idle.Targets.Kernel.Server is
               (Handle (Subprogram),
                F.New_Subprogram_Body
                  (Specification => Specification,
+                  Declarations  => Received_Declarations,
                   Statements    =>
                     [F.New_Block
                        (Statements =>
@@ -1289,14 +1336,16 @@ package body Idle.Targets.Kernel.Server is
                               Statements   => Statements.To_Array)],
                         Handlers     =>
                           [F.New_Handler
-                             ([Call (System_Calls & "Initialize_Reply",
-                                     [Parameters,
-                                      F.New_Name ("Parameters.Reply_Cap")]),
-                               Call (System_Calls & "Send_Error",
-                                     [Parameters,
-                                      F.New_Name
-                                        ("Rose.Invocation.Exception_Raised")])
-                              ])])]));
+                             (Delete_Received
+                              & [Call (System_Calls & "Initialize_Reply",
+                                       [Parameters,
+                                        F.New_Name
+                                          ("Parameters.Reply_Cap")]),
+                                 Call (System_Calls & "Send_Error",
+                                       [Parameters,
+                                        F.New_Name
+                                          ("Rose.Invocation"
+                                           & ".Exception_Raised")])])])]));
          else
             Bodies.Add
               (Handle (Subprogram),

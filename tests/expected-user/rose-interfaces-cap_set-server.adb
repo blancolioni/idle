@@ -142,6 +142,10 @@ package body Rose.Interfaces.Cap_Set.Server is
    procedure Handle_Append
      (Parameters : in out Rose.Invocation.Invocation_Record)
    is
+      Received       : Rose.Capabilities.Capability_Array
+        (1 .. Rose.Invocation.Max_Capabilities);
+      Received_Count : constant Natural :=
+        Rose.System_Calls.Copy_Received_Caps (Parameters, 0, Received);
    begin
       begin
          declare
@@ -153,6 +157,9 @@ package body Rose.Interfaces.Cap_Set.Server is
               Rose.System_Calls.Copy_Received_Caps (Parameters, 0, Caps);
          begin
             if Object = null then
+               for Cap of Received (1 .. Received_Count) loop
+                  Rose.System_Calls.Delete_Cap (Cap);
+               end loop;
                Rose.System_Calls.Initialize_Reply
                  (Parameters,
                   Parameters.Reply_Cap);
@@ -168,6 +175,9 @@ package body Rose.Interfaces.Cap_Set.Server is
          end;
       exception
          when others =>
+            for Cap of Received (1 .. Received_Count) loop
+               Rose.System_Calls.Delete_Cap (Cap);
+            end loop;
             Rose.System_Calls.Initialize_Reply
               (Parameters,
                Parameters.Reply_Cap);
