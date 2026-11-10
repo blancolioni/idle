@@ -206,6 +206,10 @@ package body Rose.Interfaces.Exchange.Server is
    procedure Handle_Gather
      (Parameters : in out Rose.Invocation.Invocation_Record)
    is
+      Received       : Rose.Capabilities.Capability_Array
+        (1 .. Rose.Invocation.Max_Capabilities);
+      Received_Count : constant Natural :=
+        Rose.System_Calls.Copy_Received_Caps (Parameters, 0, Received);
    begin
       begin
          declare
@@ -219,6 +223,9 @@ package body Rose.Interfaces.Exchange.Server is
               Rose.Capabilities.Null_Capability;
          begin
             if Object = null then
+               for Cap of Received (1 .. Received_Count) loop
+                  Rose.System_Calls.Delete_Cap (Cap);
+               end loop;
                Rose.System_Calls.Initialize_Reply
                  (Parameters,
                   Parameters.Reply_Cap);
@@ -235,6 +242,9 @@ package body Rose.Interfaces.Exchange.Server is
          end;
       exception
          when others =>
+            for Cap of Received (1 .. Received_Count) loop
+               Rose.System_Calls.Delete_Cap (Cap);
+            end loop;
             Rose.System_Calls.Initialize_Reply
               (Parameters,
                Parameters.Reply_Cap);
@@ -398,6 +408,10 @@ package body Rose.Interfaces.Exchange.Server is
    procedure Handle_Rename
      (Parameters : in out Rose.Invocation.Invocation_Record)
    is
+      Received       : Rose.Capabilities.Capability_Array
+        (1 .. Rose.Invocation.Max_Capabilities);
+      Received_Count : constant Natural :=
+        Rose.System_Calls.Copy_Received_Caps (Parameters, 0, Received);
    begin
       begin
          declare
@@ -410,6 +424,9 @@ package body Rose.Interfaces.Exchange.Server is
             Name_Last   : Natural := 0;
          begin
             if Object = null then
+               for Cap of Received (1 .. Received_Count) loop
+                  Rose.System_Calls.Delete_Cap (Cap);
+               end loop;
                Rose.System_Calls.Initialize_Reply
                  (Parameters,
                   Parameters.Reply_Cap);
@@ -428,6 +445,9 @@ package body Rose.Interfaces.Exchange.Server is
          end;
       exception
          when others =>
+            for Cap of Received (1 .. Received_Count) loop
+               Rose.System_Calls.Delete_Cap (Cap);
+            end loop;
             Rose.System_Calls.Initialize_Reply
               (Parameters,
                Parameters.Reply_Cap);
@@ -444,6 +464,10 @@ package body Rose.Interfaces.Exchange.Server is
    procedure Handle_Split
      (Parameters : in out Rose.Invocation.Invocation_Record)
    is
+      Received       : Rose.Capabilities.Capability_Array
+        (1 .. Rose.Invocation.Max_Capabilities);
+      Received_Count : constant Natural :=
+        Rose.System_Calls.Copy_Received_Caps (Parameters, 0, Received);
    begin
       begin
          declare
@@ -455,6 +479,9 @@ package body Rose.Interfaces.Exchange.Server is
             Result : Rose.Capabilities.Capability;
          begin
             if Object = null then
+               for Cap of Received (1 .. Received_Count) loop
+                  Rose.System_Calls.Delete_Cap (Cap);
+               end loop;
                Rose.System_Calls.Initialize_Reply
                  (Parameters,
                   Parameters.Reply_Cap);
@@ -472,6 +499,9 @@ package body Rose.Interfaces.Exchange.Server is
          end;
       exception
          when others =>
+            for Cap of Received (1 .. Received_Count) loop
+               Rose.System_Calls.Delete_Cap (Cap);
+            end loop;
             Rose.System_Calls.Initialize_Reply
               (Parameters,
                Parameters.Reply_Cap);
