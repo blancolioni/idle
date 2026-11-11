@@ -1,0 +1,60 @@
+name: CI
+
+# Builds idle and runs its tests (make test, which is tests/run.sh) on
+# every pull request and every push to main (#81).  The build matches
+# Rose's CI: Fedora 43 with its GNAT, and Alire using that GNAT.
+#
+# tests/run.sh step 5, the check against a built Rose, is skipped: it
+# needs ROSE set to a checkout whose two run-time systems are built.
+
+on:
+  pull_request:
+  push:
+    branches: [main]
+
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  build-and-test:
+    runs-on: ubuntu-latest
+    container: fedora:43
+    timeout-minutes: 30
+    env:
+      ALIRE_VERSION: 2.1.0
+      # Syn is cloned next to idle, at ../syn, where alire.toml pins it.
+      # Syn's main catches a Syn change that breaks idle; set this to a
+      # commit to pin it instead.
+      SYN_REF: main
+    steps:
+      # The style step of the tests compiles the golden files with
+      # gcc -gnats, so GNAT is on the path as well as used by Alire.
+      - name: Install the build requirements
+        run: |
+          dnf install -y --setopt=install_weak_deps=False \
+              git-core make gcc gcc-gnat gprbuild diffutils findutils sed \
+              curl unzip
+
+      - uses: actions/checkout@v4
+
+      - name: Install Alire and Syn
+        run: |
+          curl -sSfL -o "$RUNNER_TEMP/alr.zip" "https://github.com/alire-project/alire/releases/download/v${ALIRE_VERSION}/alr-${ALIRE_VERSION}-bin-x86_64-linux.zip"
+          unzip -q "$RUNNER_TEMP/alr.zip" -d "$HOME/alire"
+          echo "$HOME/alire/bin" >> "$GITHUB_PATH"
+          export PATH="$HOME/alire/bin:$PATH"
+          alr settings --global --set toolchain.assistant false
+          # The solver gives up after 5 seconds by default, and with
+          # --non-interactive the incomplete solution drops the ../syn
+          # pin (rose#689).
+          alr settings --global --set solver.timeout 600
+          git clone https://github.com/blancolioni/syn ../syn
+          git -C ../syn checkout "$SYN_REF"
+          echo "Syn at $(git -C ../syn rev-parse HEAD)"
+
+      - name: Build
+        run: make
+
+      - name: Test
+        run: make test
