@@ -85,6 +85,9 @@ package body Idle.Targets.Kernel.Commands is
       Results       : Node_List;
       Serve         : Node_List;
       --  For a server, the call that serves after the reply.
+      Named_Adds    : Node_List;
+      --  For a replaceable server, the calls that name each cap that it
+      --  is given, for a restore (Rose ADR 0032, section 10).
       System_Args   : Node_List;
       Spec_Context  : Context_List;
       Main_Context  : Context_List;
@@ -423,6 +426,15 @@ package body Idle.Targets.Kernel.Commands is
                         [F.New_Name (Argument_Name), Cap_Argument])));
                Arguments.Append
                  (F.New_Named (Argument_Name, F.New_Name (Argument_Name)));
+               if not Idle.Commands.Defaults_To_Standard_Input (Argument)
+               then
+                  Named_Adds.Append
+                    (F.New_Call_Statement
+                       (F.New_Call
+                          ("Restore_Caps.Add",
+                           [F.New_String_Literal (Argument_Name),
+                            Cap_Argument])));
+               end if;
                if Target = User_Target then
                   Parameters.Append
                     (F.New_Parameter
@@ -575,11 +587,14 @@ package body Idle.Targets.Kernel.Commands is
       end if;
 
       --  A replaceable server (Rose ADR 0032) is given the version that it
-      --  replaces, if there is one, as a cap after its other caps, which
-      --  is null for a fresh start. It is not an argument of the
-      --  procedure: the main reads the old version's state and caps
-      --  first, with the Read_State procedure of the package that the
-      --  aspect names, and the procedure starts from what was read.
+      --  replaces, if there is one, as a cap after its other caps, and a
+      --  state that it restores, if there is one, as the cap after that.
+      --  Both are null for a fresh start. Neither is an argument of the
+      --  procedure: the main reads the state first, with the Read_State
+      --  procedure of the package that the aspect names, and the
+      --  procedure starts from what was read. A restored state has no
+      --  caps, so Read_State takes them from the command's caps, each
+      --  named by its argument (section 10).
 
       if Idle.Commands.Has_Aspect (Item.Aspects, "Replaceable") then
          declare
@@ -601,15 +616,33 @@ package body Idle.Targets.Kernel.Commands is
                   & " or none");
             Line ("previous", "cap" & Natural'Image (Index));
 
+            Line ("argument", "Saved");
+            Line ("type", "interface Reader");
+            Line ("place", "cap" & Natural'Image (Index + 1));
+            Line ("help",
+                  "a saved state of the server to start from, or none");
+            Line ("saved", "cap" & Natural'Image (Index + 1));
+
             Main_Context.Add ("Rose.Replacement");
             Main_Context.Add (State);
+            Declarations.Append
+              (F.New_Object
+                 ("Restore_Caps",
+                  F.New_Name ("Rose.Replacement.Named_Caps")));
+            for Named of Named_Adds.To_Array loop
+               Statements.Append (Named);
+            end loop;
             Statements.Append
               (F.New_Call_Statement
                  (F.New_Call
-                    ("Rose.Replacement.Take_Over",
+                    ("Rose.Replacement.Start",
                      [F.New_Call
                         (Launch & "Cap_Argument",
                          [Call_Node, Literal (Index)]),
+                      F.New_Call
+                        (Launch & "Cap_Argument",
+                         [Call_Node, Literal (Index + 1)]),
+                      F.New_Name ("Restore_Caps"),
                       F.New_Attribute
                         (F.New_Name (State & ".Read_State"), "Access")])));
          end;

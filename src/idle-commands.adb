@@ -77,7 +77,8 @@ package body Idle.Commands is
       --  A command with the Replaceable aspect (Rose ADR 0032) is a
       --  server, has the Cap_Set_Service role, to make the cap set that
       --  its Caps returns, and has no argument called Previous, which is
-      --  the version it replaces.
+      --  the version it replaces, or Saved, which is a state that it
+      --  restores (Rose ADR 0032, section 10).
 
       procedure Check_Roles;
 
@@ -458,6 +459,10 @@ package body Idle.Commands is
                Error (Argument.Position,
                       "Previous is reserved: it is the version that a"
                       & " Replaceable command replaces");
+            elsif Same (To_String (Argument.Name), "Saved") then
+               Error (Argument.Position,
+                      "Saved is reserved: it is a state that a"
+                      & " Replaceable command restores");
             end if;
          end loop;
       end Check_Replaceable;
