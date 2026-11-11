@@ -13,6 +13,7 @@ procedure Rose.Core.Replace_Main is
    Call            : Rose.Command_Line.Launch.Launch_Call;
    Cap_Set_Service : Rose.Interfaces.Constructor.Client.Constructor_Client;
    Result          : Rose.Capabilities.Capability;
+   Restore_Caps    : Rose.Replacement.Named_Caps;
 begin
    Rose.Command_Line.Launch.Receive (Call);
    Rose.Interfaces.Constructor.Client.Open
@@ -20,8 +21,13 @@ begin
       Rose.Command_Line.Launch.Cap_Argument (Call, 1));
    Rose.System_Calls.Use_Capabilities
      (Create_Endpoint => Rose.Command_Line.Launch.Cap_Argument (Call, 0));
-   Rose.Replacement.Take_Over
+   Restore_Caps.Add
+     ("Cap_Set_Service",
+      Rose.Command_Line.Launch.Cap_Argument (Call, 1));
+   Rose.Replacement.Start
      (Rose.Command_Line.Launch.Cap_Argument (Call, 2),
+      Rose.Command_Line.Launch.Cap_Argument (Call, 3),
+      Restore_Caps,
       Replace_Server.State.Read_State'Access);
    Rose.Command_Line.Launch.Set_Command_Line ("Rose.Core.Replace");
    Rose.Core.Replace (Cap_Set_Service => Cap_Set_Service, Result => Result);

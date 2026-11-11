@@ -4,4 +4,6 @@ command Rose.Core.Unserved : Create_Endpoint
 is
    Previous : in Named
      with Help => "a name";
+   Saved : in Reader
+     with Help => "a state";
 end Rose.Core.Unserved;

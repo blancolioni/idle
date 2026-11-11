@@ -54,6 +54,16 @@ package Rose.Core.Replace_Metadata is
      & ASCII.LF
      & "previous cap 2"
      & ASCII.LF
+     & "argument Saved"
+     & ASCII.LF
+     & "type interface Reader"
+     & ASCII.LF
+     & "place cap 3"
+     & ASCII.LF
+     & "help a saved state of the server to start from, or none"
+     & ASCII.LF
+     & "saved cap 3"
+     & ASCII.LF
      with Linker_Section => ".rose_command";
 
 end Rose.Core.Replace_Metadata;
