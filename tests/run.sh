@@ -99,6 +99,8 @@ rose-core-serve_metadata.ads rose-core-show.ads rose-core-show_main.adb
 rose-core-show_metadata.ads rose-core-touch.ads rose-core-touch_main.adb
 rose-core-touch_metadata.ads rose-core-probe.ads
 rose-core-probe_main.adb rose-core-probe_metadata.ads
+rose-core-replace.ads rose-core-replace_main.adb
+rose-core-replace_metadata.ads
 rose-interfaces-journal.ads rose-interfaces-journal-client.ads
 rose-interfaces-journal-client.adb
 rose-interfaces-journal-client-conversions.ads
@@ -157,12 +159,13 @@ rose-core-head_metadata.ads rose-core-copy.ads rose-core-copy_main.adb
 rose-core-copy_metadata.ads rose-core-serve.ads rose-core-serve_main.adb
 rose-core-serve_metadata.ads rose-core-show.ads rose-core-show_main.adb
 rose-core-show_metadata.ads rose-core-touch.ads rose-core-touch_main.adb
-rose-core-touch_metadata.ads"
+rose-core-touch_metadata.ads rose-core-replace.ads
+rose-core-replace_main.adb rose-core-replace_metadata.ads"
 if $idle --target user -I commands -I rose -o output/user \
      commands/rose-core.idl commands/rose-core-echo.idl \
      commands/rose-core-head.idl commands/rose-core-copy.idl \
      commands/rose-core-serve.idl commands/rose-core-show.idl \
-     commands/rose-core-touch.idl; then
+     commands/rose-core-touch.idl commands/rose-core-replace.idl; then
   for file in $user_commands; do
     if diff -u "expected-user/$file" "output/user/$file"; then
       pass "user $file"
@@ -245,7 +248,7 @@ fi
 # Commands, packages and roles that break the rules. Each command finds
 # its package beside it, in command-errors/, and its roles in commands/.
 
-if $idle --target kernel -I commands -I rose -o output      command-errors/rose-core-bad.idl command-errors/nowhere-thing.idl      command-errors/bad_role.idl command-errors/bad_category.idl command-errors/rose-core-modes.idl      command-errors/rose-core.idl 2> output/diagnostics.txt; then
+if $idle --target kernel -I commands -I rose -o output      command-errors/rose-core-bad.idl command-errors/nowhere-thing.idl      command-errors/bad_role.idl command-errors/bad_category.idl command-errors/rose-core-modes.idl      command-errors/rose-core-unserved.idl      command-errors/rose-core.idl 2> output/diagnostics.txt; then
   fail "command errors (expected errors)"
 elif diff -u command-errors/expected.txt output/diagnostics.txt; then
   pass "command errors"

@@ -1,0 +1,13 @@
+--  A replaceable server (Rose ADR 0032): the main is given the version
+--  that it replaces as a cap after the others, or a null cap, and reads
+--  its state through the Read_State of the package that Replaceable names,
+--  before it calls the command.
+
+command Rose.Core.Replace : Create_Endpoint, Cap_Set_Service
+  with Summary     => "Serve a name that a new version can take over.",
+       Server      => Replace_Server.Start,
+       Replaceable => Replace_Server.State
+is
+   Result : out Named
+     with Help => "the interface that is served";
+end Rose.Core.Replace;

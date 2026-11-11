@@ -574,6 +574,47 @@ package body Idle.Targets.Kernel.Commands is
                   System_Args.To_Array)));
       end if;
 
+      --  A replaceable server (Rose ADR 0032) is given the version that it
+      --  replaces, if there is one, as a cap after its other caps, which
+      --  is null for a fresh start. It is not an argument of the
+      --  procedure: the main reads the old version's state and caps
+      --  first, with the Read_State procedure of the package that the
+      --  aspect names, and the procedure starts from what was read.
+
+      if Idle.Commands.Has_Aspect (Item.Aspects, "Replaceable") then
+         declare
+            State : constant String :=
+              Idle.Commands.Aspect (Item.Aspects, "Replaceable");
+            Index : Natural := 0;
+         begin
+            for Placed of Signature loop
+               if Placed.Where.Kind = Cap_Place then
+                  Index := Natural'Max (Index, Placed.Where.Index + 1);
+               end if;
+            end loop;
+
+            Line ("argument", "Previous");
+            Line ("type", "interface Replaceable");
+            Line ("place", "cap" & Natural'Image (Index));
+            Line ("help",
+                  "the version of the server that this one replaces,"
+                  & " or none");
+            Line ("previous", "cap" & Natural'Image (Index));
+
+            Main_Context.Add ("Rose.Replacement");
+            Main_Context.Add (State);
+            Statements.Append
+              (F.New_Call_Statement
+                 (F.New_Call
+                    ("Rose.Replacement.Take_Over",
+                     [F.New_Call
+                        (Launch & "Cap_Argument",
+                         [Call_Node, Literal (Index)]),
+                      F.New_Attribute
+                        (F.New_Name (State & ".Read_State"), "Access")])));
+         end;
+      end if;
+
       --  The procedure spec.
 
       Syn.Units.Write

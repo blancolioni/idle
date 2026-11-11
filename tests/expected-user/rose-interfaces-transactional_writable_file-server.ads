@@ -11,7 +11,8 @@ package Rose.Interfaces.Transactional_Writable_File.Server is
    procedure Attach
      (Server_Context : in out Rose.Server.Server_Context;
       Object         :
-        not null access Transactional_Writable_File_Interface'Class);
+        not null access Transactional_Writable_File_Interface'Class;
+      Identifier     : Rose.Objects.Capability_Identifier := 0);
 
    procedure Publish
      (Server_Context : in out Rose.Server.Server_Context;
@@ -21,6 +22,10 @@ package Rose.Interfaces.Transactional_Writable_File.Server is
    function Interface_Cap
      (Object : not null access Transactional_Writable_File_Interface'Class)
       return Rose.Capabilities.Capability;
+
+   function Identifier_Of
+     (Object : not null access Transactional_Writable_File_Interface'Class)
+      return Rose.Objects.Capability_Identifier;
 
    function Cap_Of
      (Object       : Transactional_Writable_File_Interface'Class;

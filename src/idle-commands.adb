@@ -72,6 +72,13 @@ package body Idle.Commands is
 
       procedure Check_Members;
       procedure Check_Package;
+
+      procedure Check_Replaceable;
+      --  A command with the Replaceable aspect (Rose ADR 0032) is a
+      --  server, has the Cap_Set_Service role, to make the cap set that
+      --  its Caps returns, and has no argument called Previous, which is
+      --  the version it replaces.
+
       procedure Check_Roles;
 
       procedure Check_Standard_Input (Argument : Idle.Syntax.Argument);
@@ -415,6 +422,46 @@ package body Idle.Commands is
          end if;
       end Check_Package;
 
+      -----------------------
+      -- Check_Replaceable --
+      -----------------------
+
+      procedure Check_Replaceable is
+         Has_Service : Boolean := False;
+      begin
+         if not Has_Aspect (Item.Aspects, "Replaceable") then
+            return;
+         end if;
+
+         for Ancestor of Idle.Hierarchy.Ancestors (Item) loop
+            if Same (Simple_Name (To_String (Ancestor.Name)),
+                     "Cap_Set_Service")
+            then
+               Has_Service := True;
+            end if;
+         end loop;
+
+         if not Has_Aspect (Item.Aspects, "Server") then
+            Error (Item.Position,
+                   "a Replaceable command is a server, so it needs the"
+                   & " Server aspect");
+         end if;
+
+         if not Has_Service then
+            Error (Item.Position,
+                   "a Replaceable command needs the Cap_Set_Service role,"
+                   & " to make the cap set that its Caps returns");
+         end if;
+
+         for Argument of Item.Arguments loop
+            if Same (To_String (Argument.Name), "Previous") then
+               Error (Argument.Position,
+                      "Previous is reserved: it is the version that a"
+                      & " Replaceable command replaces");
+            end if;
+         end loop;
+      end Check_Replaceable;
+
       -----------------
       -- Check_Roles --
       -----------------
@@ -483,8 +530,9 @@ package body Idle.Commands is
             Check_Aspects
               (Item.Aspects,
                "Summary Description Name Authors Version Copyright",
-               "Server", "Live", "a command");
+               "Server Replaceable", "Live", "a command");
             Check_Arguments;
+            Check_Replaceable;
          when Package_Unit =>
             Check_Aspects
               (Item.Aspects,

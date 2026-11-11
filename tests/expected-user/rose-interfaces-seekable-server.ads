@@ -9,7 +9,8 @@ package Rose.Interfaces.Seekable.Server is
 
    procedure Attach
      (Server_Context : in out Rose.Server.Server_Context;
-      Object         : not null access Seekable_Interface'Class);
+      Object         : not null access Seekable_Interface'Class;
+      Identifier     : Rose.Objects.Capability_Identifier := 0);
 
    procedure Publish
      (Server_Context : in out Rose.Server.Server_Context;
@@ -18,6 +19,10 @@ package Rose.Interfaces.Seekable.Server is
    function Interface_Cap
      (Object : not null access Seekable_Interface'Class)
       return Rose.Capabilities.Capability;
+
+   function Identifier_Of
+     (Object : not null access Seekable_Interface'Class)
+      return Rose.Objects.Capability_Identifier;
 
    function Cap_Of
      (Object       : Seekable_Interface'Class;
