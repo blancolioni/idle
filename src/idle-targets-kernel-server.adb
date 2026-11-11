@@ -265,13 +265,30 @@ package body Idle.Targets.Kernel.Server is
              ("Server_Context", F.New_Name ("Rose.Server.Server_Context"),
               Syn.In_Out_Mode);
          Attach : constant not null Syn.Node_Access :=
-           F.New_Procedure ("Attach", [Context_Parameter, Object_Parameter]);
+           F.New_Procedure
+             ("Attach",
+              [Context_Parameter, Object_Parameter,
+               F.New_Parameter
+                 ("Identifier",
+                  F.New_Name ("Rose.Objects.Capability_Identifier"),
+                  Default => F.New_Integer_Literal (0))]);
+         --  Identifier 0 gives the object a new identifier. A new version
+         --  of a replaceable server gives each object the identifier it
+         --  had in the old version, which clients' caps name (Rose ADR
+         --  0032).
          Publish : constant not null Syn.Node_Access :=
            F.New_Procedure ("Publish", [Context_Parameter, Object_Parameter]);
          Interface_Cap : constant not null Syn.Node_Access :=
            F.New_Function
              ("Interface_Cap", F.New_Name (Capability_Name),
               [Object_Parameter]);
+         Identifier_Of : constant not null Syn.Node_Access :=
+           F.New_Function
+             ("Identifier_Of",
+              F.New_Name ("Rose.Objects.Capability_Identifier"),
+              [Object_Parameter]);
+         --  The identifier of an attached object, or 0, which a
+         --  replaceable server saves in its state.
          Find : constant not null Syn.Node_Access :=
            F.New_Function
              ("Find", F.New_Name ("Object_Access"),
@@ -333,6 +350,7 @@ package body Idle.Targets.Kernel.Server is
          Public_Part.Append (Attach);
          Public_Part.Append (Publish);
          Public_Part.Append (Interface_Cap);
+         Public_Part.Append (Identifier_Of);
          Public_Part.Append (Cap_Of);
 
          Objects.Append
@@ -385,12 +403,14 @@ package body Idle.Targets.Kernel.Server is
                F.New_Subprogram_Body
                  (Specification => Attach,
                   Declarations  =>
-                    (if Resource
-                     then [F.New_Object
-                             ("Slot", F.New_Name ("Natural"),
-                              F.New_Name ("Free_Slot"),
-                              Is_Constant => True)]
-                     else Syn.No_Nodes),
+                    [F.New_Use ("Rose.Objects.Capability_Identifier",
+                                Use_Type => True)]
+                    & (if Resource
+                       then [F.New_Object
+                               ("Slot", F.New_Name ("Natural"),
+                                F.New_Name ("Free_Slot"),
+                                Is_Constant => True)]
+                       else Syn.No_Nodes),
                   Statements    =>
                     [F.New_If
                        (Condition =>
@@ -411,9 +431,21 @@ package body Idle.Targets.Kernel.Server is
                        (F.New_Name ("Attached (" & Slot & ").Object"),
                         F.New_Call
                           ("Object_Access", [F.New_Name ("Object")])),
-                     F.New_Assignment
-                       (F.New_Name ("Attached (" & Slot & ").Identifier"),
-                        F.New_Name (Server & "New_Identifier")),
+                     F.New_If
+                       (Condition =>
+                          F.New_Binary
+                            (F.New_Name ("Identifier"), "=",
+                             F.New_Integer_Literal (0)),
+                        Then_Part =>
+                          [F.New_Assignment
+                             (F.New_Name
+                                ("Attached (" & Slot & ").Identifier"),
+                              F.New_Name (Server & "New_Identifier"))],
+                        Else_Part =>
+                          [F.New_Assignment
+                             (F.New_Name
+                                ("Attached (" & Slot & ").Identifier"),
+                              F.New_Name ("Identifier"))]),
                      F.New_Assignment
                        (F.New_Name ("Attached (" & Slot & ").Cap"),
                         F.New_Call
@@ -549,6 +581,23 @@ package body Idle.Targets.Kernel.Server is
                            [F.New_Return (F.New_Name ("Item.Cap"))])]),
                   F.New_Return
                     (F.New_Name ("Rose.Capabilities.Null_Capability"))]));
+
+         Bodies.Add
+           ("Identifier_Of",
+            F.New_Subprogram_Body
+              (Specification => Identifier_Of,
+               Statements    =>
+                 [F.New_For_Of_Loop
+                    ("Item", F.New_Name ("Attached"),
+                     [F.New_If
+                        (Condition =>
+                           F.New_Binary
+                             (F.New_Name ("Item.Object"), "=",
+                              F.New_Call
+                                ("Object_Access", [F.New_Name ("Object")])),
+                         Then_Part =>
+                           [F.New_Return (F.New_Name ("Item.Identifier"))])]),
+                  F.New_Return (F.New_Integer_Literal (0))]));
 
          Bodies.Add
            ("Publish",

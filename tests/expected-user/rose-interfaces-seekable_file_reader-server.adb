@@ -73,8 +73,10 @@ package body Rose.Interfaces.Seekable_File_Reader.Server is
 
    procedure Attach
      (Server_Context : in out Rose.Server.Server_Context;
-      Object         : not null access Seekable_File_Reader_Interface'Class)
+      Object         : not null access Seekable_File_Reader_Interface'Class;
+      Identifier     : Rose.Objects.Capability_Identifier := 0)
    is
+      use type Rose.Objects.Capability_Identifier;
       Slot : constant Natural := Free_Slot;
    begin
       if not Registered then
@@ -125,7 +127,11 @@ package body Rose.Interfaces.Seekable_File_Reader.Server is
          Attached.Append (Attached_Object'(others => <>));
       end if;
       Attached (Slot).Object := Object_Access (Object);
-      Attached (Slot).Identifier := Rose.Server.New_Identifier;
+      if Identifier = 0 then
+         Attached (Slot).Identifier := Rose.Server.New_Identifier;
+      else
+         Attached (Slot).Identifier := Identifier;
+      end if;
       Attached (Slot).Cap :=
         Rose.Server.Create_Endpoint
           (Rose.Interfaces.Seekable_File_Reader.Seekable_File_Reader_Interface,
@@ -823,6 +829,23 @@ package body Rose.Interfaces.Seekable_File_Reader.Server is
                Rose.Invocation.Exception_Raised);
       end;
    end Handle_Seek;
+
+   -------------------
+   -- Identifier_Of --
+   -------------------
+
+   function Identifier_Of
+     (Object : not null access Seekable_File_Reader_Interface'Class)
+      return Rose.Objects.Capability_Identifier
+   is
+   begin
+      for Item of Attached loop
+         if Item.Object = Object_Access (Object) then
+            return Item.Identifier;
+         end if;
+      end loop;
+      return 0;
+   end Identifier_Of;
 
    -------------------
    -- Interface_Cap --

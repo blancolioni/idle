@@ -1,0 +1,7 @@
+command Rose.Core.Unserved : Create_Endpoint
+  with Summary     => "A replaceable command that does not serve.",
+       Replaceable => Unserved_State
+is
+   Previous : in Named
+     with Help => "a name";
+end Rose.Core.Unserved;

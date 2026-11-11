@@ -71,8 +71,10 @@ package body Rose.Interfaces.Exec.Server is
 
    procedure Attach
      (Server_Context : in out Rose.Server.Server_Context;
-      Object         : not null access Exec_Interface'Class)
+      Object         : not null access Exec_Interface'Class;
+      Identifier     : Rose.Objects.Capability_Identifier := 0)
    is
+      use type Rose.Objects.Capability_Identifier;
    begin
       if not Registered then
          Rose.Server.Register_Handler
@@ -114,7 +116,12 @@ package body Rose.Interfaces.Exec.Server is
       end if;
       Attached.Append (Attached_Object'(others => <>));
       Attached (Attached.Last_Index).Object := Object_Access (Object);
-      Attached (Attached.Last_Index).Identifier := Rose.Server.New_Identifier;
+      if Identifier = 0 then
+         Attached (Attached.Last_Index).Identifier :=
+           Rose.Server.New_Identifier;
+      else
+         Attached (Attached.Last_Index).Identifier := Identifier;
+      end if;
       Attached (Attached.Last_Index).Cap :=
         Rose.Server.Create_Endpoint
           (Rose.Interfaces.Exec.Exec_Interface,
@@ -664,6 +671,23 @@ package body Rose.Interfaces.Exec.Server is
                Rose.Invocation.Exception_Raised);
       end;
    end Handle_Set_Standard_Output;
+
+   -------------------
+   -- Identifier_Of --
+   -------------------
+
+   function Identifier_Of
+     (Object : not null access Exec_Interface'Class)
+      return Rose.Objects.Capability_Identifier
+   is
+   begin
+      for Item of Attached loop
+         if Item.Object = Object_Access (Object) then
+            return Item.Identifier;
+         end if;
+      end loop;
+      return 0;
+   end Identifier_Of;
 
    -------------------
    -- Interface_Cap --
