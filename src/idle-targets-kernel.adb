@@ -648,7 +648,8 @@ package body Idle.Targets.Kernel is
    procedure Generate
      (Item             : Idle.Syntax.Interface_Declaration;
       Output_Directory : String;
-      Target           : Idle.Targets.Target := Kernel_Target)
+      Target           : Idle.Targets.Target := Kernel_Target;
+      Command_Clients  : Boolean := False)
    is
    begin
       case Item.Kind is
@@ -664,7 +665,11 @@ package body Idle.Targets.Kernel is
                end if;
             end if;
          when Idle.Syntax.Command_Unit =>
-            if Idle.Commands.Check (Item) then
+            if not Idle.Commands.Check (Item) then
+               null;
+            elsif Command_Clients then
+               Commands.Generate_Client (Item, Output_Directory);
+            else
                Commands.Generate_Command (Item, Output_Directory, Target);
             end if;
          when Idle.Syntax.Package_Unit =>

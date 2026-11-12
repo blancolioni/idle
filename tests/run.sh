@@ -160,7 +160,14 @@ rose-core-copy_metadata.ads rose-core-serve.ads rose-core-serve_main.adb
 rose-core-serve_metadata.ads rose-core-show.ads rose-core-show_main.adb
 rose-core-show_metadata.ads rose-core-touch.ads rose-core-touch_main.adb
 rose-core-touch_metadata.ads rose-core-replace.ads
-rose-core-replace_main.adb rose-core-replace_metadata.ads"
+rose-core-replace_main.adb rose-core-replace_metadata.ads
+rose-core-echo_client.ads rose-core-echo_client.adb
+rose-core-head_client.ads rose-core-head_client.adb
+rose-core-copy_client.ads rose-core-copy_client.adb
+rose-core-serve_client.ads rose-core-serve_client.adb
+rose-core-show_client.ads rose-core-show_client.adb
+rose-core-touch_client.ads rose-core-touch_client.adb
+rose-core-replace_client.ads rose-core-replace_client.adb"
 if $idle --target user -I commands -I rose -o output/user \
      commands/rose-core.idl commands/rose-core-echo.idl \
      commands/rose-core-head.idl commands/rose-core-copy.idl \
@@ -181,6 +188,41 @@ if [ "$(ls output/user)" = "$(ls expected-user)" ]; then
   pass "files generated for the user target"
 else
   fail "files generated for the user target"
+fi
+
+# --command-client writes only the client of a command (#103), for a
+# program that launches it, and the package of details it is a child of.
+# It needs the user target.
+
+rm -rf output/client && mkdir output/client
+if $idle --target user --command-client -I commands -I rose \
+     -o output/client commands/rose-core.idl commands/rose-core-replace.idl
+then
+  generated=$(ls output/client | tr '\n' ' ')
+  if [ "$generated" = \
+       "rose-core.ads rose-core-replace_client.adb rose-core-replace_client.ads " ]
+  then
+    pass "--command-client writes only the client"
+  else
+    fail "--command-client writes only the client: $generated"
+  fi
+  for file in rose-core-replace_client.ads rose-core-replace_client.adb; do
+    if diff -u "expected-user/$file" "output/client/$file"; then
+      pass "client $file"
+    else
+      fail "client $file"
+    fi
+  done
+else
+  fail "--command-client"
+fi
+
+if $idle --command-client -I commands -I rose -o output/client \
+     commands/rose-core-replace.idl 2> output/diagnostics.txt
+then
+  fail "--command-client without --target user"
+else
+  pass "--command-client without --target user"
 fi
 
 # 3. Diagnostics

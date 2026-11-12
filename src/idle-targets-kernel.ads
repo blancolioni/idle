@@ -5,10 +5,13 @@ package Idle.Targets.Kernel is
    procedure Generate
      (Item             : Idle.Syntax.Interface_Declaration;
       Output_Directory : String;
-      Target           : Idle.Targets.Target := Kernel_Target);
+      Target           : Idle.Targets.Target := Kernel_Target;
+      Command_Clients  : Boolean := False);
    --  Write the units for Item, for Target, to Output_Directory. For a
    --  command or an IDL package, see Idle.Targets.Kernel.Commands; a role
-   --  has none. For an interface, they are the packages that implement
+   --  has none. If Command_Clients is True, a command has only its client
+   --  written (idle#103), for a program that launches it; Target must be
+   --  the user target. For an interface, they are the packages that implement
    --  it:
    --
    --    Rose.Interfaces.<Name>         the endpoint ids of the interface
