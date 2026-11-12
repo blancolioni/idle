@@ -101,16 +101,39 @@ package body Rose.Interfaces.File.Client is
 
    procedure Load (Item : in out File_Client) is
       Params : aliased Rose.Invocation.Invocation_Record;
+      Caps   : Rose.Capabilities.Capability_Array (1 .. Subprogram_Count);
+      Index  : Natural := 0;
+      First  : Natural := Natural'Last;
    begin
-      Rose.System_Calls.Initialize_Send (Params, Item.Interface_Cap);
-      Rose.System_Calls.Receive_Caps (Params, Subprogram_Count);
-      Rose.System_Calls.Invoke_Capability (Params);
-      if Params.Control.Flags (Rose.Invocation.Error) then
-         raise Rose.Interfaces.Objects.Invocation_Error with "File.Open";
-      end if;
-      Item.Size := Params.Caps (Size_Index);
-      Item.Open_Reader := Params.Caps (Open_Reader_Index);
-      Item.Open_Seekable_Reader := Params.Caps (Open_Seekable_Reader_Index);
+      for Cap of Caps loop
+         if First > Index
+           or else Index - First >= Rose.Invocation.Max_Capabilities
+         then
+            First := Index;
+            Rose.System_Calls.Initialize_Send (Params, Item.Interface_Cap);
+            Rose.System_Calls.Send_Word (Params, Natural (0));
+            Rose.System_Calls.Send_Word (Params, First);
+            Rose.System_Calls.Send_Word
+              (Params,
+               Natural'Min
+                 (Rose.Invocation.Max_Capabilities,
+                  Subprogram_Count - First));
+            Rose.System_Calls.Receive_Caps
+              (Params,
+               Natural'Min
+                 (Rose.Invocation.Max_Capabilities,
+                  Subprogram_Count - First));
+            Rose.System_Calls.Invoke_Capability (Params);
+            if Params.Control.Flags (Rose.Invocation.Error) then
+               raise Rose.Interfaces.Objects.Invocation_Error with "File.Open";
+            end if;
+         end if;
+         Cap := Params.Caps (Rose.Invocation.Capability_Index (Index - First));
+         Index := Index + 1;
+      end loop;
+      Item.Size := Caps (Size_Index + 1);
+      Item.Open_Reader := Caps (Open_Reader_Index + 1);
+      Item.Open_Seekable_Reader := Caps (Open_Seekable_Reader_Index + 1);
       Item.Is_Open := True;
    end Load;
 

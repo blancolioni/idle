@@ -195,117 +195,148 @@ package body Rose.Interfaces.Memory.Server is
       Cap        : Rose.Capabilities.Capability;
       Identifier : constant Rose.Objects.Capability_Identifier :=
         Parameters.Identifier;
+      First      : Natural := 0;
+      Page       : Natural := Rose.Invocation.Max_Capabilities;
    begin
+      if Rose.Invocation.Sent_Word_Count (Parameters) >= 2 then
+         First := Natural (Parameters.Data (1));
+      end if;
+      if Rose.Invocation.Sent_Word_Count (Parameters) >= 3 then
+         Page := Natural'Min (Page, Natural (Parameters.Data (2)));
+      end if;
       Rose.System_Calls.Initialize_Reply (Parameters, Parameters.Reply_Cap);
-      if New_Process_Cap = Rose.Capabilities.Null_Capability then
-         if not Rose.Server.Has_Instance
-           (Server_Instance,
-            New_Process_Endpoint,
-            Identifier)
-         then
-            Rose.Server.Set_Instance_Cap
-              (Server_Instance,
-               New_Process_Endpoint,
-               Identifier,
-               Rose.Server.Create_Endpoint (New_Process_Endpoint, Identifier));
-         end if;
-         Cap :=
-           Rose.Server.Get_Instance_Cap
-             (Server_Instance,
-              New_Process_Endpoint,
-              Identifier);
+      if First >= 5 then
+         Rose.System_Calls.Send_Error
+           (Parameters,
+            Rose.Invocation.Invalid_Operation);
       else
-         Cap := New_Process_Cap;
-      end if;
-      Rose.System_Calls.Send_Cap (Parameters, Cap);
-      if Register_Process_Cap = Rose.Capabilities.Null_Capability then
-         if not Rose.Server.Has_Instance
-           (Server_Instance,
-            Register_Process_Endpoint,
-            Identifier)
-         then
-            Rose.Server.Set_Instance_Cap
-              (Server_Instance,
-               Register_Process_Endpoint,
-               Identifier,
-               Rose.Server.Create_Endpoint
-                 (Register_Process_Endpoint,
-                  Identifier));
+         if 0 in First .. (First + Page - 1) then
+            if New_Process_Cap = Rose.Capabilities.Null_Capability then
+               if not Rose.Server.Has_Instance
+                 (Server_Instance,
+                  New_Process_Endpoint,
+                  Identifier)
+               then
+                  Rose.Server.Set_Instance_Cap
+                    (Server_Instance,
+                     New_Process_Endpoint,
+                     Identifier,
+                     Rose.Server.Create_Endpoint
+                       (New_Process_Endpoint,
+                        Identifier));
+               end if;
+               Cap :=
+                 Rose.Server.Get_Instance_Cap
+                   (Server_Instance,
+                    New_Process_Endpoint,
+                    Identifier);
+            else
+               Cap := New_Process_Cap;
+            end if;
+            Rose.System_Calls.Send_Cap (Parameters, Cap);
          end if;
-         Cap :=
-           Rose.Server.Get_Instance_Cap
-             (Server_Instance,
-              Register_Process_Endpoint,
-              Identifier);
-      else
-         Cap := Register_Process_Cap;
-      end if;
-      Rose.System_Calls.Send_Cap (Parameters, Cap);
-      if Page_Fault_Cap = Rose.Capabilities.Null_Capability then
-         if not Rose.Server.Has_Instance
-           (Server_Instance,
-            Page_Fault_Endpoint,
-            Identifier)
-         then
-            Rose.Server.Set_Instance_Cap
-              (Server_Instance,
-               Page_Fault_Endpoint,
-               Identifier,
-               Rose.Server.Create_Endpoint (Page_Fault_Endpoint, Identifier));
+         if 1 in First .. (First + Page - 1) then
+            if Register_Process_Cap = Rose.Capabilities.Null_Capability then
+               if not Rose.Server.Has_Instance
+                 (Server_Instance,
+                  Register_Process_Endpoint,
+                  Identifier)
+               then
+                  Rose.Server.Set_Instance_Cap
+                    (Server_Instance,
+                     Register_Process_Endpoint,
+                     Identifier,
+                     Rose.Server.Create_Endpoint
+                       (Register_Process_Endpoint,
+                        Identifier));
+               end if;
+               Cap :=
+                 Rose.Server.Get_Instance_Cap
+                   (Server_Instance,
+                    Register_Process_Endpoint,
+                    Identifier);
+            else
+               Cap := Register_Process_Cap;
+            end if;
+            Rose.System_Calls.Send_Cap (Parameters, Cap);
          end if;
-         Cap :=
-           Rose.Server.Get_Instance_Cap
-             (Server_Instance,
-              Page_Fault_Endpoint,
-              Identifier);
-      else
-         Cap := Page_Fault_Cap;
-      end if;
-      Rose.System_Calls.Send_Cap (Parameters, Cap);
-      if Take_Physical_Memory_Cap = Rose.Capabilities.Null_Capability then
-         if not Rose.Server.Has_Instance
-           (Server_Instance,
-            Take_Physical_Memory_Endpoint,
-            Identifier)
-         then
-            Rose.Server.Set_Instance_Cap
-              (Server_Instance,
-               Take_Physical_Memory_Endpoint,
-               Identifier,
-               Rose.Server.Create_Endpoint
-                 (Take_Physical_Memory_Endpoint,
-                  Identifier));
+         if 2 in First .. (First + Page - 1) then
+            if Page_Fault_Cap = Rose.Capabilities.Null_Capability then
+               if not Rose.Server.Has_Instance
+                 (Server_Instance,
+                  Page_Fault_Endpoint,
+                  Identifier)
+               then
+                  Rose.Server.Set_Instance_Cap
+                    (Server_Instance,
+                     Page_Fault_Endpoint,
+                     Identifier,
+                     Rose.Server.Create_Endpoint
+                       (Page_Fault_Endpoint,
+                        Identifier));
+               end if;
+               Cap :=
+                 Rose.Server.Get_Instance_Cap
+                   (Server_Instance,
+                    Page_Fault_Endpoint,
+                    Identifier);
+            else
+               Cap := Page_Fault_Cap;
+            end if;
+            Rose.System_Calls.Send_Cap (Parameters, Cap);
          end if;
-         Cap :=
-           Rose.Server.Get_Instance_Cap
-             (Server_Instance,
-              Take_Physical_Memory_Endpoint,
-              Identifier);
-      else
-         Cap := Take_Physical_Memory_Cap;
-      end if;
-      Rose.System_Calls.Send_Cap (Parameters, Cap);
-      if Checkpoint_Cap = Rose.Capabilities.Null_Capability then
-         if not Rose.Server.Has_Instance
-           (Server_Instance,
-            Checkpoint_Endpoint,
-            Identifier)
-         then
-            Rose.Server.Set_Instance_Cap
-              (Server_Instance,
-               Checkpoint_Endpoint,
-               Identifier,
-               Rose.Server.Create_Endpoint (Checkpoint_Endpoint, Identifier));
+         if 3 in First .. (First + Page - 1) then
+            if Take_Physical_Memory_Cap = Rose.Capabilities.Null_Capability
+            then
+               if not Rose.Server.Has_Instance
+                 (Server_Instance,
+                  Take_Physical_Memory_Endpoint,
+                  Identifier)
+               then
+                  Rose.Server.Set_Instance_Cap
+                    (Server_Instance,
+                     Take_Physical_Memory_Endpoint,
+                     Identifier,
+                     Rose.Server.Create_Endpoint
+                       (Take_Physical_Memory_Endpoint,
+                        Identifier));
+               end if;
+               Cap :=
+                 Rose.Server.Get_Instance_Cap
+                   (Server_Instance,
+                    Take_Physical_Memory_Endpoint,
+                    Identifier);
+            else
+               Cap := Take_Physical_Memory_Cap;
+            end if;
+            Rose.System_Calls.Send_Cap (Parameters, Cap);
          end if;
-         Cap :=
-           Rose.Server.Get_Instance_Cap
-             (Server_Instance,
-              Checkpoint_Endpoint,
-              Identifier);
-      else
-         Cap := Checkpoint_Cap;
+         if 4 in First .. (First + Page - 1) then
+            if Checkpoint_Cap = Rose.Capabilities.Null_Capability then
+               if not Rose.Server.Has_Instance
+                 (Server_Instance,
+                  Checkpoint_Endpoint,
+                  Identifier)
+               then
+                  Rose.Server.Set_Instance_Cap
+                    (Server_Instance,
+                     Checkpoint_Endpoint,
+                     Identifier,
+                     Rose.Server.Create_Endpoint
+                       (Checkpoint_Endpoint,
+                        Identifier));
+               end if;
+               Cap :=
+                 Rose.Server.Get_Instance_Cap
+                   (Server_Instance,
+                    Checkpoint_Endpoint,
+                    Identifier);
+            else
+               Cap := Checkpoint_Cap;
+            end if;
+            Rose.System_Calls.Send_Cap (Parameters, Cap);
+         end if;
       end if;
-      Rose.System_Calls.Send_Cap (Parameters, Cap);
    end Handle_Get_Memory_Interface;
 
    ------------------------

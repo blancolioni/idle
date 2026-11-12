@@ -214,17 +214,40 @@ package body Rose.Interfaces.Exec.Client is
       Interface_Cap : Rose.Capabilities.Capability)
    is
       Params : aliased Rose.Invocation.Invocation_Record;
+      Caps   : Rose.Capabilities.Capability_Array (1 .. Subprogram_Count);
+      Index  : Natural := 0;
+      First  : Natural := Natural'Last;
    begin
       Client.Is_Open := False;
       Client.Interface_Cap := Interface_Cap;
-      Rose.System_Calls.Initialize_Send (Params, Interface_Cap);
-      Rose.System_Calls.Receive_Caps (Params, Subprogram_Count);
-      Rose.System_Calls.Invoke_Capability (Params);
-      Client.Launch := Params.Caps (Launch_Index);
-      Client.Launch_Command := Params.Caps (Launch_Command_Index);
-      Client.Metadata := Params.Caps (Metadata_Index);
-      Client.Install := Params.Caps (Install_Index);
-      Client.Set_Standard_Output := Params.Caps (Set_Standard_Output_Index);
+      for Cap of Caps loop
+         if First > Index
+           or else Index - First >= Rose.Invocation.Max_Capabilities
+         then
+            First := Index;
+            Rose.System_Calls.Initialize_Send (Params, Interface_Cap);
+            Rose.System_Calls.Send_Word (Params, Natural (0));
+            Rose.System_Calls.Send_Word (Params, First);
+            Rose.System_Calls.Send_Word
+              (Params,
+               Natural'Min
+                 (Rose.Invocation.Max_Capabilities,
+                  Subprogram_Count - First));
+            Rose.System_Calls.Receive_Caps
+              (Params,
+               Natural'Min
+                 (Rose.Invocation.Max_Capabilities,
+                  Subprogram_Count - First));
+            Rose.System_Calls.Invoke_Capability (Params);
+         end if;
+         Cap := Params.Caps (Rose.Invocation.Capability_Index (Index - First));
+         Index := Index + 1;
+      end loop;
+      Client.Launch := Caps (Launch_Index + 1);
+      Client.Launch_Command := Caps (Launch_Command_Index + 1);
+      Client.Metadata := Caps (Metadata_Index + 1);
+      Client.Install := Caps (Install_Index + 1);
+      Client.Set_Standard_Output := Caps (Set_Standard_Output_Index + 1);
       Client.Is_Open := True;
    end Open;
 

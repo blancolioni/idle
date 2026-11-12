@@ -1,0 +1,27 @@
+--  An invocation carries at most four capabilities, and so does its
+--  reply (Rose #234). A capability array isn't counted: its length is
+--  only known when it is sent.
+
+interface Caps is
+
+   procedure Four
+     (A : Capability; B : Capability; C : Capability; D : Capability);
+
+   procedure Five
+     (A : Capability; B : Capability; C : Capability; D : Capability;
+      E : Capability);
+
+   procedure Both
+     (A : in out Capability; B : in out Capability;
+      C : in out Capability; D : out Capability; E : out Capability);
+
+   function Many
+     (A : Capability; B : out Capability; C : out Capability;
+      D : out Capability; E : out Capability)
+     return Capability;
+
+   procedure Array_Too
+     (A : Capability; B : Capability; C : Capability; D : Capability;
+      Rest : Capability_Array);
+
+end Caps;

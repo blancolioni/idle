@@ -165,16 +165,40 @@ package body Rose.Interfaces.Cap_Set.Client is
 
    procedure Load (Item : in out Cap_Set_Client) is
       Params : aliased Rose.Invocation.Invocation_Record;
+      Caps   : Rose.Capabilities.Capability_Array (1 .. Subprogram_Count);
+      Index  : Natural := 0;
+      First  : Natural := Natural'Last;
    begin
-      Rose.System_Calls.Initialize_Send (Params, Item.Interface_Cap);
-      Rose.System_Calls.Receive_Caps (Params, Subprogram_Count);
-      Rose.System_Calls.Invoke_Capability (Params);
-      if Params.Control.Flags (Rose.Invocation.Error) then
-         raise Rose.Interfaces.Objects.Invocation_Error with "Cap_Set.Open";
-      end if;
-      Item.Append := Params.Caps (Append_Index);
-      Item.Get_Cap := Params.Caps (Get_Cap_Index);
-      Item.Length := Params.Caps (Length_Index);
+      for Cap of Caps loop
+         if First > Index
+           or else Index - First >= Rose.Invocation.Max_Capabilities
+         then
+            First := Index;
+            Rose.System_Calls.Initialize_Send (Params, Item.Interface_Cap);
+            Rose.System_Calls.Send_Word (Params, Natural (0));
+            Rose.System_Calls.Send_Word (Params, First);
+            Rose.System_Calls.Send_Word
+              (Params,
+               Natural'Min
+                 (Rose.Invocation.Max_Capabilities,
+                  Subprogram_Count - First));
+            Rose.System_Calls.Receive_Caps
+              (Params,
+               Natural'Min
+                 (Rose.Invocation.Max_Capabilities,
+                  Subprogram_Count - First));
+            Rose.System_Calls.Invoke_Capability (Params);
+            if Params.Control.Flags (Rose.Invocation.Error) then
+               raise Rose.Interfaces.Objects.Invocation_Error
+                 with "Cap_Set.Open";
+            end if;
+         end if;
+         Cap := Params.Caps (Rose.Invocation.Capability_Index (Index - First));
+         Index := Index + 1;
+      end loop;
+      Item.Append := Caps (Append_Index + 1);
+      Item.Get_Cap := Caps (Get_Cap_Index + 1);
+      Item.Length := Caps (Length_Index + 1);
       Item.Is_Open := True;
    end Load;
 

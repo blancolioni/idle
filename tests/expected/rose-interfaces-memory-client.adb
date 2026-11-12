@@ -146,17 +146,40 @@ package body Rose.Interfaces.Memory.Client is
       Interface_Cap : Rose.Capabilities.Capability)
    is
       Params : aliased Rose.Invocation.Invocation_Record;
+      Caps   : Rose.Capabilities.Capability_Array (1 .. Subprogram_Count);
+      Index  : Natural := 0;
+      First  : Natural := Natural'Last;
    begin
       Client.Is_Open := False;
       Client.Interface_Cap := Interface_Cap;
-      Rose.System_Calls.Initialize_Send (Params, Interface_Cap);
-      Rose.System_Calls.Receive_Caps (Params, Subprogram_Count);
-      Rose.System_Calls.Invoke_Capability (Params);
-      Client.New_Process := Params.Caps (New_Process_Index);
-      Client.Register_Process := Params.Caps (Register_Process_Index);
-      Client.Page_Fault := Params.Caps (Page_Fault_Index);
-      Client.Take_Physical_Memory := Params.Caps (Take_Physical_Memory_Index);
-      Client.Checkpoint := Params.Caps (Checkpoint_Index);
+      for Cap of Caps loop
+         if First > Index
+           or else Index - First >= Rose.Invocation.Max_Capabilities
+         then
+            First := Index;
+            Rose.System_Calls.Initialize_Send (Params, Interface_Cap);
+            Rose.System_Calls.Send_Word (Params, Natural (0));
+            Rose.System_Calls.Send_Word (Params, First);
+            Rose.System_Calls.Send_Word
+              (Params,
+               Natural'Min
+                 (Rose.Invocation.Max_Capabilities,
+                  Subprogram_Count - First));
+            Rose.System_Calls.Receive_Caps
+              (Params,
+               Natural'Min
+                 (Rose.Invocation.Max_Capabilities,
+                  Subprogram_Count - First));
+            Rose.System_Calls.Invoke_Capability (Params);
+         end if;
+         Cap := Params.Caps (Rose.Invocation.Capability_Index (Index - First));
+         Index := Index + 1;
+      end loop;
+      Client.New_Process := Caps (New_Process_Index + 1);
+      Client.Register_Process := Caps (Register_Process_Index + 1);
+      Client.Page_Fault := Caps (Page_Fault_Index + 1);
+      Client.Take_Physical_Memory := Caps (Take_Physical_Memory_Index + 1);
+      Client.Checkpoint := Caps (Checkpoint_Index + 1);
       Client.Is_Open := True;
    end Open;
 

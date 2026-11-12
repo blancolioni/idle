@@ -242,18 +242,42 @@ package body Rose.Interfaces.Gauge.Client is
 
    procedure Load (Item : in out Gauge_Client) is
       Params : aliased Rose.Invocation.Invocation_Record;
+      Caps   : Rose.Capabilities.Capability_Array (1 .. Subprogram_Count);
+      Index  : Natural := 0;
+      First  : Natural := Natural'Last;
    begin
-      Rose.System_Calls.Initialize_Send (Params, Item.Interface_Cap);
-      Rose.System_Calls.Receive_Caps (Params, Subprogram_Count);
-      Rose.System_Calls.Invoke_Capability (Params);
-      if Params.Control.Flags (Rose.Invocation.Error) then
-         raise Rose.Interfaces.Objects.Invocation_Error with "Gauge.Open";
-      end if;
-      Item.Badge := Params.Caps (Badge_Index);
-      Item.Increment := Params.Caps (Increment_Index);
-      Item.Value := Params.Caps (Value_Index);
-      Item.Set_Label := Params.Caps (Set_Label_Index);
-      Item.Reset := Params.Caps (Reset_Index);
+      for Cap of Caps loop
+         if First > Index
+           or else Index - First >= Rose.Invocation.Max_Capabilities
+         then
+            First := Index;
+            Rose.System_Calls.Initialize_Send (Params, Item.Interface_Cap);
+            Rose.System_Calls.Send_Word (Params, Natural (0));
+            Rose.System_Calls.Send_Word (Params, First);
+            Rose.System_Calls.Send_Word
+              (Params,
+               Natural'Min
+                 (Rose.Invocation.Max_Capabilities,
+                  Subprogram_Count - First));
+            Rose.System_Calls.Receive_Caps
+              (Params,
+               Natural'Min
+                 (Rose.Invocation.Max_Capabilities,
+                  Subprogram_Count - First));
+            Rose.System_Calls.Invoke_Capability (Params);
+            if Params.Control.Flags (Rose.Invocation.Error) then
+               raise Rose.Interfaces.Objects.Invocation_Error
+                 with "Gauge.Open";
+            end if;
+         end if;
+         Cap := Params.Caps (Rose.Invocation.Capability_Index (Index - First));
+         Index := Index + 1;
+      end loop;
+      Item.Badge := Caps (Badge_Index + 1);
+      Item.Increment := Caps (Increment_Index + 1);
+      Item.Value := Caps (Value_Index + 1);
+      Item.Set_Label := Caps (Set_Label_Index + 1);
+      Item.Reset := Caps (Reset_Index + 1);
       Item.Is_Open := True;
    end Load;
 
