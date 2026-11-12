@@ -14,7 +14,10 @@ with Idle.Targets.Kernel;
 procedure Idle.Main is
 
    --  idle [--syntax-only | --check | --list-endpoints] [--target TARGET]
-   --       [-I DIRECTORY]... [-o DIRECTORY] FILE.idl...
+   --       [--command-client] [-I DIRECTORY]... [-o DIRECTORY] FILE.idl...
+   --
+   --  --command-client writes only the client of each command, for a
+   --  program that launches it (idle#103), and needs --target user.
    --
    --  -I adds a directory to search for the declarations that a file
    --  names, after the file's own directory.
@@ -41,6 +44,7 @@ procedure Idle.Main is
    Syntax_Only      : Boolean := False;
    Check_Only       : Boolean := False;
    List_Only        : Boolean := False;
+   Command_Clients  : Boolean := False;
    Arguments_OK     : Boolean := True;
    Index            : Positive := 1;
 
@@ -53,7 +57,8 @@ procedure Idle.Main is
       Ada.Text_IO.Put_Line
         (Ada.Text_IO.Standard_Error,
          "usage: idle [--syntax-only | --check | --list-endpoints]"
-         & " [--target TARGET] [-I DIRECTORY]... [-o DIRECTORY]"
+         & " [--target TARGET] [--command-client]"
+         & " [-I DIRECTORY]... [-o DIRECTORY]"
          & " FILE.idl...");
       Ada.Text_IO.Put_Line
         (Ada.Text_IO.Standard_Error,
@@ -73,6 +78,8 @@ begin
             Check_Only := True;
          elsif Argument = "--list-endpoints" then
             List_Only := True;
+         elsif Argument = "--command-client" then
+            Command_Clients := True;
          elsif Argument = "--endpoints" or else Argument = "-o"
            or else Argument = "--target" or else Argument = "-I"
          then
@@ -123,6 +130,15 @@ begin
      or else Boolean'Pos (Syntax_Only) + Boolean'Pos (Check_Only)
              + Boolean'Pos (List_Only) > 1
    then
+      Arguments_OK := False;
+   end if;
+
+   if Command_Clients
+     and then Idle.Targets."/=" (Target, Idle.Targets.User_Target)
+   then
+      Ada.Text_IO.Put_Line
+        (Ada.Text_IO.Standard_Error,
+         "idle: --command-client needs --target user");
       Arguments_OK := False;
    end if;
 
@@ -183,7 +199,8 @@ begin
                   end if;
                else
                   Idle.Targets.Kernel.Generate
-                    (Item, To_String (Output_Directory), Target);
+                    (Item, To_String (Output_Directory), Target,
+                     Command_Clients);
                end if;
             end if;
          end;

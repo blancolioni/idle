@@ -54,6 +54,304 @@ package body Idle.Targets.Kernel.Commands is
       return To_String (Result);
    end Escape;
 
+   ---------------------
+   -- Generate_Client --
+   ---------------------
+
+   procedure Generate_Client
+     (Item             : Idle.Syntax.Interface_Declaration;
+      Output_Directory : String)
+   is
+      use all type Idle.Commands.Argument_Type;
+      use all type Idle.Commands.Place_Kind;
+      use all type Idle.Syntax.Parameter_Mode;
+
+      F           : Syn.Factory.Factory;
+      Name        : constant String := To_String (Item.Name) & "_Client";
+      Client      : constant String := "Rose.Command_Line.Launch_Client.";
+      Cap_Type    : constant String := "Rose.Capabilities.Capability";
+      Null_Cap    : constant String := "Rose.Capabilities.Null_Capability";
+      Signature   : constant Idle.Commands.Placed_Vectors.Vector :=
+        Idle.Commands.Signature (Item);
+      Replaceable : constant Boolean :=
+        Idle.Commands.Has_Aspect (Item.Aspects, "Replaceable");
+
+      Arguments   : Node_List;
+      --  The statements that set the arguments, but for strings.
+      Items       : Node_List;
+      --  The statements that add the strings, in item order.
+      Results     : Node_List;
+      Spec_Context : Context_List;
+      Body_Context : Context_List;
+      Uses_Text   : Boolean := False;
+
+      function Call_Node return not null Syn.Node_Access
+      is (F.New_Name ("Launch_Call"));
+
+      function Literal (Value : Natural) return not null Syn.Node_Access
+      is (F.New_Integer_Literal (Long_Long_Long_Integer (Value)));
+
+      function Ada_Type
+        (Placed : Idle.Commands.Placed_Argument)
+         return String;
+      --  The type of the client's parameter for Placed.
+
+      function Parameters return Syn.Node_Array;
+      --  The parameters of Call, made again for each use, since a node
+      --  goes in one place in a tree.
+
+      procedure Statement
+        (List      : in out Node_List;
+         Procedure_Name : String;
+         Arguments : Syn.Node_Array);
+      --  Append a call of the Launch_Client procedure Procedure_Name.
+
+      --------------
+      -- Ada_Type --
+      --------------
+
+      function Ada_Type
+        (Placed : Idle.Commands.Placed_Argument)
+         return String
+      is
+      begin
+         if Placed.Role /= Null_Unbounded_String then
+            return Cap_Type;
+         end if;
+
+         case Placed.Kind is
+            when Boolean_Argument     => return "Boolean";
+            when Natural_Argument     => return "Natural";
+            when Positive_Argument    => return "Positive";
+            when String_Argument      =>
+               return (if Placed.Argument.Mode = In_Mode then "String"
+                       else "Rose.Command_Line.Text");
+            when String_List_Argument =>
+               return "Rose.Command_Line.String_List";
+            when Interface_Argument | Other_Argument => return Cap_Type;
+         end case;
+      end Ada_Type;
+
+      ----------------
+      -- Parameters --
+      ----------------
+
+      function Parameters return Syn.Node_Array is
+         List : Node_List;
+      begin
+         List.Append
+           (F.New_Parameter ("Endpoint", F.New_Name (Cap_Type)));
+         for Placed of Signature loop
+            declare
+               Argument : Idle.Syntax.Argument renames Placed.Argument;
+               Is_Value : constant Boolean :=
+                 Placed.Role = Null_Unbounded_String
+                 and then Placed.Kind not in Interface_Argument
+                                           | Other_Argument;
+            begin
+               List.Append
+                 (F.New_Parameter
+                    (To_String (Argument.Name),
+                     F.New_Name (Ada_Type (Placed)),
+                     (case Argument.Mode is
+                         when In_Mode     => Syn.In_Mode,
+                         when Out_Mode    => Syn.Out_Mode,
+                         when In_Out_Mode => Syn.In_Out_Mode),
+                     Default =>
+                       (if Argument.Mode /= In_Mode
+                          or else not Argument.Has_Default
+                          or else not Is_Value
+                        then null
+                        elsif Placed.Kind = String_Argument
+                        then F.New_String_Literal
+                               (To_String (Argument.Default.Text))
+                        else F.New_Name
+                               (To_String (Argument.Default.Text)))));
+            end;
+         end loop;
+         if Replaceable then
+            List.Append
+              (F.New_Parameter
+                 ("Previous", F.New_Name (Cap_Type),
+                  Default => F.New_Name (Null_Cap)));
+            List.Append
+              (F.New_Parameter
+                 ("Saved", F.New_Name (Cap_Type),
+                  Default => F.New_Name (Null_Cap)));
+         end if;
+         return List.To_Array;
+      end Parameters;
+
+      ---------------
+      -- Statement --
+      ---------------
+
+      procedure Statement
+        (List      : in out Node_List;
+         Procedure_Name : String;
+         Arguments : Syn.Node_Array)
+      is
+      begin
+         List.Append
+           (F.New_Call_Statement
+              (F.New_Call (Client & Procedure_Name, Arguments)));
+      end Statement;
+
+      Last_Item : Natural := 0;
+      Next_Cap  : Natural := 0;
+
+   begin
+      Spec_Context.Add ("Rose.Capabilities");
+      Body_Context.Add ("Rose.Command_Line.Launch_Client");
+
+      for Placed of Signature loop
+         declare
+            Argument_Name : constant String :=
+              To_String (Placed.Argument.Name);
+            Where         : Idle.Commands.Place renames Placed.Where;
+            Answer        : Idle.Commands.Place renames Placed.Result;
+            Value         : constant not null Syn.Node_Access :=
+              F.New_Name (Argument_Name);
+         begin
+            if Placed.Kind in String_Argument | String_List_Argument
+              and then Placed.Role = Null_Unbounded_String
+            then
+               Spec_Context.Add ("Rose.Command_Line");
+            end if;
+
+            case Where.Kind is
+               when No_Place =>
+                  null;
+               when Cap_Place =>
+                  Statement (Arguments, "Cap_Argument",
+                             [Call_Node, Literal (Where.Index), Value]);
+                  Next_Cap := Natural'Max (Next_Cap, Where.Index + 1);
+               when Word_Place =>
+                  Statement
+                    (Arguments,
+                     (if Placed.Kind = Boolean_Argument
+                      then "Boolean_Argument" else "Natural_Argument"),
+                     [Call_Node, Literal (Where.Index), Value]);
+               when Item_Place | List_Place =>
+                  Last_Item := Natural'Max (Last_Item, Where.Index);
+            end case;
+
+            case Answer.Kind is
+               when No_Place | List_Place =>
+                  null;
+               when Cap_Place =>
+                  Results.Append
+                    (F.New_Assignment
+                       (F.New_Name (Argument_Name),
+                        F.New_Call
+                          (Client & "Cap_Result",
+                           [Call_Node, Literal (Answer.Index)])));
+               when Word_Place =>
+                  Results.Append
+                    (F.New_Assignment
+                       (F.New_Name (Argument_Name),
+                        (case Placed.Kind is
+                            when Boolean_Argument =>
+                              F.New_Call
+                                (Client & "Boolean_Result",
+                                 [Call_Node, Literal (Answer.Index)]),
+                            when Positive_Argument =>
+                              F.New_Call
+                                ("Positive",
+                                 [F.New_Call
+                                    (Client & "Natural_Result",
+                                     [Call_Node,
+                                      Literal (Answer.Index)])]),
+                            when others =>
+                              F.New_Call
+                                (Client & "Natural_Result",
+                                 [Call_Node, Literal (Answer.Index)]))));
+               when Item_Place =>
+                  Uses_Text := True;
+                  Results.Append
+                    (F.New_Assignment
+                       (F.New_Name (Argument_Name),
+                        F.New_Call
+                          ("Rose.Texts.To_Text",
+                           [F.New_Call
+                              (Client & "String_Result",
+                               [Call_Node, Literal (Answer.Index)])])));
+            end case;
+         end;
+      end loop;
+
+      --  The strings are buffer items, added in the order of their item
+      --  numbers, and the strings of a list come after them.
+
+      for Item_Number in 1 .. Last_Item loop
+         for Placed of Signature loop
+            if Placed.Where.Kind = Item_Place
+              and then Placed.Where.Index = Item_Number
+            then
+               Statement
+                 (Items, "String_Argument",
+                  [Call_Node, F.New_Name (To_String (Placed.Argument.Name))]);
+            end if;
+         end loop;
+      end loop;
+
+      for Placed of Signature loop
+         if Placed.Where.Kind = List_Place then
+            Statement
+              (Items, "String_List_Argument",
+               [Call_Node, Literal (Placed.Where.Count),
+                F.New_Name (To_String (Placed.Argument.Name))]);
+         end if;
+      end loop;
+
+      --  A replaceable server's Previous and Saved are the caps after the
+      --  others, and are sent only if they are needed (Rose ADR 0032).
+
+      if Replaceable then
+         Statement (Arguments, "Optional_Cap_Argument",
+                    [Call_Node, Literal (Next_Cap), F.New_Name ("Previous")]);
+         Statement (Arguments, "Optional_Cap_Argument",
+                    [Call_Node, Literal (Next_Cap + 1),
+                     F.New_Name ("Saved")]);
+      end if;
+
+      if Uses_Text then
+         Body_Context.Add ("Rose.Texts");
+      end if;
+
+      Syn.Units.Write
+        (F.New_Compilation_Unit
+           (Context => Spec_Context.To_Array (F),
+            Item    =>
+              F.New_Package
+                (Name, [F.New_Procedure ("Call", Parameters)])),
+         Output_Directory);
+
+      Syn.Units.Write
+        (F.New_Compilation_Unit
+           (Context => Body_Context.To_Array (F),
+            Item    =>
+              F.New_Package_Body
+                (Name,
+                 [F.New_Subprogram_Body
+                    (Specification => F.New_Procedure ("Call", Parameters),
+                     Declarations  =>
+                       [F.New_Object
+                          ("Launch_Call",
+                           F.New_Name (Client & "Launch_Call"))],
+                     Statements    =>
+                       [F.New_Call_Statement
+                          (F.New_Call
+                             (Client & "Start",
+                              [Call_Node, F.New_Name ("Endpoint")]))]
+                       & Arguments.To_Array
+                       & Items.To_Array
+                       & [F.New_Call_Statement
+                            (F.New_Call (Client & "Invoke", [Call_Node]))]
+                       & Results.To_Array)])),
+         Output_Directory);
+   end Generate_Client;
+
    ----------------------
    -- Generate_Command --
    ----------------------
@@ -754,6 +1052,10 @@ package body Idle.Targets.Kernel.Commands is
                         (F.New_Call (Launch & "Complete", [Call_Node]))]
                    & Serve.To_Array)),
          Output_Directory);
+
+      if Target = User_Target then
+         Generate_Client (Item, Output_Directory);
+      end if;
    end Generate_Command;
 
    ----------------------
