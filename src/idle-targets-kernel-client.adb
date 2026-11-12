@@ -112,6 +112,22 @@ package body Idle.Targets.Kernel.Client is
       --  member: Item, or for the user target an in out Item, as the
       --  object type declares it.
 
+      function Load_Declarations return Syn.Node_Array;
+      function Load_Statements
+        (Interface_Cap : String;
+         Client        : String)
+         return Syn.Node_Array;
+      --  Get the caps of the subprograms from the interface cap named
+      --  Interface_Cap, and put each in its component of the client
+      --  object named Client. An invocation carries at most
+      --  Rose.Invocation.Max_Capabilities caps (Rose #234), so they come
+      --  in pages: the words 0 (the subprograms, not an ancestor), the
+      --  index of the first cap of the page, and the number of caps
+      --  wanted. Load_Declarations are the
+      --  objects that Load_Statements use. For the user target, a failed
+      --  invocation raises Invocation_Error. An interface without
+      --  subprograms needs neither.
+
       procedure Add_Cap_Functions;
       procedure Add_Close;
       procedure Add_Error_Functions;
@@ -444,30 +460,15 @@ package body Idle.Targets.Kernel.Client is
              ("Load",
               [F.New_Parameter
                  ("Item", F.New_Name (Client_Type), Syn.In_Out_Mode)]);
-         Params : constant not null Syn.Node_Access := F.New_Name ("Params");
       begin
          Body_Specs.Append (Specification);
          Bodies.Add
            ("Load",
             F.New_Subprogram_Body
               (Specification => Specification,
-               Declarations  =>
-                 [F.New_Object
-                    ("Params", F.New_Name (Record_Name),
-                     Is_Aliased => True)],
+               Declarations  => Load_Declarations,
                Statements    =>
-                 [Call (System_Calls & "Initialize_Send",
-                        [Params, F.New_Name ("Item.Interface_Cap")]),
-                  Call (System_Calls & "Receive_Caps",
-                        [Params, F.New_Name (Count_Name)]),
-                  Call (System_Calls & "Invoke_Capability", [Params]),
-                  Raise_On_Error ("Open")]
-                 & [for Subprogram of Subprograms =>
-                      F.New_Assignment
-                        (F.New_Name ("Item." & Name (Subprogram)),
-                         F.New_Call
-                           ("Params.Caps",
-                            [F.New_Name (Index_Name (Subprogram))]))]
+                 Load_Statements ("Item.Interface_Cap", "Item")
                  & [F.New_Assignment
                       (F.New_Name ("Item.Is_Open"), F.New_Name ("True"))]));
       end Add_Load;
@@ -478,7 +479,7 @@ package body Idle.Targets.Kernel.Client is
 
       --  Invoking the interface cap returns a cap for each subprogram, at
       --  the position given by its index constant in the interface
-      --  package.
+      --  package, a page at a time (see Load_Statements).
 
       procedure Add_Open is
          Specification : constant not null Syn.Node_Access :=
@@ -487,12 +488,6 @@ package body Idle.Targets.Kernel.Client is
               [Client_Parameter (Syn.Out_Mode),
                F.New_Parameter ("Interface_Cap",
                                 F.New_Name (Capability_Name))]);
-         Caps : constant Syn.Node_Array :=
-           [for Subprogram of Subprograms =>
-              F.New_Assignment
-                (F.New_Name ("Client." & Name (Subprogram)),
-                 F.New_Call
-                   ("Params.Caps", [F.New_Name (Index_Name (Subprogram))]))];
       begin
          Public_Part.Append (Specification);
          if User then
@@ -517,24 +512,14 @@ package body Idle.Targets.Kernel.Client is
            ("Open",
             F.New_Subprogram_Body
               (Specification => Specification,
-               Declarations  =>
-                 [F.New_Object
-                    ("Params", F.New_Name (Record_Name),
-                     Is_Aliased => True)],
+               Declarations  => Load_Declarations,
                Statements    =>
                  [F.New_Assignment
                     (F.New_Name ("Client.Is_Open"), F.New_Name ("False")),
                   F.New_Assignment
                     (F.New_Name ("Client.Interface_Cap"),
-                     F.New_Name ("Interface_Cap")),
-                  Call (System_Calls & "Initialize_Send",
-                        [F.New_Name ("Params"),
-                         F.New_Name ("Interface_Cap")]),
-                  Call (System_Calls & "Receive_Caps",
-                        [F.New_Name ("Params"), F.New_Name (Count_Name)]),
-                  Call (System_Calls & "Invoke_Capability",
-                        [F.New_Name ("Params")])]
-                 & Caps
+                     F.New_Name ("Interface_Cap"))]
+                 & Load_Statements ("Interface_Cap", "Client")
                  & [F.New_Assignment
                       (F.New_Name ("Client.Is_Open"),
                        F.New_Name ("True"))]));
@@ -1196,6 +1181,104 @@ package body Idle.Targets.Kernel.Client is
             return Client_Parameter;
          end if;
       end Item_Parameter;
+
+      -----------------------
+      -- Load_Declarations --
+      -----------------------
+
+      function Load_Declarations return Syn.Node_Array is
+      begin
+         if Subprograms.Is_Empty then
+            return Syn.No_Nodes;
+         end if;
+         return
+           [F.New_Object
+              ("Params", F.New_Name (Record_Name), Is_Aliased => True),
+            F.New_Object
+              ("Caps",
+               F.New_Call
+                 ("Rose.Capabilities.Capability_Array",
+                  [F.New_Binary
+                     (F.New_Integer_Literal (1), "..",
+                      F.New_Name (Count_Name))])),
+            --  The caps of the subprograms, in the order of their index
+            --  constants, from 1.
+            F.New_Object
+              ("Index", F.New_Name ("Natural"), F.New_Integer_Literal (0)),
+            --  The index of the subprogram whose cap is next.
+            F.New_Object
+              ("First", F.New_Name ("Natural"), F.New_Name ("Natural'Last"))];
+            --  The index of the subprogram whose cap is Params.Caps (0),
+            --  or Natural'Last before the first page.
+      end Load_Declarations;
+
+      ---------------------
+      -- Load_Statements --
+      ---------------------
+
+      function Load_Statements
+        (Interface_Cap : String;
+         Client        : String)
+         return Syn.Node_Array
+      is
+         Params : constant not null Syn.Node_Access := F.New_Name ("Params");
+         Index  : constant not null Syn.Node_Access := F.New_Name ("Index");
+         First  : constant not null Syn.Node_Access := F.New_Name ("First");
+         Max    : constant not null Syn.Node_Access :=
+           F.New_Name ("Rose.Invocation.Max_Capabilities");
+         Count  : constant not null Syn.Node_Access :=
+           F.New_Call
+             ("Natural'Min",
+              [Max, F.New_Binary (F.New_Name (Count_Name), "-", First)]);
+         --  The number of caps in the page that starts at First.
+
+         --  The next page starts at Index, if Index is not in this one.
+         Get_Page : constant Syn.Node_Array :=
+           [F.New_Assignment (First, Index),
+            Call (System_Calls & "Initialize_Send",
+                  [Params, F.New_Name (Interface_Cap)]),
+            Call (System_Calls & "Send_Word",
+                  [Params,
+                   F.New_Call ("Natural", [F.New_Integer_Literal (0)])]),
+            Call (System_Calls & "Send_Word", [Params, First]),
+            Call (System_Calls & "Send_Word", [Params, Count]),
+            Call (System_Calls & "Receive_Caps", [Params, Count]),
+            Call (System_Calls & "Invoke_Capability", [Params])]
+           & (if User then [Raise_On_Error ("Open")] else Syn.No_Nodes);
+      begin
+         if Subprograms.Is_Empty then
+            return Syn.No_Nodes;
+         end if;
+         return
+           [F.New_For_Of_Loop
+              ("Cap", F.New_Name ("Caps"),
+               [F.New_If
+                  (Condition =>
+                     F.New_Binary
+                       (F.New_Binary (First, ">", Index),
+                        "or else",
+                        F.New_Binary
+                          (F.New_Binary (Index, "-", First), ">=", Max)),
+                   Then_Part => Get_Page),
+                F.New_Assignment
+                  (F.New_Name ("Cap"),
+                   F.New_Call
+                     ("Params.Caps",
+                      [F.New_Call
+                         ("Rose.Invocation.Capability_Index",
+                          [F.New_Binary (Index, "-", First)])])),
+                F.New_Assignment
+                  (Index,
+                   F.New_Binary (Index, "+", F.New_Integer_Literal (1)))])]
+           & [for Subprogram of Subprograms =>
+                F.New_Assignment
+                  (F.New_Name (Client & "." & Name (Subprogram)),
+                   F.New_Call
+                     ("Caps",
+                      [F.New_Binary
+                         (F.New_Name (Index_Name (Subprogram)), "+",
+                          F.New_Integer_Literal (1))]))];
+      end Load_Statements;
 
       --------------
       -- Use_Type --

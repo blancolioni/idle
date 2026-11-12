@@ -623,6 +623,14 @@ package body Idle.Targets.Kernel.Server is
       --  instanced server has one endpoint for each subprogram and
       --  identifier, which it creates the first time it is needed.
       --
+      --  An invocation carries at most Rose.Invocation.Max_Capabilities
+      --  caps (Rose #234), so they are sent a page at a time: a second
+      --  word gives the index of the first cap of the page, 0 if there is
+      --  none, and a third the number of caps wanted, the limit if there
+      --  is none. The reply has the caps from the first, up to that
+      --  number and the limit, so a client can ask for exactly the caps
+      --  it will keep. An index past the last subprogram is an error.
+      --
       --  An invocation with a word N > 0 asks instead for the interface
       --  cap of the Nth of Idle.Hierarchy.Ancestors (For_Interface). That
       --  cap gives only the ancestor's subprograms, so a client narrowed
@@ -781,15 +789,109 @@ package body Idle.Targets.Kernel.Server is
                                [F.New_Integer_Literal (0)])]))]));
          end if;
 
+         if not Sent.Is_Empty then
+            Declarations.Append
+              (F.New_Object
+                 ("First", F.New_Name ("Natural"),
+                  F.New_Integer_Literal (0)));
+            --  The index of the first cap of the page.
+            Declarations.Append
+              (F.New_Object
+                 ("Page", F.New_Name ("Natural"),
+                  F.New_Name ("Rose.Invocation.Max_Capabilities")));
+            --  The number of caps in the page.
+            Statements.Append
+              (F.New_If
+                 (Condition =>
+                    F.New_Binary
+                      (F.New_Call
+                         ("Rose.Invocation.Sent_Word_Count",
+                          [F.New_Name ("Parameters")]),
+                       ">=", F.New_Integer_Literal (2)),
+                  Then_Part =>
+                    [F.New_Assignment
+                       (F.New_Name ("First"),
+                        F.New_Call
+                          ("Natural",
+                           [F.New_Call
+                              ("Parameters.Data",
+                               [F.New_Integer_Literal (1)])]))]));
+            Statements.Append
+              (F.New_If
+                 (Condition =>
+                    F.New_Binary
+                      (F.New_Call
+                         ("Rose.Invocation.Sent_Word_Count",
+                          [F.New_Name ("Parameters")]),
+                       ">=", F.New_Integer_Literal (3)),
+                  Then_Part =>
+                    [F.New_Assignment
+                       (F.New_Name ("Page"),
+                        F.New_Call
+                          ("Natural'Min",
+                           [F.New_Name ("Page"),
+                            F.New_Call
+                              ("Natural",
+                               [F.New_Call
+                                  ("Parameters.Data",
+                                   [F.New_Integer_Literal (2)])])]))]));
+         end if;
+
          Statements.Append
            (Call (System_Calls & "Initialize_Reply",
                   [F.New_Name ("Parameters"),
                    F.New_Name ("Parameters.Reply_Cap")]));
-         for Subprogram of Sent loop
-            for Statement of Send_Cap (Subprogram) loop
-               Own_Caps.Append (Statement);
-            end loop;
-         end loop;
+
+         if not Sent.Is_Empty then
+            declare
+               First : constant not null Syn.Node_Access :=
+                 F.New_Name ("First");
+               Page  : Node_List;
+               --  The sends of the caps, each if it is in the page.
+            begin
+               --  The position of each cap is its subprogram's place in
+               --  Sent, which is For_Interface's own order. It isn't the
+               --  index constant that the server package sees: when
+               --  For_Interface is an ancestor, that is the descendant's.
+               for Position in 0 .. Natural (Sent.Length) - 1 loop
+                  declare
+                     Subprogram : Idle.Syntax.Subprogram renames
+                       Sent (Sent.First_Index + Position);
+                     Index : constant not null Syn.Node_Access :=
+                       F.New_Integer_Literal
+                         (Long_Long_Long_Integer (Position));
+                  begin
+                     Page.Append
+                       (F.New_If
+                          --  A membership test: "First <= 0" is a
+                          --  constant condition to GNAT.
+                          (Condition =>
+                             F.New_Binary
+                               (Index, "in",
+                                F.New_Binary
+                                  (First, "..",
+                                   F.New_Binary
+                                     (F.New_Binary
+                                        (First, "+", F.New_Name ("Page")),
+                                      "-", F.New_Integer_Literal (1)))),
+                           Then_Part => Send_Cap (Subprogram)));
+                  end;
+               end loop;
+               Own_Caps.Append
+                 (F.New_If
+                    (Condition =>
+                       F.New_Binary
+                         (First, ">=",
+                          F.New_Integer_Literal
+                            (Long_Long_Long_Integer (Sent.Length))),
+                     Then_Part =>
+                       [Call (System_Calls & "Send_Error",
+                              [F.New_Name ("Parameters"),
+                               F.New_Name
+                                 ("Rose.Invocation.Invalid_Operation")])],
+                     Else_Part => Page.To_Array));
+            end;
+         end if;
 
          if Ancestors.Is_Empty then
             for Statement of Own_Caps.To_Array loop

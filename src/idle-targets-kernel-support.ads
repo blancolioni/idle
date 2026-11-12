@@ -66,6 +66,11 @@ private package Idle.Targets.Kernel.Support is
    --  The name of the constant that gives the number of caps in the
    --  reply to the interface cap.
 
+   Max_Invocation_Caps : constant := 4;
+   --  The most caps that an invocation, or its reply, carries (Rose
+   --  #234). The generated code uses Rose.Invocation.Max_Capabilities,
+   --  but which subprograms can carry their caps is checked against this.
+
    function Is_Resource
      (Item : Idle.Syntax.Interface_Declaration)
       return Boolean;

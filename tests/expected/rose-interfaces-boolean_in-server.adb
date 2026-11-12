@@ -77,29 +77,45 @@ package body Rose.Interfaces.Boolean_In.Server is
       Cap        : Rose.Capabilities.Capability;
       Identifier : constant Rose.Objects.Capability_Identifier :=
         Parameters.Identifier;
+      First      : Natural := 0;
+      Page       : Natural := Rose.Invocation.Max_Capabilities;
    begin
-      Rose.System_Calls.Initialize_Reply (Parameters, Parameters.Reply_Cap);
-      if Set_Cap = Rose.Capabilities.Null_Capability then
-         if not Rose.Server.Has_Instance
-           (Server_Instance,
-            Set_Endpoint,
-            Identifier)
-         then
-            Rose.Server.Set_Instance_Cap
-              (Server_Instance,
-               Set_Endpoint,
-               Identifier,
-               Rose.Server.Create_Endpoint (Set_Endpoint, Identifier));
-         end if;
-         Cap :=
-           Rose.Server.Get_Instance_Cap
-             (Server_Instance,
-              Set_Endpoint,
-              Identifier);
-      else
-         Cap := Set_Cap;
+      if Rose.Invocation.Sent_Word_Count (Parameters) >= 2 then
+         First := Natural (Parameters.Data (1));
       end if;
-      Rose.System_Calls.Send_Cap (Parameters, Cap);
+      if Rose.Invocation.Sent_Word_Count (Parameters) >= 3 then
+         Page := Natural'Min (Page, Natural (Parameters.Data (2)));
+      end if;
+      Rose.System_Calls.Initialize_Reply (Parameters, Parameters.Reply_Cap);
+      if First >= 1 then
+         Rose.System_Calls.Send_Error
+           (Parameters,
+            Rose.Invocation.Invalid_Operation);
+      else
+         if 0 in First .. (First + Page - 1) then
+            if Set_Cap = Rose.Capabilities.Null_Capability then
+               if not Rose.Server.Has_Instance
+                 (Server_Instance,
+                  Set_Endpoint,
+                  Identifier)
+               then
+                  Rose.Server.Set_Instance_Cap
+                    (Server_Instance,
+                     Set_Endpoint,
+                     Identifier,
+                     Rose.Server.Create_Endpoint (Set_Endpoint, Identifier));
+               end if;
+               Cap :=
+                 Rose.Server.Get_Instance_Cap
+                   (Server_Instance,
+                    Set_Endpoint,
+                    Identifier);
+            else
+               Cap := Set_Cap;
+            end if;
+            Rose.System_Calls.Send_Cap (Parameters, Cap);
+         end if;
+      end if;
    end Handle_Get_Boolean_In_Interface;
 
    ----------------

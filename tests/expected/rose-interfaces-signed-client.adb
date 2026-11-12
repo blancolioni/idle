@@ -189,17 +189,40 @@ package body Rose.Interfaces.Signed.Client is
       Interface_Cap : Rose.Capabilities.Capability)
    is
       Params : aliased Rose.Invocation.Invocation_Record;
+      Caps   : Rose.Capabilities.Capability_Array (1 .. Subprogram_Count);
+      Index  : Natural := 0;
+      First  : Natural := Natural'Last;
    begin
       Client.Is_Open := False;
       Client.Interface_Cap := Interface_Cap;
-      Rose.System_Calls.Initialize_Send (Params, Interface_Cap);
-      Rose.System_Calls.Receive_Caps (Params, Subprogram_Count);
-      Rose.System_Calls.Invoke_Capability (Params);
-      Client.Clamp := Params.Caps (Clamp_Index);
-      Client.Position := Params.Caps (Position_Index);
-      Client.Offset := Params.Caps (Offset_Index);
-      Client.Difference := Params.Caps (Difference_Index);
-      Client.Bounds := Params.Caps (Bounds_Index);
+      for Cap of Caps loop
+         if First > Index
+           or else Index - First >= Rose.Invocation.Max_Capabilities
+         then
+            First := Index;
+            Rose.System_Calls.Initialize_Send (Params, Interface_Cap);
+            Rose.System_Calls.Send_Word (Params, Natural (0));
+            Rose.System_Calls.Send_Word (Params, First);
+            Rose.System_Calls.Send_Word
+              (Params,
+               Natural'Min
+                 (Rose.Invocation.Max_Capabilities,
+                  Subprogram_Count - First));
+            Rose.System_Calls.Receive_Caps
+              (Params,
+               Natural'Min
+                 (Rose.Invocation.Max_Capabilities,
+                  Subprogram_Count - First));
+            Rose.System_Calls.Invoke_Capability (Params);
+         end if;
+         Cap := Params.Caps (Rose.Invocation.Capability_Index (Index - First));
+         Index := Index + 1;
+      end loop;
+      Client.Clamp := Caps (Clamp_Index + 1);
+      Client.Position := Caps (Position_Index + 1);
+      Client.Offset := Caps (Offset_Index + 1);
+      Client.Difference := Caps (Difference_Index + 1);
+      Client.Bounds := Caps (Bounds_Index + 1);
       Client.Is_Open := True;
    end Open;
 

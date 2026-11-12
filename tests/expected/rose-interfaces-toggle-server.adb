@@ -99,50 +99,70 @@ package body Rose.Interfaces.Toggle.Server is
       Cap        : Rose.Capabilities.Capability;
       Identifier : constant Rose.Objects.Capability_Identifier :=
         Parameters.Identifier;
+      First      : Natural := 0;
+      Page       : Natural := Rose.Invocation.Max_Capabilities;
    begin
+      if Rose.Invocation.Sent_Word_Count (Parameters) >= 2 then
+         First := Natural (Parameters.Data (1));
+      end if;
+      if Rose.Invocation.Sent_Word_Count (Parameters) >= 3 then
+         Page := Natural'Min (Page, Natural (Parameters.Data (2)));
+      end if;
       Rose.System_Calls.Initialize_Reply (Parameters, Parameters.Reply_Cap);
-      if Is_On_Cap = Rose.Capabilities.Null_Capability then
-         if not Rose.Server.Has_Instance
-           (Server_Instance,
-            Is_On_Endpoint,
-            Identifier)
-         then
-            Rose.Server.Set_Instance_Cap
-              (Server_Instance,
-               Is_On_Endpoint,
-               Identifier,
-               Rose.Server.Create_Endpoint (Is_On_Endpoint, Identifier));
-         end if;
-         Cap :=
-           Rose.Server.Get_Instance_Cap
-             (Server_Instance,
-              Is_On_Endpoint,
-              Identifier);
+      if First >= 2 then
+         Rose.System_Calls.Send_Error
+           (Parameters,
+            Rose.Invocation.Invalid_Operation);
       else
-         Cap := Is_On_Cap;
-      end if;
-      Rose.System_Calls.Send_Cap (Parameters, Cap);
-      if Switch_Cap = Rose.Capabilities.Null_Capability then
-         if not Rose.Server.Has_Instance
-           (Server_Instance,
-            Switch_Endpoint,
-            Identifier)
-         then
-            Rose.Server.Set_Instance_Cap
-              (Server_Instance,
-               Switch_Endpoint,
-               Identifier,
-               Rose.Server.Create_Endpoint (Switch_Endpoint, Identifier));
+         if 0 in First .. (First + Page - 1) then
+            if Is_On_Cap = Rose.Capabilities.Null_Capability then
+               if not Rose.Server.Has_Instance
+                 (Server_Instance,
+                  Is_On_Endpoint,
+                  Identifier)
+               then
+                  Rose.Server.Set_Instance_Cap
+                    (Server_Instance,
+                     Is_On_Endpoint,
+                     Identifier,
+                     Rose.Server.Create_Endpoint (Is_On_Endpoint, Identifier));
+               end if;
+               Cap :=
+                 Rose.Server.Get_Instance_Cap
+                   (Server_Instance,
+                    Is_On_Endpoint,
+                    Identifier);
+            else
+               Cap := Is_On_Cap;
+            end if;
+            Rose.System_Calls.Send_Cap (Parameters, Cap);
          end if;
-         Cap :=
-           Rose.Server.Get_Instance_Cap
-             (Server_Instance,
-              Switch_Endpoint,
-              Identifier);
-      else
-         Cap := Switch_Cap;
+         if 1 in First .. (First + Page - 1) then
+            if Switch_Cap = Rose.Capabilities.Null_Capability then
+               if not Rose.Server.Has_Instance
+                 (Server_Instance,
+                  Switch_Endpoint,
+                  Identifier)
+               then
+                  Rose.Server.Set_Instance_Cap
+                    (Server_Instance,
+                     Switch_Endpoint,
+                     Identifier,
+                     Rose.Server.Create_Endpoint
+                       (Switch_Endpoint,
+                        Identifier));
+               end if;
+               Cap :=
+                 Rose.Server.Get_Instance_Cap
+                   (Server_Instance,
+                    Switch_Endpoint,
+                    Identifier);
+            else
+               Cap := Switch_Cap;
+            end if;
+            Rose.System_Calls.Send_Cap (Parameters, Cap);
+         end if;
       end if;
-      Rose.System_Calls.Send_Cap (Parameters, Cap);
    end Handle_Get_Toggle_Interface;
 
    ------------------

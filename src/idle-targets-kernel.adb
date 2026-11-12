@@ -304,6 +304,11 @@ package body Idle.Targets.Kernel is
          --  Several buffers can be sent as items if they are all in
          --  arguments (idle#58): there is one buffer for the reply.
          Cap_Array_Seen : Boolean := False;
+         Sent_Caps      : Natural := 0;
+         Reply_Caps     : Natural := 0;
+         --  The caps and interfaces that the invocation and its reply
+         --  carry, not counting a capability array, whose length is only
+         --  known when it is sent.
 
          function Unsupported_Text (What : String) return String
          is (What & " are not yet supported by the kernel target");
@@ -368,6 +373,15 @@ package body Idle.Targets.Kernel is
                      Cap_Array_Seen := True;
                   end if;
 
+                  if Info.Category in Capability_Value | Interface_Value then
+                     if Parameter.Mode /= Idle.Syntax.Out_Mode then
+                        Sent_Caps := Sent_Caps + 1;
+                     end if;
+                     if Parameter.Mode /= Idle.Syntax.In_Mode then
+                        Reply_Caps := Reply_Caps + 1;
+                     end if;
+                  end if;
+
                   if Types.Is_Buffer (Info) then
                      Buffers := Buffers + 1;
                      if Parameter.Mode /= Idle.Syntax.In_Mode then
@@ -406,6 +420,10 @@ package body Idle.Targets.Kernel is
                      Packable := False;
                   when others =>
                      Check_Interface (Info, Type_Name, Subprogram.Position);
+                     if Info.Category in Capability_Value | Interface_Value
+                     then
+                        Reply_Caps := Reply_Caps + 1;
+                     end if;
                end case;
             end;
          end if;
@@ -414,6 +432,22 @@ package body Idle.Targets.Kernel is
             Error (Member.File_Name, Subprogram.Position,
                    "several strings or arrays can be passed in an "
                    & "invocation only if they are all in arguments");
+         end if;
+
+         if Sent_Caps > Max_Invocation_Caps then
+            Error (Member.File_Name, Subprogram.Position,
+                   "an invocation carries at most"
+                   & Natural'Image (Max_Invocation_Caps)
+                   & " capabilities, and this one sends"
+                   & Natural'Image (Sent_Caps));
+         end if;
+
+         if Reply_Caps > Max_Invocation_Caps then
+            Error (Member.File_Name, Subprogram.Position,
+                   "an invocation carries at most"
+                   & Natural'Image (Max_Invocation_Caps)
+                   & " capabilities, and the reply to this one has"
+                   & Natural'Image (Reply_Caps));
          end if;
       end Check_Member;
 

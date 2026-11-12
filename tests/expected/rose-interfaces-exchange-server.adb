@@ -213,115 +213,145 @@ package body Rose.Interfaces.Exchange.Server is
       Cap        : Rose.Capabilities.Capability;
       Identifier : constant Rose.Objects.Capability_Identifier :=
         Parameters.Identifier;
+      First      : Natural := 0;
+      Page       : Natural := Rose.Invocation.Max_Capabilities;
    begin
+      if Rose.Invocation.Sent_Word_Count (Parameters) >= 2 then
+         First := Natural (Parameters.Data (1));
+      end if;
+      if Rose.Invocation.Sent_Word_Count (Parameters) >= 3 then
+         Page := Natural'Min (Page, Natural (Parameters.Data (2)));
+      end if;
       Rose.System_Calls.Initialize_Reply (Parameters, Parameters.Reply_Cap);
-      if Create_Endpoint_Cap = Rose.Capabilities.Null_Capability then
-         if not Rose.Server.Has_Instance
-           (Server_Instance,
-            Create_Endpoint_Endpoint,
-            Identifier)
-         then
-            Rose.Server.Set_Instance_Cap
-              (Server_Instance,
-               Create_Endpoint_Endpoint,
-               Identifier,
-               Rose.Server.Create_Endpoint
-                 (Create_Endpoint_Endpoint,
-                  Identifier));
-         end if;
-         Cap :=
-           Rose.Server.Get_Instance_Cap
-             (Server_Instance,
-              Create_Endpoint_Endpoint,
-              Identifier);
+      if First >= 5 then
+         Rose.System_Calls.Send_Error
+           (Parameters,
+            Rose.Invocation.Invalid_Operation);
       else
-         Cap := Create_Endpoint_Cap;
-      end if;
-      Rose.System_Calls.Send_Cap (Parameters, Cap);
-      if Split_Cap = Rose.Capabilities.Null_Capability then
-         if not Rose.Server.Has_Instance
-           (Server_Instance,
-            Split_Endpoint,
-            Identifier)
-         then
-            Rose.Server.Set_Instance_Cap
-              (Server_Instance,
-               Split_Endpoint,
-               Identifier,
-               Rose.Server.Create_Endpoint (Split_Endpoint, Identifier));
+         if 0 in First .. (First + Page - 1) then
+            if Create_Endpoint_Cap = Rose.Capabilities.Null_Capability then
+               if not Rose.Server.Has_Instance
+                 (Server_Instance,
+                  Create_Endpoint_Endpoint,
+                  Identifier)
+               then
+                  Rose.Server.Set_Instance_Cap
+                    (Server_Instance,
+                     Create_Endpoint_Endpoint,
+                     Identifier,
+                     Rose.Server.Create_Endpoint
+                       (Create_Endpoint_Endpoint,
+                        Identifier));
+               end if;
+               Cap :=
+                 Rose.Server.Get_Instance_Cap
+                   (Server_Instance,
+                    Create_Endpoint_Endpoint,
+                    Identifier);
+            else
+               Cap := Create_Endpoint_Cap;
+            end if;
+            Rose.System_Calls.Send_Cap (Parameters, Cap);
          end if;
-         Cap :=
-           Rose.Server.Get_Instance_Cap
-             (Server_Instance,
-              Split_Endpoint,
-              Identifier);
-      else
-         Cap := Split_Cap;
-      end if;
-      Rose.System_Calls.Send_Cap (Parameters, Cap);
-      if Rename_Cap = Rose.Capabilities.Null_Capability then
-         if not Rose.Server.Has_Instance
-           (Server_Instance,
-            Rename_Endpoint,
-            Identifier)
-         then
-            Rose.Server.Set_Instance_Cap
-              (Server_Instance,
-               Rename_Endpoint,
-               Identifier,
-               Rose.Server.Create_Endpoint (Rename_Endpoint, Identifier));
+         if 1 in First .. (First + Page - 1) then
+            if Split_Cap = Rose.Capabilities.Null_Capability then
+               if not Rose.Server.Has_Instance
+                 (Server_Instance,
+                  Split_Endpoint,
+                  Identifier)
+               then
+                  Rose.Server.Set_Instance_Cap
+                    (Server_Instance,
+                     Split_Endpoint,
+                     Identifier,
+                     Rose.Server.Create_Endpoint (Split_Endpoint, Identifier));
+               end if;
+               Cap :=
+                 Rose.Server.Get_Instance_Cap
+                   (Server_Instance,
+                    Split_Endpoint,
+                    Identifier);
+            else
+               Cap := Split_Cap;
+            end if;
+            Rose.System_Calls.Send_Cap (Parameters, Cap);
          end if;
-         Cap :=
-           Rose.Server.Get_Instance_Cap
-             (Server_Instance,
-              Rename_Endpoint,
-              Identifier);
-      else
-         Cap := Rename_Cap;
-      end if;
-      Rose.System_Calls.Send_Cap (Parameters, Cap);
-      if Partner_Cap = Rose.Capabilities.Null_Capability then
-         if not Rose.Server.Has_Instance
-           (Server_Instance,
-            Partner_Endpoint,
-            Identifier)
-         then
-            Rose.Server.Set_Instance_Cap
-              (Server_Instance,
-               Partner_Endpoint,
-               Identifier,
-               Rose.Server.Create_Endpoint (Partner_Endpoint, Identifier));
+         if 2 in First .. (First + Page - 1) then
+            if Rename_Cap = Rose.Capabilities.Null_Capability then
+               if not Rose.Server.Has_Instance
+                 (Server_Instance,
+                  Rename_Endpoint,
+                  Identifier)
+               then
+                  Rose.Server.Set_Instance_Cap
+                    (Server_Instance,
+                     Rename_Endpoint,
+                     Identifier,
+                     Rose.Server.Create_Endpoint
+                       (Rename_Endpoint,
+                        Identifier));
+               end if;
+               Cap :=
+                 Rose.Server.Get_Instance_Cap
+                   (Server_Instance,
+                    Rename_Endpoint,
+                    Identifier);
+            else
+               Cap := Rename_Cap;
+            end if;
+            Rose.System_Calls.Send_Cap (Parameters, Cap);
          end if;
-         Cap :=
-           Rose.Server.Get_Instance_Cap
-             (Server_Instance,
-              Partner_Endpoint,
-              Identifier);
-      else
-         Cap := Partner_Cap;
-      end if;
-      Rose.System_Calls.Send_Cap (Parameters, Cap);
-      if Gather_Cap = Rose.Capabilities.Null_Capability then
-         if not Rose.Server.Has_Instance
-           (Server_Instance,
-            Gather_Endpoint,
-            Identifier)
-         then
-            Rose.Server.Set_Instance_Cap
-              (Server_Instance,
-               Gather_Endpoint,
-               Identifier,
-               Rose.Server.Create_Endpoint (Gather_Endpoint, Identifier));
+         if 3 in First .. (First + Page - 1) then
+            if Partner_Cap = Rose.Capabilities.Null_Capability then
+               if not Rose.Server.Has_Instance
+                 (Server_Instance,
+                  Partner_Endpoint,
+                  Identifier)
+               then
+                  Rose.Server.Set_Instance_Cap
+                    (Server_Instance,
+                     Partner_Endpoint,
+                     Identifier,
+                     Rose.Server.Create_Endpoint
+                       (Partner_Endpoint,
+                        Identifier));
+               end if;
+               Cap :=
+                 Rose.Server.Get_Instance_Cap
+                   (Server_Instance,
+                    Partner_Endpoint,
+                    Identifier);
+            else
+               Cap := Partner_Cap;
+            end if;
+            Rose.System_Calls.Send_Cap (Parameters, Cap);
          end if;
-         Cap :=
-           Rose.Server.Get_Instance_Cap
-             (Server_Instance,
-              Gather_Endpoint,
-              Identifier);
-      else
-         Cap := Gather_Cap;
+         if 4 in First .. (First + Page - 1) then
+            if Gather_Cap = Rose.Capabilities.Null_Capability then
+               if not Rose.Server.Has_Instance
+                 (Server_Instance,
+                  Gather_Endpoint,
+                  Identifier)
+               then
+                  Rose.Server.Set_Instance_Cap
+                    (Server_Instance,
+                     Gather_Endpoint,
+                     Identifier,
+                     Rose.Server.Create_Endpoint
+                       (Gather_Endpoint,
+                        Identifier));
+               end if;
+               Cap :=
+                 Rose.Server.Get_Instance_Cap
+                   (Server_Instance,
+                    Gather_Endpoint,
+                    Identifier);
+            else
+               Cap := Gather_Cap;
+            end if;
+            Rose.System_Calls.Send_Cap (Parameters, Cap);
+         end if;
       end if;
-      Rose.System_Calls.Send_Cap (Parameters, Cap);
    end Handle_Get_Exchange_Interface;
 
    --------------------

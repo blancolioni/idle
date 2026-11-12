@@ -99,16 +99,40 @@ package body Rose.Interfaces.Items.Client is
 
    procedure Load (Item : in out Items_Client) is
       Params : aliased Rose.Invocation.Invocation_Record;
+      Caps   : Rose.Capabilities.Capability_Array (1 .. Subprogram_Count);
+      Index  : Natural := 0;
+      First  : Natural := Natural'Last;
    begin
-      Rose.System_Calls.Initialize_Send (Params, Item.Interface_Cap);
-      Rose.System_Calls.Receive_Caps (Params, Subprogram_Count);
-      Rose.System_Calls.Invoke_Capability (Params);
-      if Params.Control.Flags (Rose.Invocation.Error) then
-         raise Rose.Interfaces.Objects.Invocation_Error with "Items.Open";
-      end if;
-      Item.Pair := Params.Caps (Pair_Index);
-      Item.Store := Params.Caps (Store_Index);
-      Item.Single := Params.Caps (Single_Index);
+      for Cap of Caps loop
+         if First > Index
+           or else Index - First >= Rose.Invocation.Max_Capabilities
+         then
+            First := Index;
+            Rose.System_Calls.Initialize_Send (Params, Item.Interface_Cap);
+            Rose.System_Calls.Send_Word (Params, Natural (0));
+            Rose.System_Calls.Send_Word (Params, First);
+            Rose.System_Calls.Send_Word
+              (Params,
+               Natural'Min
+                 (Rose.Invocation.Max_Capabilities,
+                  Subprogram_Count - First));
+            Rose.System_Calls.Receive_Caps
+              (Params,
+               Natural'Min
+                 (Rose.Invocation.Max_Capabilities,
+                  Subprogram_Count - First));
+            Rose.System_Calls.Invoke_Capability (Params);
+            if Params.Control.Flags (Rose.Invocation.Error) then
+               raise Rose.Interfaces.Objects.Invocation_Error
+                 with "Items.Open";
+            end if;
+         end if;
+         Cap := Params.Caps (Rose.Invocation.Capability_Index (Index - First));
+         Index := Index + 1;
+      end loop;
+      Item.Pair := Caps (Pair_Index + 1);
+      Item.Store := Caps (Store_Index + 1);
+      Item.Single := Caps (Single_Index + 1);
       Item.Is_Open := True;
    end Load;
 

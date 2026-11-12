@@ -155,16 +155,40 @@ package body Rose.Interfaces.Launch.Client is
 
    procedure Load (Item : in out Launch_Client) is
       Params : aliased Rose.Invocation.Invocation_Record;
+      Caps   : Rose.Capabilities.Capability_Array (1 .. Subprogram_Count);
+      Index  : Natural := 0;
+      First  : Natural := Natural'Last;
    begin
-      Rose.System_Calls.Initialize_Send (Params, Item.Interface_Cap);
-      Rose.System_Calls.Receive_Caps (Params, Subprogram_Count);
-      Rose.System_Calls.Invoke_Capability (Params);
-      if Params.Control.Flags (Rose.Invocation.Error) then
-         raise Rose.Interfaces.Objects.Invocation_Error with "Launch.Open";
-      end if;
-      Item.Launch := Params.Caps (Launch_Index);
-      Item.Launch_Command := Params.Caps (Launch_Command_Index);
-      Item.Metadata := Params.Caps (Metadata_Index);
+      for Cap of Caps loop
+         if First > Index
+           or else Index - First >= Rose.Invocation.Max_Capabilities
+         then
+            First := Index;
+            Rose.System_Calls.Initialize_Send (Params, Item.Interface_Cap);
+            Rose.System_Calls.Send_Word (Params, Natural (0));
+            Rose.System_Calls.Send_Word (Params, First);
+            Rose.System_Calls.Send_Word
+              (Params,
+               Natural'Min
+                 (Rose.Invocation.Max_Capabilities,
+                  Subprogram_Count - First));
+            Rose.System_Calls.Receive_Caps
+              (Params,
+               Natural'Min
+                 (Rose.Invocation.Max_Capabilities,
+                  Subprogram_Count - First));
+            Rose.System_Calls.Invoke_Capability (Params);
+            if Params.Control.Flags (Rose.Invocation.Error) then
+               raise Rose.Interfaces.Objects.Invocation_Error
+                 with "Launch.Open";
+            end if;
+         end if;
+         Cap := Params.Caps (Rose.Invocation.Capability_Index (Index - First));
+         Index := Index + 1;
+      end loop;
+      Item.Launch := Caps (Launch_Index + 1);
+      Item.Launch_Command := Caps (Launch_Command_Index + 1);
+      Item.Metadata := Caps (Metadata_Index + 1);
       Item.Is_Open := True;
    end Load;
 

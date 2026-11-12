@@ -114,15 +114,38 @@ package body Rose.Interfaces.Counter.Client is
       Interface_Cap : Rose.Capabilities.Capability)
    is
       Params : aliased Rose.Invocation.Invocation_Record;
+      Caps   : Rose.Capabilities.Capability_Array (1 .. Subprogram_Count);
+      Index  : Natural := 0;
+      First  : Natural := Natural'Last;
    begin
       Client.Is_Open := False;
       Client.Interface_Cap := Interface_Cap;
-      Rose.System_Calls.Initialize_Send (Params, Interface_Cap);
-      Rose.System_Calls.Receive_Caps (Params, Subprogram_Count);
-      Rose.System_Calls.Invoke_Capability (Params);
-      Client.Badge := Params.Caps (Badge_Index);
-      Client.Increment := Params.Caps (Increment_Index);
-      Client.Value := Params.Caps (Value_Index);
+      for Cap of Caps loop
+         if First > Index
+           or else Index - First >= Rose.Invocation.Max_Capabilities
+         then
+            First := Index;
+            Rose.System_Calls.Initialize_Send (Params, Interface_Cap);
+            Rose.System_Calls.Send_Word (Params, Natural (0));
+            Rose.System_Calls.Send_Word (Params, First);
+            Rose.System_Calls.Send_Word
+              (Params,
+               Natural'Min
+                 (Rose.Invocation.Max_Capabilities,
+                  Subprogram_Count - First));
+            Rose.System_Calls.Receive_Caps
+              (Params,
+               Natural'Min
+                 (Rose.Invocation.Max_Capabilities,
+                  Subprogram_Count - First));
+            Rose.System_Calls.Invoke_Capability (Params);
+         end if;
+         Cap := Params.Caps (Rose.Invocation.Capability_Index (Index - First));
+         Index := Index + 1;
+      end loop;
+      Client.Badge := Caps (Badge_Index + 1);
+      Client.Increment := Caps (Increment_Index + 1);
+      Client.Value := Caps (Value_Index + 1);
       Client.Is_Open := True;
    end Open;
 
