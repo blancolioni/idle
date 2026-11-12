@@ -198,9 +198,9 @@ rm -rf output/client && mkdir output/client
 if $idle --target user --command-client -I commands -I rose \
      -o output/client commands/rose-core.idl commands/rose-core-replace.idl
 then
-  generated=$(ls output/client | tr '\n' ' ')
+  generated=$(ls output/client | LC_ALL=C sort | tr '\n' ' ')
   if [ "$generated" = \
-       "rose-core.ads rose-core-replace_client.adb rose-core-replace_client.ads " ]
+       "rose-core-replace_client.adb rose-core-replace_client.ads rose-core.ads " ]
   then
     pass "--command-client writes only the client"
   else
