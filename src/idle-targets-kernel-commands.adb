@@ -372,6 +372,8 @@ package body Idle.Targets.Kernel.Commands is
       Metadata_Name : constant String := Name & "_Metadata";
       Signature     : constant Idle.Commands.Placed_Vectors.Vector :=
         Idle.Commands.Signature (Item);
+      Replaceable   : constant Boolean :=
+        Idle.Commands.Has_Aspect (Item.Aspects, "Replaceable");
 
       Parameters    : Node_List;
       Declarations  : Node_List;
@@ -385,7 +387,13 @@ package body Idle.Targets.Kernel.Commands is
       --  For a server, the call that serves after the reply.
       Named_Adds    : Node_List;
       --  For a replaceable server, the calls that name each cap that it
-      --  is given, for a restore (Rose ADR 0032, section 10).
+      --  is given, for a restore (Rose ADR 0032, section 10), and for
+      --  Rose.Replacement.Arguments.
+      Prelude       : Node_List;
+      --  For a replaceable server, the calls that give its caps to
+      --  Rose.Replacement.Arguments, which takes any that the caller left
+      --  null from the version it replaces (Rose #901). They come before
+      --  anything uses the caps.
       System_Args   : Node_List;
       Spec_Context  : Context_List;
       Main_Context  : Context_List;
@@ -665,6 +673,18 @@ package body Idle.Targets.Kernel.Commands is
                   (Launch & "Cap_Argument",
                    [Call_Node, Literal (Where.Index)]));
 
+            function Named_Cap
+              (Cap_Name : String)
+               return not null Syn.Node_Access
+            is (if Replaceable
+                then F.New_Call
+                       ("Restore_Caps.Cap",
+                        [F.New_String_Literal (Cap_Name)])
+                else Cap_Argument);
+            --  The cap of the argument called Cap_Name. A replaceable
+            --  server uses it as Rose.Replacement.Arguments gave it, which
+            --  is the old version's if the caller left it null.
+
             procedure Return_Cap;
             --  Pass the command a cap to set, and send it back as the
             --  result. A server sets it to its own interface cap, which
@@ -721,7 +741,11 @@ package body Idle.Targets.Kernel.Commands is
                         & (if Idle.Commands.Defaults_To_Standard_Input
                                 (Argument)
                            then ".Open_Cap_Set" else ".Open"),
-                        [F.New_Name (Argument_Name), Cap_Argument])));
+                        [F.New_Name (Argument_Name),
+                         (if Idle.Commands.Defaults_To_Standard_Input
+                               (Argument)
+                          then Cap_Argument
+                          else Named_Cap (Argument_Name))])));
                Arguments.Append
                  (F.New_Named (Argument_Name, F.New_Name (Argument_Name)));
                if not Idle.Commands.Defaults_To_Standard_Input (Argument)
@@ -729,7 +753,7 @@ package body Idle.Targets.Kernel.Commands is
                   Named_Adds.Append
                     (F.New_Call_Statement
                        (F.New_Call
-                          ("Restore_Caps.Add",
+                          ("Given.Add",
                            [F.New_String_Literal (Argument_Name),
                             Cap_Argument])));
                end if;
@@ -773,14 +797,23 @@ package body Idle.Targets.Kernel.Commands is
                          when Rescind_Cap         => "rescind-cap",
                          when No_System_Cap       => "")
                      & Natural'Image (Where.Index));
-               System_Args.Append
-                 (F.New_Named
-                    ((case Placed.System is
-                         when Create_Endpoint_Cap => "Create_Endpoint",
-                         when Delete_Cap          => "Delete_Cap",
-                         when Rescind_Cap         => "Rescind_Cap",
-                         when No_System_Cap       => ""),
-                     Cap_Argument));
+               declare
+                  System_Name : constant String :=
+                    (case Placed.System is
+                        when Create_Endpoint_Cap => "Create_Endpoint",
+                        when Delete_Cap          => "Delete_Cap",
+                        when Rescind_Cap         => "Rescind_Cap",
+                        when No_System_Cap       => "");
+               begin
+                  System_Args.Append
+                    (F.New_Named (System_Name, Named_Cap (System_Name)));
+                  Named_Adds.Append
+                    (F.New_Call_Statement
+                       (F.New_Call
+                          ("Given.Add",
+                           [F.New_String_Literal (System_Name),
+                            Cap_Argument])));
+               end;
 
             elsif Placed.Role /= Null_Unbounded_String then
                Line ("cap",
@@ -893,8 +926,14 @@ package body Idle.Targets.Kernel.Commands is
       --  procedure starts from what was read. A restored state has no
       --  caps, so Read_State takes them from the command's caps, each
       --  named by its argument (section 10).
+      --
+      --  The main names its role members and interface arguments, and
+      --  gives them to Rose.Replacement.Arguments before it uses any of
+      --  them. A cap that the caller left null is then the old version's
+      --  of the same name, so a caller can launch a new version with
+      --  Previous alone (Rose #901). Stream roles aren't handed over.
 
-      if Idle.Commands.Has_Aspect (Item.Aspects, "Replaceable") then
+      if Replaceable then
          declare
             State : constant String :=
               Idle.Commands.Aspect (Item.Aspects, "Replaceable");
@@ -925,11 +964,24 @@ package body Idle.Targets.Kernel.Commands is
             Main_Context.Add (State);
             Declarations.Append
               (F.New_Object
+                 ("Given",
+                  F.New_Name ("Rose.Replacement.Named_Caps")));
+            Declarations.Append
+              (F.New_Object
                  ("Restore_Caps",
                   F.New_Name ("Rose.Replacement.Named_Caps")));
             for Named of Named_Adds.To_Array loop
-               Statements.Append (Named);
+               Prelude.Append (Named);
             end loop;
+            Prelude.Append
+              (F.New_Assignment
+                 (F.New_Name ("Restore_Caps"),
+                  F.New_Call
+                    ("Rose.Replacement.Arguments",
+                     [F.New_Call
+                        (Launch & "Cap_Argument",
+                         [Call_Node, Literal (Index)]),
+                      F.New_Name ("Given")])));
             Statements.Append
               (F.New_Call_Statement
                  (F.New_Call
@@ -1038,6 +1090,7 @@ package body Idle.Targets.Kernel.Commands is
                    [F.New_Call_Statement
                       (F.New_Call
                          (Launch & "Receive", [Call_Node]))]
+                   & Prelude.To_Array
                    & Statements.To_Array
                    & [F.New_Call_Statement
                         (F.New_Call
