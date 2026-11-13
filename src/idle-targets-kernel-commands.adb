@@ -213,8 +213,14 @@ package body Idle.Targets.Kernel.Commands is
             Value         : constant not null Syn.Node_Access :=
               F.New_Name (Argument_Name);
          begin
-            if Placed.Kind in String_Argument | String_List_Argument
-              and then Placed.Role = Null_Unbounded_String
+            --  An in string is a String, and needs nothing from
+            --  Rose.Command_Line, whose String_List and Text the spec
+            --  names only for a string list and an out string.
+
+            if Placed.Role = Null_Unbounded_String
+              and then (Placed.Kind = String_List_Argument
+                        or else (Placed.Kind = String_Argument
+                                 and then Placed.Argument.Mode /= In_Mode))
             then
                Spec_Context.Add ("Rose.Command_Line");
             end if;

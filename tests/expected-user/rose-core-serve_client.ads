@@ -1,5 +1,4 @@
 with Rose.Capabilities;
-with Rose.Command_Line;
 
 package Rose.Core.Serve_Client is
 
