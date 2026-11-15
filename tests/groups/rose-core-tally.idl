@@ -1,9 +1,12 @@
 --  A command whose role and argument are interfaces in groups (Rose
---  ADR 0034).
+--  ADR 0034), and an argument that defaults to standard input, named with
+--  its group.
 
 command Rose.Core.Tally : Measures.Counter_Service
   with Summary => "Count a label."
 is
    Label : in Common.Named
      with Help => "what to count";
+   Source : in Common.Named := Measures.Standard_Input
+     with Help => "where to count from";
 end Rose.Core.Tally;

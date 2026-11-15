@@ -497,12 +497,14 @@ package body Idle.Commands is
 
          if Argument.Mode /= In_Mode then
             null;
-         elsif not Idle.Hierarchy.Find (Item, "Standard_Input", Role)
+         elsif not Idle.Hierarchy.Find
+                     (Item, To_String (Argument.Default.Text), Role)
            or else Role.Kind /= Role_Unit
            or else Natural (Role.Arguments.Length) /= 1
          then
             Error (Argument.Default.Position,
-                   "Standard_Input is not a role with one member");
+                   To_String (Argument.Default.Text)
+                   & " is not a role with one member");
          elsif not Same
                      (To_String (Argument.Of_Type.Name),
                       To_String (Role.Arguments.First_Element.Of_Type.Name))
@@ -563,7 +565,8 @@ package body Idle.Commands is
       return Boolean
    is (Item.Has_Default
        and then Item.Default.Kind = Idle.Syntax.Name_Value
-       and then Same (To_String (Item.Default.Text), "Standard_Input"));
+       and then Same (Simple_Name (To_String (Item.Default.Text)),
+                      "Standard_Input"));
 
    ------------
    -- Detail --

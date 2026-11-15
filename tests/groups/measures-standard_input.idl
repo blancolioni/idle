@@ -1,0 +1,4 @@
+--  Standard input, in a group (Rose ADR 0034), for an argument's
+--  default.
+
+role Measures.Standard_Input : Common.Named;

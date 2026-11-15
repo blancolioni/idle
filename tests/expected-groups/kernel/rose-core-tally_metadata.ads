@@ -39,6 +39,16 @@ package Rose.Core.Tally_Metadata is
      & ASCII.LF
      & "help what to count"
      & ASCII.LF
+     & "argument Source"
+     & ASCII.LF
+     & "type interface Common.Named"
+     & ASCII.LF
+     & "place cap 2"
+     & ASCII.LF
+     & "default Measures.Standard_Input"
+     & ASCII.LF
+     & "help where to count from"
+     & ASCII.LF
      with Linker_Section => ".rose_command";
 
 end Rose.Core.Tally_Metadata;

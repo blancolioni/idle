@@ -9,7 +9,8 @@ package body Rose.Core.Tally_Client is
    procedure Call
      (Endpoint        : Rose.Capabilities.Capability;
       Counter_Service : Rose.Capabilities.Capability;
-      Label           : Rose.Capabilities.Capability)
+      Label           : Rose.Capabilities.Capability;
+      Source          : Rose.Capabilities.Capability)
    is
       Launch_Call : Rose.Command_Line.Launch_Client.Launch_Call;
    begin
@@ -19,6 +20,7 @@ package body Rose.Core.Tally_Client is
          0,
          Counter_Service);
       Rose.Command_Line.Launch_Client.Cap_Argument (Launch_Call, 1, Label);
+      Rose.Command_Line.Launch_Client.Cap_Argument (Launch_Call, 2, Source);
       Rose.Command_Line.Launch_Client.Invoke (Launch_Call);
    end Call;
 
