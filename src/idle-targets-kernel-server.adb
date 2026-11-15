@@ -76,7 +76,8 @@ package body Idle.Targets.Kernel.Server is
       function Get_Interface
         (For_Interface : Idle.Syntax.Interface_Declaration)
          return String
-      is ("Handle_Get_" & Idle.Names.Ada_Name (To_String (For_Interface.Name))
+      is ("Handle_Get_"
+          & Idle.Names.Simple_Name (To_String (For_Interface.Name))
           & "_Interface");
 
       function Id (For_Interface : Idle.Syntax.Interface_Declaration)
@@ -89,7 +90,8 @@ package body Idle.Targets.Kernel.Server is
       --  package declares a type with the name of the interface id of
       --  Item, so it names the ids by their package.
 
-      Interface_Type : constant String := Ada_Name & "_Interface";
+      Interface_Type : constant String :=
+        Idle.Names.Simple_Name (Ada_Name) & "_Interface";
       Resource       : constant Boolean := Is_Resource (Item);
       --  True if Item's objects are released (Rose ADR 0010).
       --  For the user target, the interface that a served object
@@ -1943,7 +1945,8 @@ package body Idle.Targets.Kernel.Server is
 
       function Result_Subtype (Info : Types.Type_Info) return String is
          Name   : constant String :=
-           To_String (Info.Interface_Name) & "_Object_Class";
+           Idle.Names.Simple_Name (To_String (Info.Interface_Name))
+           & "_Object_Class";
          Target : constant String := Types.Object_Class (Info);
          Dot    : constant Natural :=
            Ada.Strings.Fixed.Index

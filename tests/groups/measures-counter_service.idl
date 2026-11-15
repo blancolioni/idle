@@ -1,0 +1,1 @@
+role Measures.Counter_Service : Measures.Counter with Category => "measures";

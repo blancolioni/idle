@@ -670,9 +670,10 @@ package body Idle.Commands is
          return False;
       end if;
 
-      return Same (To_String (Found.Name), "Transactional")
+      return Same (Simple_Name (To_String (Found.Name)), "Transactional")
         or else (for some Ancestor of Idle.Hierarchy.Ancestors (Found) =>
-                   Same (To_String (Ancestor.Name), "Transactional"));
+                   Same (Simple_Name (To_String (Ancestor.Name)),
+                         "Transactional"));
    end Is_Transactional;
 
    ------------------

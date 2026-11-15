@@ -1,5 +1,4 @@
 with Idle.Hierarchy;
-with Idle.Names;
 
 package body Idle.Targets.Kernel.Types is
 
@@ -258,7 +257,8 @@ package body Idle.Targets.Kernel.Types is
                     Encoding       => Not_A_Word,
                     Ada_Name       =>
                       To_Unbounded_String
-                        (Client & "." & Ada_Name & "_Client"),
+                        (Client & "." & Idle.Names.Simple_Name (Name)
+                         & "_Client"),
                     Unit           => To_Unbounded_String (Client),
                     Interface_Name => To_Unbounded_String (Ada_Name));
          end;

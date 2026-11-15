@@ -658,7 +658,7 @@ package body Idle.Targets.Kernel.Commands is
                 & ".Client");
 
             function Client_Type return String
-            is (Client_Unit & "." & Idle.Names.Ada_Name (Type_Name)
+            is (Client_Unit & "." & Idle.Names.Simple_Name (Type_Name)
                 & "_Client");
 
             function Object_Unit return String
@@ -667,7 +667,7 @@ package body Idle.Targets.Kernel.Commands is
             function Object_Class return not null Syn.Node_Access
             is (F.New_Attribute
                   (F.New_Name
-                     (Object_Unit & "." & Idle.Names.Ada_Name (Type_Name)
+                     (Object_Unit & "." & Idle.Names.Simple_Name (Type_Name)
                       & "_Object"),
                    "Class"));
             --  For the user target, the type of the command's parameter:
