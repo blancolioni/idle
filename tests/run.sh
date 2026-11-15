@@ -269,7 +269,8 @@ else
 fi
 
 if $idle --check groups/common-named.idl groups/measures-counter.idl \
-     groups/measures-counter_service.idl 2> output/groups/check.txt \
+     groups/measures-counter_service.idl groups/measures-standard_input.idl \
+     2> output/groups/check.txt \
    && diff -u expected-groups/check.txt output/groups/check.txt; then
   pass "check of interfaces in groups"
 else
