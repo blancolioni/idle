@@ -15,6 +15,8 @@
 #     list (rose-build.txt) and the cases in check-errors/, for commands
 #     with the cases in command-errors/, and for what the user target
 #     does not support yet with user-errors/.
+#     Then interfaces in groups (Rose ADR 0034), from groups/, for both
+#     targets, with expected-groups/.
 #  4. Compile every expected Ada file, of both targets, with GNAT's style
 #     checks, as strict as Rose's build.
 
@@ -225,6 +227,55 @@ else
   pass "--command-client without --target user"
 fi
 
+# Interfaces in groups (Rose ADR 0034): an interface whose parent is in
+# another group, references across groups, a role in a group, and a
+# command whose role and argument are in groups. Each group's package is
+# generated with its interfaces, for both targets. The expected files are
+# in expected-groups/kernel and expected-groups/user. Checking the
+# interfaces warns that the command beside them is not compiled.
+
+rm -rf output/groups && mkdir -p output/groups/kernel output/groups/user
+for target in kernel user; do
+  for name in common-named measures-counter; do
+    $idle --target $target -I groups -o output/groups/$target \
+      groups/$name.idl || fail "$target target for groups/$name"
+  done
+  $idle --target $target -I groups -I commands -I rose \
+    -o output/groups/$target commands/rose-core.idl \
+    groups/rose-core-tally.idl || fail "$target target for groups/tally"
+  for file in $(ls expected-groups/$target); do
+    if diff -u "expected-groups/$target/$file" \
+         "output/groups/$target/$file"; then
+      pass "groups $target $file"
+    else
+      fail "groups $target $file"
+    fi
+  done
+  if [ "$(ls output/groups/$target)" = "$(ls expected-groups/$target)" ]
+  then
+    pass "files generated for groups, $target target"
+  else
+    fail "files generated for groups, $target target"
+  fi
+done
+
+if $idle --list-endpoints groups/common-named.idl \
+     groups/measures-counter.idl > output/groups/endpoints.txt \
+   && diff -u expected-groups/endpoints.txt output/groups/endpoints.txt
+then
+  pass "endpoint ids of interfaces in groups"
+else
+  fail "endpoint ids of interfaces in groups"
+fi
+
+if $idle --check groups/common-named.idl groups/measures-counter.idl \
+     groups/measures-counter_service.idl 2> output/groups/check.txt \
+   && diff -u expected-groups/check.txt output/groups/check.txt; then
+  pass "check of interfaces in groups"
+else
+  fail "check of interfaces in groups"
+fi
+
 # 3. Diagnostics
 
 for file in errors/*.idl; do
@@ -315,7 +366,8 @@ fi
 
 work=$(mktemp -d) || exit 1
 trap 'rm -rf "$work"' EXIT
-for file in expected/*.ad[sb] expected-user/*.ad[sb]; do
+for file in expected/*.ad[sb] expected-user/*.ad[sb] \
+            expected-groups/*/*.ad[sb]; do
   if (cd "$work" && gcc -c -gnats -gnat2022 -gnatyabcefhiklmnoprst -gnaty3 \
         -gnatwe "$OLDPWD/$file"); then
     pass "style of $file"
@@ -369,6 +421,21 @@ else
       done
     done
   done < semantic.txt
+
+  # The interfaces in groups, and their groups' packages.
+  for target in kernel user; do
+    if [ $target = kernel ]; then flags=$kernel; else flags=$user; fi
+    dir=expected-groups/$target
+    for file in "$dir"/rose-interfaces-*.ad[sb]; do
+      # shellcheck disable=SC2086
+      if (cd "$work" && gcc -c -gnatc -gnat2012 -gnatwae -m32 -nostdinc \
+            -nostdlib -I"$OLDPWD/$dir" $flags "$OLDPWD/$file"); then
+        pass "rose groups $target $(basename "$file")"
+      else
+        fail "rose groups $target $(basename "$file")"
+      fi
+    done
+  done
 fi
 
 exit $status

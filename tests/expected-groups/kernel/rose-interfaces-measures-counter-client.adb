@@ -1,0 +1,259 @@
+with Rose.System_Calls;
+
+package body Rose.Interfaces.Measures.Counter.Client is
+
+   use type Rose.Invocation.Invocation_Error;
+
+   Last_Error : Rose.Invocation.Invocation_Error := Rose.Invocation.OK;
+
+   -----------
+   -- Badge --
+   -----------
+
+   function Badge
+     (Item : Counter_Client)
+      return Rose.Capabilities.Capability
+   is
+      Params : aliased Rose.Invocation.Invocation_Record;
+   begin
+      Rose.System_Calls.Initialize_Send (Params, Item.Badge);
+      Rose.System_Calls.Receive_Caps (Params, 1);
+      Rose.System_Calls.Invoke_Capability (Params);
+      Last_Error := Rose.Invocation.OK;
+      if Params.Control.Flags (Rose.Invocation.Error) then
+         Last_Error := Params.Error;
+      end if;
+      return Params.Caps (0);
+   end Badge;
+
+   -----------
+   -- Close --
+   -----------
+
+   procedure Close (Client : in out Counter_Client) is
+   begin
+      Client.Is_Open := False;
+      Rose.System_Calls.Delete_Cap (Client.Badge);
+      Rose.System_Calls.Delete_Cap (Client.Increment);
+      Rose.System_Calls.Delete_Cap (Client.Value);
+      Rose.System_Calls.Delete_Cap (Client.Label);
+      Rose.System_Calls.Delete_Cap (Client.Twin);
+      Rose.System_Calls.Delete_Cap (Client.Interface_Cap);
+   end Close;
+
+   -------------------
+   -- Get_Badge_Cap --
+   -------------------
+
+   function Get_Badge_Cap
+     (Item : Counter_Client)
+      return Rose.Capabilities.Capability
+   is (Item.Badge);
+
+   -----------------------
+   -- Get_Increment_Cap --
+   -----------------------
+
+   function Get_Increment_Cap
+     (Item : Counter_Client)
+      return Rose.Capabilities.Capability
+   is (Item.Increment);
+
+   -----------------------
+   -- Get_Interface_Cap --
+   -----------------------
+
+   function Get_Interface_Cap
+     (Item : Counter_Client)
+      return Rose.Capabilities.Capability
+   is (Item.Interface_Cap);
+
+   -------------------
+   -- Get_Label_Cap --
+   -------------------
+
+   function Get_Label_Cap
+     (Item : Counter_Client)
+      return Rose.Capabilities.Capability
+   is (Item.Label);
+
+   --------------------
+   -- Get_Last_Error --
+   --------------------
+
+   function Get_Last_Error
+      return Rose.Invocation.Invocation_Error
+   is (Last_Error);
+
+   ------------------
+   -- Get_Twin_Cap --
+   ------------------
+
+   function Get_Twin_Cap
+     (Item : Counter_Client)
+      return Rose.Capabilities.Capability
+   is (Item.Twin);
+
+   -------------------
+   -- Get_Value_Cap --
+   -------------------
+
+   function Get_Value_Cap
+     (Item : Counter_Client)
+      return Rose.Capabilities.Capability
+   is (Item.Value);
+
+   ---------------
+   -- Has_Error --
+   ---------------
+
+   function Has_Error return Boolean is (Last_Error /= Rose.Invocation.OK);
+
+   ---------------
+   -- Increment --
+   ---------------
+
+   procedure Increment (Item : Counter_Client; By : Rose.Words.Word) is
+      Params : aliased Rose.Invocation.Invocation_Record;
+   begin
+      Rose.System_Calls.Initialize_Send (Params, Item.Increment);
+      Rose.System_Calls.Send_Word (Params, By);
+      Rose.System_Calls.Invoke_Capability (Params);
+      Last_Error := Rose.Invocation.OK;
+      if Params.Control.Flags (Rose.Invocation.Error) then
+         Last_Error := Params.Error;
+      end if;
+   end Increment;
+
+   -----------
+   -- Label --
+   -----------
+
+   function Label
+     (Item : Counter_Client)
+      return Rose.Interfaces.Common.Named.Client.Named_Client
+   is
+      Params : aliased Rose.Invocation.Invocation_Record;
+   begin
+      Rose.System_Calls.Initialize_Send (Params, Item.Label);
+      Rose.System_Calls.Receive_Caps (Params, 1);
+      Rose.System_Calls.Invoke_Capability (Params);
+      Last_Error := Rose.Invocation.OK;
+      if Params.Control.Flags (Rose.Invocation.Error) then
+         Last_Error := Params.Error;
+      end if;
+      declare
+         Result : Rose.Interfaces.Common.Named.Client.Named_Client;
+      begin
+         Rose.Interfaces.Common.Named.Client.Open (Result, Params.Caps (0));
+         return Result;
+      end;
+   end Label;
+
+   ----------
+   -- Open --
+   ----------
+
+   procedure Open
+     (Client        : out Counter_Client;
+      Interface_Cap : Rose.Capabilities.Capability)
+   is
+      Params : aliased Rose.Invocation.Invocation_Record;
+      Caps   : Rose.Capabilities.Capability_Array (1 .. Subprogram_Count);
+      Index  : Natural := 0;
+      First  : Natural := Natural'Last;
+   begin
+      Client.Is_Open := False;
+      Client.Interface_Cap := Interface_Cap;
+      for Cap of Caps loop
+         if First > Index
+           or else Index - First >= Rose.Invocation.Max_Capabilities
+         then
+            First := Index;
+            Rose.System_Calls.Initialize_Send (Params, Interface_Cap);
+            Rose.System_Calls.Send_Word (Params, Natural (0));
+            Rose.System_Calls.Send_Word (Params, First);
+            Rose.System_Calls.Send_Word
+              (Params,
+               Natural'Min
+                 (Rose.Invocation.Max_Capabilities,
+                  Subprogram_Count - First));
+            Rose.System_Calls.Receive_Caps
+              (Params,
+               Natural'Min
+                 (Rose.Invocation.Max_Capabilities,
+                  Subprogram_Count - First));
+            Rose.System_Calls.Invoke_Capability (Params);
+         end if;
+         Cap := Params.Caps (Rose.Invocation.Capability_Index (Index - First));
+         Index := Index + 1;
+      end loop;
+      Client.Badge := Caps (Badge_Index + 1);
+      Client.Increment := Caps (Increment_Index + 1);
+      Client.Value := Caps (Value_Index + 1);
+      Client.Label := Caps (Label_Index + 1);
+      Client.Twin := Caps (Twin_Index + 1);
+      Client.Is_Open := True;
+   end Open;
+
+   ------------------
+   -- Open_Cap_Set --
+   ------------------
+
+   procedure Open_Cap_Set
+     (Client    : out Counter_Client;
+      Badge     : Rose.Capabilities.Capability;
+      Increment : Rose.Capabilities.Capability;
+      Value     : Rose.Capabilities.Capability;
+      Label     : Rose.Capabilities.Capability;
+      Twin      : Rose.Capabilities.Capability)
+   is
+   begin
+      Client.Badge := Badge;
+      Client.Increment := Increment;
+      Client.Value := Value;
+      Client.Label := Label;
+      Client.Twin := Twin;
+      Client.Is_Open := True;
+   end Open_Cap_Set;
+
+   ----------
+   -- Twin --
+   ----------
+
+   function Twin (Item : Counter_Client) return Counter_Client is
+      Params : aliased Rose.Invocation.Invocation_Record;
+   begin
+      Rose.System_Calls.Initialize_Send (Params, Item.Twin);
+      Rose.System_Calls.Receive_Caps (Params, 1);
+      Rose.System_Calls.Invoke_Capability (Params);
+      Last_Error := Rose.Invocation.OK;
+      if Params.Control.Flags (Rose.Invocation.Error) then
+         Last_Error := Params.Error;
+      end if;
+      declare
+         Result : Counter_Client;
+      begin
+         Open (Result, Params.Caps (0));
+         return Result;
+      end;
+   end Twin;
+
+   -----------
+   -- Value --
+   -----------
+
+   function Value (Item : Counter_Client) return Rose.Words.Word is
+      Params : aliased Rose.Invocation.Invocation_Record;
+   begin
+      Rose.System_Calls.Initialize_Send (Params, Item.Value);
+      Rose.System_Calls.Receive_Words (Params, 1);
+      Rose.System_Calls.Invoke_Capability (Params);
+      Last_Error := Rose.Invocation.OK;
+      if Params.Control.Flags (Rose.Invocation.Error) then
+         Last_Error := Params.Error;
+      end if;
+      return Rose.System_Calls.Get_Word_32 (Params, 0);
+   end Value;
+
+end Rose.Interfaces.Measures.Counter.Client;

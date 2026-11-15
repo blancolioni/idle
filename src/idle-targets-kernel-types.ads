@@ -3,6 +3,7 @@ with Ada.Strings.Unbounded;
 with Syn;
 with Syn.Factory;
 
+with Idle.Names;
 with Idle.Syntax;
 
 private package Idle.Targets.Kernel.Types is
@@ -108,13 +109,14 @@ private package Idle.Targets.Kernel.Types is
    --  the interface Info.
 
    function Object_Class (Info : Type_Info) return String
-   is (Object_Unit (Info) & "." & To_String (Info.Interface_Name)
+   is (Object_Unit (Info) & "."
+       & Idle.Names.Simple_Name (To_String (Info.Interface_Name))
        & "_Object'Class")
      with Pre => Info.Category = Interface_Value;
    --  The class-wide object type of the interface Info.
 
    function Cap_Function (Info : Type_Info) return String
-   is (To_String (Info.Interface_Name) & "_Cap")
+   is (Idle.Names.Simple_Name (To_String (Info.Interface_Name)) & "_Cap")
      with Pre => Info.Category = Interface_Value;
    --  The function of an object that returns its cap for the interface
    --  Info.

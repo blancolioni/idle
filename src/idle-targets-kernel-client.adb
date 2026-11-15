@@ -33,7 +33,8 @@ package body Idle.Targets.Kernel.Client is
         Idle.Names.Ada_Name (To_String (Item.Name));
       Package_Name : constant String :=
         "Rose.Interfaces." & Ada_Name & ".Client";
-      Client_Type  : constant String := Ada_Name & "_Client";
+      Client_Type  : constant String :=
+        Idle.Names.Simple_Name (Ada_Name) & "_Client";
       Subprograms  : constant Idle.Syntax.Subprogram_Vectors.Vector :=
         Support.Subprograms (Item);
       Ancestors    : constant Idle.Hierarchy.Interface_Vectors.Vector :=
@@ -67,7 +68,8 @@ package body Idle.Targets.Kernel.Client is
       function Ancestor_Cap
         (Ancestor : Idle.Syntax.Interface_Declaration)
          return String
-      is (Idle.Names.Ada_Name (To_String (Ancestor.Name)) & "_Interface_Cap");
+      is (Idle.Names.Simple_Name (To_String (Ancestor.Name))
+          & "_Interface_Cap");
       --  For the user target, the component that keeps the interface cap
       --  of Ancestor, once it has been asked for.
 
@@ -1358,9 +1360,11 @@ package body Idle.Targets.Kernel.Client is
             Index := Index + 1;
             declare
                Ancestor_Name : constant String :=
-                 Idle.Names.Ada_Name (To_String (Ancestor.Name));
+                 Idle.Names.Simple_Name (To_String (Ancestor.Name));
                Ancestor_Package : constant String :=
-                 "Rose.Interfaces." & Ancestor_Name & ".Client";
+                 "Rose.Interfaces."
+                 & Idle.Names.Ada_Name (To_String (Ancestor.Name))
+                 & ".Client";
                Ancestor_Type : constant String :=
                  Ancestor_Package & "." & Ancestor_Name & "_Client";
                Specification : constant not null Syn.Node_Access :=

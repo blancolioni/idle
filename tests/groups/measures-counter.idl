@@ -1,0 +1,11 @@
+--  An interface in one group whose parent is in another, and which names
+--  interfaces of both groups, always with their group (Rose ADR 0034).
+
+interface Measures.Counter : Common.Named is
+
+   procedure Increment (By : Word);
+   function Value return Word;
+   function Label return interface Common.Named;
+   function Twin return interface Measures.Counter;
+
+end Measures.Counter;

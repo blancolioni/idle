@@ -1070,6 +1070,23 @@ package body Idle.Targets.Kernel is
                    "Rose.Interfaces." & Idle.Names.Ada_Name (Name),
                  Public_Part => Declarations & User_Declarations)),
          Output_Directory);
+
+      --  An interface in a group, such as Storage.Bank, is a child of the
+      --  group's package, Rose.Interfaces.Storage, which declares nothing
+      --  (Rose ADR 0034). Each interface of the group writes the same
+      --  package.
+
+      if Idle.Names.Group_Name (Name) /= "" then
+         Syn.Units.Write
+           (F.New_Compilation_Unit
+              (Context => Syn.No_Nodes,
+               Item    =>
+                 F.New_Package
+                   (Name        =>
+                      "Rose.Interfaces." & Idle.Names.Group_Name (Name),
+                    Public_Part => Syn.No_Nodes)),
+            Output_Directory);
+      end if;
    end Generate_Interface_Package;
 
    -------------------------

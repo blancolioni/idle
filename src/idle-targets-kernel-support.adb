@@ -73,7 +73,7 @@ package body Idle.Targets.Kernel.Support is
 
    function Cap_Function (Interface_Name : String) return String is
    begin
-      return Idle.Names.Ada_Name (Interface_Name) & "_Cap";
+      return Idle.Names.Simple_Name (Interface_Name) & "_Cap";
    end Cap_Function;
 
    --------------
@@ -157,7 +157,7 @@ package body Idle.Targets.Kernel.Support is
      return String
    is
    begin
-      return Idle.Names.Ada_Name (To_String (Item.Name)) & "_Interface";
+      return Idle.Names.Simple_Name (To_String (Item.Name)) & "_Interface";
    end Interface_Name;
 
    ----------------
@@ -166,7 +166,8 @@ package body Idle.Targets.Kernel.Support is
 
    function Is_Release (Member : Idle.Hierarchy.Member) return Boolean is
    begin
-      return Idle.Names.Key (To_String (Member.Declared_In))
+      return Idle.Names.Key
+               (Idle.Names.Simple_Name (To_String (Member.Declared_In)))
           = Idle.Names.Key (Resource_Name)
         and then Idle.Names.Key (To_String (Member.Subprogram.Name))
           = Idle.Names.Key (Release_Name);
@@ -183,7 +184,8 @@ package body Idle.Targets.Kernel.Support is
       function Is_Named_Resource
         (Declaration : Idle.Syntax.Interface_Declaration)
          return Boolean
-      is (Idle.Names.Key (To_String (Declaration.Name))
+      is (Idle.Names.Key
+            (Idle.Names.Simple_Name (To_String (Declaration.Name)))
           = Idle.Names.Key (Resource_Name));
    begin
       return Is_Named_Resource (Item)
@@ -225,7 +227,7 @@ package body Idle.Targets.Kernel.Support is
 
    function Object_Type_Name (Interface_Name : String) return String is
    begin
-      return Idle.Names.Ada_Name (Interface_Name) & "_Object";
+      return Idle.Names.Simple_Name (Interface_Name) & "_Object";
    end Object_Type_Name;
 
    ----------------------

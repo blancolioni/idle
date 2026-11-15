@@ -40,6 +40,34 @@ package body Idle.Names is
       return Result;
    end File_Key;
 
+   ----------------
+   -- Group_Name --
+   ----------------
+
+   function Group_Name (Name : String) return String is
+   begin
+      for Index in reverse Name'Range loop
+         if Name (Index) = '.' then
+            return Ada_Name (Name (Name'First .. Index - 1));
+         end if;
+      end loop;
+      return "";
+   end Group_Name;
+
+   -----------------
+   -- Simple_Name --
+   -----------------
+
+   function Simple_Name (Name : String) return String is
+   begin
+      for Index in reverse Name'Range loop
+         if Name (Index) = '.' then
+            return Ada_Name (Name (Index + 1 .. Name'Last));
+         end if;
+      end loop;
+      return Ada_Name (Name);
+   end Simple_Name;
+
    ---------
    -- Key --
    ---------

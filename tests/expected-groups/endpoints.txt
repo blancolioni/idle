@@ -1,0 +1,7 @@
+16#9208_2F83_E925_52F0#  interface rose.interfaces.common.named
+16#C9B6_319C_F3D5_7B5C#  rose.interfaces.common.named.badge return capability
+16#2179_AD35_6D1A_C026#  interface rose.interfaces.measures.counter
+16#D5C3_E5A8_9102_3957#  rose.interfaces.measures.counter.increment(in word)
+16#ADFD_7087_FD78_E21D#  rose.interfaces.measures.counter.value return word
+16#3294_FB8D_8CB1_211D#  rose.interfaces.measures.counter.label return interface rose.interfaces.common.named
+16#B4D9_EB4C_A436_16C6#  rose.interfaces.measures.counter.twin return interface rose.interfaces.measures.counter

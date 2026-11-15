@@ -1,0 +1,8 @@
+--  An interface in a group (Rose ADR 0034), which an interface of another
+--  group descends from and names.
+
+interface Common.Named is
+
+   function Badge return Capability;
+
+end Common.Named;

@@ -1,0 +1,1 @@
+groups/rose-core-tally.idl: warning: not compiled by this build

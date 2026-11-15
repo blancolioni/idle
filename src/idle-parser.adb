@@ -7,6 +7,7 @@ with Ada.Text_IO;
 
 with Idle.Diagnostics;
 with Idle.Literals;
+with Idle.Names;
 with Idle.Lexical; use Idle.Lexical;
 with Idle.Tokens;  use Idle.Tokens;
 
@@ -366,7 +367,7 @@ package body Idle.Parser is
    procedure Parse_Interface (Item : in out Interface_Declaration) is
    begin
       Expect (Tok_Interface, [Tok_Identifier]);
-      Item.Name := Parse_Name ("interface name");
+      Item.Name := Parse_Qualified_Name ("interface name");
       Parse_Parents (Item);
       Parse_Aspects (Item.Pinned_Id, Item.Versioned, On_Interface => True);
       Expect (Tok_Is, Declaration_Start);
@@ -459,7 +460,8 @@ package body Idle.Parser is
       if Tok = Tok_Colon then
          Scan;
          loop
-            Item.Parents.Append (To_String (Parse_Name ("parent name")));
+            Item.Parents.Append
+              (To_String (Parse_Qualified_Name ("parent name")));
             exit when Tok /= Tok_Comma;
             Scan;
          end loop;
@@ -488,7 +490,7 @@ package body Idle.Parser is
    begin
       Expect (Tok_Role, [Tok_Identifier]);
       Item.Kind := Role_Unit;
-      Item.Name := Parse_Name ("role name");
+      Item.Name := Parse_Qualified_Name ("role name");
       Parse_Parents (Item);
       Parse_Aspect_List (Item.Aspects);
 
@@ -499,7 +501,9 @@ package body Idle.Parser is
       if Tok = Tok_Semicolon and then Natural (Item.Parents.Length) = 1 then
          Item.Arguments.Append
            (Argument'
-              (Name     => Item.Name,
+              (Name     =>
+                 To_Unbounded_String
+                   (Idle.Names.Simple_Name (To_String (Item.Name))),
                Of_Type  =>
                  (Name         =>
                     To_Unbounded_String (Item.Parents.First_Element),
@@ -652,7 +656,7 @@ package body Idle.Parser is
          Scan;
          Result.Is_Interface := True;
       end if;
-      Result.Name := Parse_Name ("type name");
+      Result.Name := Parse_Qualified_Name ("type name");
       return Result;
    end Parse_Type_Reference;
 
