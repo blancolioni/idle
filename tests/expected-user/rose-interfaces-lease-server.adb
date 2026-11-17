@@ -1,3 +1,4 @@
+with Ada.Containers.Ordered_Maps;
 with Ada.Containers.Vectors;
 with Rose.Interfaces.Objects;
 with Rose.Invocation;
@@ -6,8 +7,6 @@ with Rose.Words;
 with System;
 
 package body Rose.Interfaces.Lease.Server is
-
-   Server_Instance : Rose.Server.Server_Instance;
 
    type Object_Access is access all Lease_Interface'Class;
 
@@ -22,52 +21,86 @@ package body Rose.Interfaces.Lease.Server is
    package Attached_Vectors is
      new Ada.Containers.Vectors (Natural, Attached_Object);
 
-   Attached        : Attached_Vectors.Vector;
+   package Address_Maps is
+     new Ada.Containers.Ordered_Maps
+       (System.Address, Natural, System."<");
 
-   Registered      : Boolean := False;
+   package Identifier_Maps is
+     new Ada.Containers.Ordered_Maps
+       (Rose.Objects.Capability_Identifier, Natural,
+        Rose.Objects."<");
+
+   type Attached_Table is
+     new Rose.Server.Interface_Table with
+      record
+         Attached        : Attached_Vectors.Vector;
+         By_Address      : Address_Maps.Map;
+         By_Identifier   : Identifier_Maps.Map;
+         Server_Instance : Rose.Server.Server_Instance;
+      end record;
+
+   type Table_Access is access all Attached_Table;
+
+   function Table_Of
+     (Server_Context : Rose.Server.Server_Context)
+      return Table_Access;
 
    function Find
-     (Identifier : Rose.Objects.Capability_Identifier)
+     (Server_Context : Rose.Server.Server_Context;
+      Identifier     : Rose.Objects.Capability_Identifier)
       return Object_Access;
 
    function Owns
-     (Identifier : Rose.Objects.Capability_Identifier)
+     (Server_Context : Rose.Server.Server_Context;
+      Identifier     : Rose.Objects.Capability_Identifier)
       return Boolean;
 
-   function Free_Slot return Natural;
+   function Free_Slot (Table : not null Table_Access) return Natural;
 
    function Slot_Of
-     (Identifier : Rose.Objects.Capability_Identifier)
+     (Table      : not null Table_Access;
+      Identifier : Rose.Objects.Capability_Identifier)
       return Natural;
 
-   procedure Detach (Identifier : Rose.Objects.Capability_Identifier);
+   procedure Detach
+     (Server_Context : Rose.Server.Server_Context;
+      Identifier     : Rose.Objects.Capability_Identifier);
 
    procedure Handle_Get_Named_Interface
-     (Parameters : in out Rose.Invocation.Invocation_Record);
+     (Server_Context : in out Rose.Server.Server_Context;
+      Parameters     : in out Rose.Invocation.Invocation_Record);
 
    procedure Handle_Get_Counter_Interface
-     (Parameters : in out Rose.Invocation.Invocation_Record);
+     (Server_Context : in out Rose.Server.Server_Context;
+      Parameters     : in out Rose.Invocation.Invocation_Record);
 
    procedure Handle_Get_Resource_Interface
-     (Parameters : in out Rose.Invocation.Invocation_Record);
+     (Server_Context : in out Rose.Server.Server_Context;
+      Parameters     : in out Rose.Invocation.Invocation_Record);
 
    procedure Handle_Get_Lease_Interface
-     (Parameters : in out Rose.Invocation.Invocation_Record);
+     (Server_Context : in out Rose.Server.Server_Context;
+      Parameters     : in out Rose.Invocation.Invocation_Record);
 
    procedure Handle_Badge
-     (Parameters : in out Rose.Invocation.Invocation_Record);
+     (Server_Context : in out Rose.Server.Server_Context;
+      Parameters     : in out Rose.Invocation.Invocation_Record);
 
    procedure Handle_Increment
-     (Parameters : in out Rose.Invocation.Invocation_Record);
+     (Server_Context : in out Rose.Server.Server_Context;
+      Parameters     : in out Rose.Invocation.Invocation_Record);
 
    procedure Handle_Value
-     (Parameters : in out Rose.Invocation.Invocation_Record);
+     (Server_Context : in out Rose.Server.Server_Context;
+      Parameters     : in out Rose.Invocation.Invocation_Record);
 
    procedure Handle_Release
-     (Parameters : in out Rose.Invocation.Invocation_Record);
+     (Server_Context : in out Rose.Server.Server_Context;
+      Parameters     : in out Rose.Invocation.Invocation_Record);
 
    procedure Handle_Remaining
-     (Parameters : in out Rose.Invocation.Invocation_Record);
+     (Server_Context : in out Rose.Server.Server_Context;
+      Parameters     : in out Rose.Invocation.Invocation_Record);
 
    ------------
    -- Attach --
@@ -79,69 +112,77 @@ package body Rose.Interfaces.Lease.Server is
       Identifier     : Rose.Objects.Capability_Identifier := 0)
    is
       use type Rose.Objects.Capability_Identifier;
-      Slot : constant Natural := Free_Slot;
+      Table : Table_Access := Table_Of (Server_Context);
+      Slot  : Natural;
    begin
-      if not Registered then
-         Rose.Server.Register_Handler
+      if Table = null then
+         Table := new Attached_Table;
+         Rose.Server.Add_Table
+           (Server_Context,
+            Rose.Interfaces.Lease.Lease_Interface,
+            Rose.Server.Interface_Table_Access (Table));
+         Rose.Server.Register_Context_Handler
            (Server_Context,
             Rose.Interfaces.Lease.Named_Interface,
             Handle_Get_Named_Interface'Access,
             Owns'Access);
-         Rose.Server.Register_Handler
+         Rose.Server.Register_Context_Handler
            (Server_Context,
             Rose.Interfaces.Lease.Counter_Interface,
             Handle_Get_Counter_Interface'Access,
             Owns'Access);
-         Rose.Server.Register_Handler
+         Rose.Server.Register_Context_Handler
            (Server_Context,
             Rose.Interfaces.Lease.Resource_Interface,
             Handle_Get_Resource_Interface'Access,
             Owns'Access);
-         Rose.Server.Register_Handler
+         Rose.Server.Register_Context_Handler
            (Server_Context,
             Rose.Interfaces.Lease.Lease_Interface,
             Handle_Get_Lease_Interface'Access,
             Owns'Access);
-         Rose.Server.Register_Handler
+         Rose.Server.Register_Context_Handler
            (Server_Context,
             Badge_Endpoint,
             Handle_Badge'Access,
             Owns'Access);
-         Rose.Server.Register_Handler
+         Rose.Server.Register_Context_Handler
            (Server_Context,
             Increment_Endpoint,
             Handle_Increment'Access,
             Owns'Access);
-         Rose.Server.Register_Handler
+         Rose.Server.Register_Context_Handler
            (Server_Context,
             Value_Endpoint,
             Handle_Value'Access,
             Owns'Access);
-         Rose.Server.Register_Handler
+         Rose.Server.Register_Context_Handler
            (Server_Context,
             Release_Endpoint,
             Handle_Release'Access,
             Owns'Access);
-         Rose.Server.Register_Handler
+         Rose.Server.Register_Context_Handler
            (Server_Context,
             Remaining_Endpoint,
             Handle_Remaining'Access,
             Owns'Access);
-         Registered := True;
       end if;
-      if Slot = Natural (Attached.Length) then
-         Attached.Append (Attached_Object'(others => <>));
+      Slot := Free_Slot (Table);
+      if Slot = Natural (Table.Attached.Length) then
+         Table.Attached.Append (Attached_Object'(others => <>));
       end if;
-      Attached (Slot).Object := Object_Access (Object);
+      Table.Attached (Slot).Object := Object_Access (Object);
       if Identifier = 0 then
-         Attached (Slot).Identifier := Rose.Server.New_Identifier;
+         Table.Attached (Slot).Identifier := Rose.Server.New_Identifier;
       else
-         Attached (Slot).Identifier := Identifier;
+         Table.Attached (Slot).Identifier := Identifier;
       end if;
-      Attached (Slot).Cap :=
+      Table.Attached (Slot).Cap :=
         Rose.Server.Create_Endpoint
           (Rose.Interfaces.Lease.Lease_Interface,
-           Attached (Slot).Identifier);
+           Table.Attached (Slot).Identifier);
+      Table.By_Address.Include (Object.all'Address, Slot);
+      Table.By_Identifier.Include (Table.Attached (Slot).Identifier, Slot);
    end Attach;
 
    ------------
@@ -149,20 +190,22 @@ package body Rose.Interfaces.Lease.Server is
    ------------
 
    function Cap_Of
-     (Object       : Lease_Interface'Class;
-      Interface_Id : Rose.Objects.Endpoint_Id :=
+     (Server_Context : Rose.Server.Server_Context;
+      Object         : Lease_Interface'Class;
+      Interface_Id   : Rose.Objects.Endpoint_Id :=
         Rose.Interfaces.Lease.Lease_Interface)
       return Rose.Capabilities.Capability
    is
-      use type System.Address;
       use type Rose.Objects.Endpoint_Id;
+      Table : constant Table_Access := Table_Of (Server_Context);
    begin
-      for Item of Attached loop
-         if Item.Object /= null
-           and then Item.Object.all'Address = Object'Address
-         then
+      if Table /= null and then Table.By_Address.Contains (Object'Address) then
+         declare
+            Slot : constant Natural :=
+              Table.By_Address.Element (Object'Address);
+         begin
             if Interface_Id = Rose.Interfaces.Lease.Lease_Interface then
-               return Item.Cap;
+               return Table.Attached (Slot).Cap;
             else
                if Interface_Id = Rose.Interfaces.Lease.Named_Interface
                  or else Interface_Id = Rose.Interfaces.Lease.Counter_Interface
@@ -170,26 +213,26 @@ package body Rose.Interfaces.Lease.Server is
                    .Resource_Interface
                then
                   if not Rose.Server.Has_Instance
-                    (Server_Instance,
+                    (Table.Server_Instance,
                      Interface_Id,
-                     Item.Identifier)
+                     Table.Attached (Slot).Identifier)
                   then
                      Rose.Server.Set_Instance_Cap
-                       (Server_Instance,
+                       (Table.Server_Instance,
                         Interface_Id,
-                        Item.Identifier,
+                        Table.Attached (Slot).Identifier,
                         Rose.Server.Create_Endpoint
                           (Interface_Id,
-                           Item.Identifier));
+                           Table.Attached (Slot).Identifier));
                   end if;
                   return Rose.Server.Get_Instance_Cap
-                    (Server_Instance,
+                    (Table.Server_Instance,
                      Interface_Id,
-                     Item.Identifier);
+                     Table.Attached (Slot).Identifier);
                end if;
             end if;
-         end if;
-      end loop;
+         end;
+      end if;
       raise Rose.Interfaces.Objects.Not_Served
         with "Rose.Interfaces.Lease.Server.Cap_Of";
    end Cap_Of;
@@ -198,116 +241,120 @@ package body Rose.Interfaces.Lease.Server is
    -- Detach --
    ------------
 
-   procedure Detach (Identifier : Rose.Objects.Capability_Identifier) is
+   procedure Detach
+     (Server_Context : Rose.Server.Server_Context;
+      Identifier     : Rose.Objects.Capability_Identifier)
+   is
       use type Rose.Capabilities.Capability;
       use type Rose.Objects.Capability_Identifier;
-      Slot : constant Natural := Slot_Of (Identifier);
+      Table : constant Table_Access := Table_Of (Server_Context);
+      Slot  : constant Natural := Slot_Of (Table, Identifier);
    begin
-      if Slot >= Natural (Attached.Length) then
+      if Slot >= Natural (Table.Attached.Length) then
          return;
       end if;
       if Rose.System_Calls.Rescind_Cap_Capability = Rose.Capabilities
         .Null_Capability
       then
-         Attached (Slot).Retired := True;
+         Table.Attached (Slot).Retired := True;
       else
-         Rose.System_Calls.Rescind_Cap (Attached (Slot).Cap);
+         Rose.System_Calls.Rescind_Cap (Table.Attached (Slot).Cap);
          if Rose.Server.Has_Instance
-           (Server_Instance,
+           (Table.Server_Instance,
             Badge_Endpoint,
             Identifier)
          then
             Rose.System_Calls.Rescind_Cap
               (Rose.Server.Get_Instance_Cap
-                 (Server_Instance,
+                 (Table.Server_Instance,
                   Badge_Endpoint,
                   Identifier));
          end if;
          if Rose.Server.Has_Instance
-           (Server_Instance,
+           (Table.Server_Instance,
             Increment_Endpoint,
             Identifier)
          then
             Rose.System_Calls.Rescind_Cap
               (Rose.Server.Get_Instance_Cap
-                 (Server_Instance,
+                 (Table.Server_Instance,
                   Increment_Endpoint,
                   Identifier));
          end if;
          if Rose.Server.Has_Instance
-           (Server_Instance,
+           (Table.Server_Instance,
             Value_Endpoint,
             Identifier)
          then
             Rose.System_Calls.Rescind_Cap
               (Rose.Server.Get_Instance_Cap
-                 (Server_Instance,
+                 (Table.Server_Instance,
                   Value_Endpoint,
                   Identifier));
          end if;
          if Rose.Server.Has_Instance
-           (Server_Instance,
+           (Table.Server_Instance,
             Release_Endpoint,
             Identifier)
          then
             Rose.System_Calls.Rescind_Cap
               (Rose.Server.Get_Instance_Cap
-                 (Server_Instance,
+                 (Table.Server_Instance,
                   Release_Endpoint,
                   Identifier));
          end if;
          if Rose.Server.Has_Instance
-           (Server_Instance,
+           (Table.Server_Instance,
             Remaining_Endpoint,
             Identifier)
          then
             Rose.System_Calls.Rescind_Cap
               (Rose.Server.Get_Instance_Cap
-                 (Server_Instance,
+                 (Table.Server_Instance,
                   Remaining_Endpoint,
                   Identifier));
          end if;
          if Rose.Server.Has_Instance
-           (Server_Instance,
+           (Table.Server_Instance,
             Rose.Interfaces.Lease.Named_Interface,
             Identifier)
          then
             Rose.System_Calls.Rescind_Cap
               (Rose.Server.Get_Instance_Cap
-                 (Server_Instance,
+                 (Table.Server_Instance,
                   Rose.Interfaces.Lease.Named_Interface,
                   Identifier));
          end if;
          if Rose.Server.Has_Instance
-           (Server_Instance,
+           (Table.Server_Instance,
             Rose.Interfaces.Lease.Counter_Interface,
             Identifier)
          then
             Rose.System_Calls.Rescind_Cap
               (Rose.Server.Get_Instance_Cap
-                 (Server_Instance,
+                 (Table.Server_Instance,
                   Rose.Interfaces.Lease.Counter_Interface,
                   Identifier));
          end if;
          if Rose.Server.Has_Instance
-           (Server_Instance,
+           (Table.Server_Instance,
             Rose.Interfaces.Lease.Resource_Interface,
             Identifier)
          then
             Rose.System_Calls.Rescind_Cap
               (Rose.Server.Get_Instance_Cap
-                 (Server_Instance,
+                 (Table.Server_Instance,
                   Rose.Interfaces.Lease.Resource_Interface,
                   Identifier));
          end if;
          if Rose.Server.Has_Instance
-           (Server_Instance,
+           (Table.Server_Instance,
             Rose.Interfaces.Lease.Lease_Interface,
             Identifier)
          then
             Rose.System_Calls.Rescind_Cap
               (Rose.Server.Get_Instance_Cap
-                 (Server_Instance,
+                 (Table.Server_Instance,
                   Rose.Interfaces.Lease.Lease_Interface,
                   Identifier));
          end if;
@@ -315,10 +362,14 @@ package body Rose.Interfaces.Lease.Server is
             Rose.Server.Free_Identifier (Identifier);
          end if;
       end if;
-      Rose.Server.Remove_Instance (Server_Instance, Identifier);
-      Rose.System_Calls.Delete_Cap (Attached (Slot).Cap);
-      Attached (Slot).Object := null;
-      Attached (Slot).Cap := Rose.Capabilities.Null_Capability;
+      Rose.Server.Remove_Instance (Table.Server_Instance, Identifier);
+      Rose.System_Calls.Delete_Cap (Table.Attached (Slot).Cap);
+      if Table.Attached (Slot).Object /= null then
+         Table.By_Address.Exclude (Table.Attached (Slot).Object.all'Address);
+      end if;
+      Table.By_Identifier.Exclude (Table.Attached (Slot).Identifier);
+      Table.Attached (Slot).Object := null;
+      Table.Attached (Slot).Cap := Rose.Capabilities.Null_Capability;
    end Detach;
 
    ----------
@@ -326,22 +377,30 @@ package body Rose.Interfaces.Lease.Server is
    ----------
 
    function Find
-     (Identifier : Rose.Objects.Capability_Identifier)
+     (Server_Context : Rose.Server.Server_Context;
+      Identifier     : Rose.Objects.Capability_Identifier)
       return Object_Access
    is
       use type Rose.Objects.Capability_Identifier;
+      Table : constant Table_Access := Table_Of (Server_Context);
    begin
+      if Table = null then
+         return null;
+      end if;
       if Identifier = 0 then
-         if Attached.Is_Empty then
+         if Table.Attached.Is_Empty then
             return null;
          end if;
-         return Attached (0).Object;
+         return Table.Attached (0).Object;
       end if;
-      for Item of Attached loop
-         if Item.Object /= null and then Item.Identifier = Identifier then
-            return Item.Object;
-         end if;
-      end loop;
+      if Table.By_Identifier.Contains (Identifier) then
+         declare
+            Slot : constant Natural :=
+              Table.By_Identifier.Element (Identifier);
+         begin
+            return Table.Attached (Slot).Object;
+         end;
+      end if;
       return null;
    end Find;
 
@@ -349,16 +408,16 @@ package body Rose.Interfaces.Lease.Server is
    -- Free_Slot --
    ---------------
 
-   function Free_Slot return Natural is
+   function Free_Slot (Table : not null Table_Access) return Natural is
       Index : Natural := 0;
    begin
-      for Item of Attached loop
+      for Item of Table.Attached loop
          if Item.Object = null and then not Item.Retired then
             return Index;
          end if;
          Index := Index + 1;
       end loop;
-      return Natural (Attached.Length);
+      return Natural (Table.Attached.Length);
    end Free_Slot;
 
    ------------------
@@ -366,12 +425,14 @@ package body Rose.Interfaces.Lease.Server is
    ------------------
 
    procedure Handle_Badge
-     (Parameters : in out Rose.Invocation.Invocation_Record)
+     (Server_Context : in out Rose.Server.Server_Context;
+      Parameters     : in out Rose.Invocation.Invocation_Record)
    is
    begin
       begin
          declare
-            Object : constant Object_Access := Find (Parameters.Identifier);
+            Object : constant Object_Access :=
+              Find (Server_Context, Parameters.Identifier);
             Result : Rose.Capabilities.Capability;
          begin
             if Object = null then
@@ -405,11 +466,13 @@ package body Rose.Interfaces.Lease.Server is
    ----------------------------------
 
    procedure Handle_Get_Counter_Interface
-     (Parameters : in out Rose.Invocation.Invocation_Record)
+     (Server_Context : in out Rose.Server.Server_Context;
+      Parameters     : in out Rose.Invocation.Invocation_Record)
    is
       Cap        : Rose.Capabilities.Capability;
       Identifier : constant Rose.Objects.Capability_Identifier :=
         Parameters.Identifier;
+      Table      : constant Table_Access := Table_Of (Server_Context);
       Ancestor   : Natural := 0;
       First      : Natural := 0;
       Page       : Natural := Rose.Invocation.Max_Capabilities;
@@ -432,31 +495,31 @@ package body Rose.Interfaces.Lease.Server is
          else
             if 0 in First .. (First + Page - 1) then
                if not Rose.Server.Has_Instance
-                 (Server_Instance,
+                 (Table.Server_Instance,
                   Badge_Endpoint,
                   Identifier)
                then
                   Rose.Server.Set_Instance_Cap
-                    (Server_Instance,
+                    (Table.Server_Instance,
                      Badge_Endpoint,
                      Identifier,
                      Rose.Server.Create_Endpoint (Badge_Endpoint, Identifier));
                end if;
                Cap :=
                  Rose.Server.Get_Instance_Cap
-                   (Server_Instance,
+                   (Table.Server_Instance,
                     Badge_Endpoint,
                     Identifier);
                Rose.System_Calls.Send_Cap (Parameters, Cap);
             end if;
             if 1 in First .. (First + Page - 1) then
                if not Rose.Server.Has_Instance
-                 (Server_Instance,
+                 (Table.Server_Instance,
                   Increment_Endpoint,
                   Identifier)
                then
                   Rose.Server.Set_Instance_Cap
-                    (Server_Instance,
+                    (Table.Server_Instance,
                      Increment_Endpoint,
                      Identifier,
                      Rose.Server.Create_Endpoint
@@ -465,26 +528,26 @@ package body Rose.Interfaces.Lease.Server is
                end if;
                Cap :=
                  Rose.Server.Get_Instance_Cap
-                   (Server_Instance,
+                   (Table.Server_Instance,
                     Increment_Endpoint,
                     Identifier);
                Rose.System_Calls.Send_Cap (Parameters, Cap);
             end if;
             if 2 in First .. (First + Page - 1) then
                if not Rose.Server.Has_Instance
-                 (Server_Instance,
+                 (Table.Server_Instance,
                   Value_Endpoint,
                   Identifier)
                then
                   Rose.Server.Set_Instance_Cap
-                    (Server_Instance,
+                    (Table.Server_Instance,
                      Value_Endpoint,
                      Identifier,
                      Rose.Server.Create_Endpoint (Value_Endpoint, Identifier));
                end if;
                Cap :=
                  Rose.Server.Get_Instance_Cap
-                   (Server_Instance,
+                   (Table.Server_Instance,
                     Value_Endpoint,
                     Identifier);
                Rose.System_Calls.Send_Cap (Parameters, Cap);
@@ -493,12 +556,12 @@ package body Rose.Interfaces.Lease.Server is
       else
          if Ancestor = 1 then
             if not Rose.Server.Has_Instance
-              (Server_Instance,
+              (Table.Server_Instance,
                Named_Interface,
                Identifier)
             then
                Rose.Server.Set_Instance_Cap
-                 (Server_Instance,
+                 (Table.Server_Instance,
                   Named_Interface,
                   Identifier,
                   Rose.Server.Create_Endpoint (Named_Interface, Identifier));
@@ -506,7 +569,7 @@ package body Rose.Interfaces.Lease.Server is
             Rose.System_Calls.Send_Cap
               (Parameters,
                Rose.Server.Get_Instance_Cap
-                 (Server_Instance,
+                 (Table.Server_Instance,
                   Named_Interface,
                   Identifier));
          else
@@ -522,11 +585,13 @@ package body Rose.Interfaces.Lease.Server is
    --------------------------------
 
    procedure Handle_Get_Lease_Interface
-     (Parameters : in out Rose.Invocation.Invocation_Record)
+     (Server_Context : in out Rose.Server.Server_Context;
+      Parameters     : in out Rose.Invocation.Invocation_Record)
    is
       Cap        : Rose.Capabilities.Capability;
       Identifier : constant Rose.Objects.Capability_Identifier :=
         Parameters.Identifier;
+      Table      : constant Table_Access := Table_Of (Server_Context);
       Ancestor   : Natural := 0;
       First      : Natural := 0;
       Page       : Natural := Rose.Invocation.Max_Capabilities;
@@ -549,31 +614,31 @@ package body Rose.Interfaces.Lease.Server is
          else
             if 0 in First .. (First + Page - 1) then
                if not Rose.Server.Has_Instance
-                 (Server_Instance,
+                 (Table.Server_Instance,
                   Badge_Endpoint,
                   Identifier)
                then
                   Rose.Server.Set_Instance_Cap
-                    (Server_Instance,
+                    (Table.Server_Instance,
                      Badge_Endpoint,
                      Identifier,
                      Rose.Server.Create_Endpoint (Badge_Endpoint, Identifier));
                end if;
                Cap :=
                  Rose.Server.Get_Instance_Cap
-                   (Server_Instance,
+                   (Table.Server_Instance,
                     Badge_Endpoint,
                     Identifier);
                Rose.System_Calls.Send_Cap (Parameters, Cap);
             end if;
             if 1 in First .. (First + Page - 1) then
                if not Rose.Server.Has_Instance
-                 (Server_Instance,
+                 (Table.Server_Instance,
                   Increment_Endpoint,
                   Identifier)
                then
                   Rose.Server.Set_Instance_Cap
-                    (Server_Instance,
+                    (Table.Server_Instance,
                      Increment_Endpoint,
                      Identifier,
                      Rose.Server.Create_Endpoint
@@ -582,38 +647,38 @@ package body Rose.Interfaces.Lease.Server is
                end if;
                Cap :=
                  Rose.Server.Get_Instance_Cap
-                   (Server_Instance,
+                   (Table.Server_Instance,
                     Increment_Endpoint,
                     Identifier);
                Rose.System_Calls.Send_Cap (Parameters, Cap);
             end if;
             if 2 in First .. (First + Page - 1) then
                if not Rose.Server.Has_Instance
-                 (Server_Instance,
+                 (Table.Server_Instance,
                   Value_Endpoint,
                   Identifier)
                then
                   Rose.Server.Set_Instance_Cap
-                    (Server_Instance,
+                    (Table.Server_Instance,
                      Value_Endpoint,
                      Identifier,
                      Rose.Server.Create_Endpoint (Value_Endpoint, Identifier));
                end if;
                Cap :=
                  Rose.Server.Get_Instance_Cap
-                   (Server_Instance,
+                   (Table.Server_Instance,
                     Value_Endpoint,
                     Identifier);
                Rose.System_Calls.Send_Cap (Parameters, Cap);
             end if;
             if 3 in First .. (First + Page - 1) then
                if not Rose.Server.Has_Instance
-                 (Server_Instance,
+                 (Table.Server_Instance,
                   Release_Endpoint,
                   Identifier)
                then
                   Rose.Server.Set_Instance_Cap
-                    (Server_Instance,
+                    (Table.Server_Instance,
                      Release_Endpoint,
                      Identifier,
                      Rose.Server.Create_Endpoint
@@ -622,19 +687,19 @@ package body Rose.Interfaces.Lease.Server is
                end if;
                Cap :=
                  Rose.Server.Get_Instance_Cap
-                   (Server_Instance,
+                   (Table.Server_Instance,
                     Release_Endpoint,
                     Identifier);
                Rose.System_Calls.Send_Cap (Parameters, Cap);
             end if;
             if 4 in First .. (First + Page - 1) then
                if not Rose.Server.Has_Instance
-                 (Server_Instance,
+                 (Table.Server_Instance,
                   Remaining_Endpoint,
                   Identifier)
                then
                   Rose.Server.Set_Instance_Cap
-                    (Server_Instance,
+                    (Table.Server_Instance,
                      Remaining_Endpoint,
                      Identifier,
                      Rose.Server.Create_Endpoint
@@ -643,7 +708,7 @@ package body Rose.Interfaces.Lease.Server is
                end if;
                Cap :=
                  Rose.Server.Get_Instance_Cap
-                   (Server_Instance,
+                   (Table.Server_Instance,
                     Remaining_Endpoint,
                     Identifier);
                Rose.System_Calls.Send_Cap (Parameters, Cap);
@@ -652,12 +717,12 @@ package body Rose.Interfaces.Lease.Server is
       else
          if Ancestor = 1 then
             if not Rose.Server.Has_Instance
-              (Server_Instance,
+              (Table.Server_Instance,
                Named_Interface,
                Identifier)
             then
                Rose.Server.Set_Instance_Cap
-                 (Server_Instance,
+                 (Table.Server_Instance,
                   Named_Interface,
                   Identifier,
                   Rose.Server.Create_Endpoint (Named_Interface, Identifier));
@@ -665,18 +730,18 @@ package body Rose.Interfaces.Lease.Server is
             Rose.System_Calls.Send_Cap
               (Parameters,
                Rose.Server.Get_Instance_Cap
-                 (Server_Instance,
+                 (Table.Server_Instance,
                   Named_Interface,
                   Identifier));
          else
             if Ancestor = 2 then
                if not Rose.Server.Has_Instance
-                 (Server_Instance,
+                 (Table.Server_Instance,
                   Counter_Interface,
                   Identifier)
                then
                   Rose.Server.Set_Instance_Cap
-                    (Server_Instance,
+                    (Table.Server_Instance,
                      Counter_Interface,
                      Identifier,
                      Rose.Server.Create_Endpoint
@@ -686,18 +751,18 @@ package body Rose.Interfaces.Lease.Server is
                Rose.System_Calls.Send_Cap
                  (Parameters,
                   Rose.Server.Get_Instance_Cap
-                    (Server_Instance,
+                    (Table.Server_Instance,
                      Counter_Interface,
                      Identifier));
             else
                if Ancestor = 3 then
                   if not Rose.Server.Has_Instance
-                    (Server_Instance,
+                    (Table.Server_Instance,
                      Resource_Interface,
                      Identifier)
                   then
                      Rose.Server.Set_Instance_Cap
-                       (Server_Instance,
+                       (Table.Server_Instance,
                         Resource_Interface,
                         Identifier,
                         Rose.Server.Create_Endpoint
@@ -707,7 +772,7 @@ package body Rose.Interfaces.Lease.Server is
                   Rose.System_Calls.Send_Cap
                     (Parameters,
                      Rose.Server.Get_Instance_Cap
-                       (Server_Instance,
+                       (Table.Server_Instance,
                         Resource_Interface,
                         Identifier));
                else
@@ -725,11 +790,13 @@ package body Rose.Interfaces.Lease.Server is
    --------------------------------
 
    procedure Handle_Get_Named_Interface
-     (Parameters : in out Rose.Invocation.Invocation_Record)
+     (Server_Context : in out Rose.Server.Server_Context;
+      Parameters     : in out Rose.Invocation.Invocation_Record)
    is
       Cap        : Rose.Capabilities.Capability;
       Identifier : constant Rose.Objects.Capability_Identifier :=
         Parameters.Identifier;
+      Table      : constant Table_Access := Table_Of (Server_Context);
       First      : Natural := 0;
       Page       : Natural := Rose.Invocation.Max_Capabilities;
    begin
@@ -747,19 +814,19 @@ package body Rose.Interfaces.Lease.Server is
       else
          if 0 in First .. (First + Page - 1) then
             if not Rose.Server.Has_Instance
-              (Server_Instance,
+              (Table.Server_Instance,
                Badge_Endpoint,
                Identifier)
             then
                Rose.Server.Set_Instance_Cap
-                 (Server_Instance,
+                 (Table.Server_Instance,
                   Badge_Endpoint,
                   Identifier,
                   Rose.Server.Create_Endpoint (Badge_Endpoint, Identifier));
             end if;
             Cap :=
               Rose.Server.Get_Instance_Cap
-                (Server_Instance,
+                (Table.Server_Instance,
                  Badge_Endpoint,
                  Identifier);
             Rose.System_Calls.Send_Cap (Parameters, Cap);
@@ -772,11 +839,13 @@ package body Rose.Interfaces.Lease.Server is
    -----------------------------------
 
    procedure Handle_Get_Resource_Interface
-     (Parameters : in out Rose.Invocation.Invocation_Record)
+     (Server_Context : in out Rose.Server.Server_Context;
+      Parameters     : in out Rose.Invocation.Invocation_Record)
    is
       Cap        : Rose.Capabilities.Capability;
       Identifier : constant Rose.Objects.Capability_Identifier :=
         Parameters.Identifier;
+      Table      : constant Table_Access := Table_Of (Server_Context);
       First      : Natural := 0;
       Page       : Natural := Rose.Invocation.Max_Capabilities;
    begin
@@ -794,19 +863,19 @@ package body Rose.Interfaces.Lease.Server is
       else
          if 0 in First .. (First + Page - 1) then
             if not Rose.Server.Has_Instance
-              (Server_Instance,
+              (Table.Server_Instance,
                Release_Endpoint,
                Identifier)
             then
                Rose.Server.Set_Instance_Cap
-                 (Server_Instance,
+                 (Table.Server_Instance,
                   Release_Endpoint,
                   Identifier,
                   Rose.Server.Create_Endpoint (Release_Endpoint, Identifier));
             end if;
             Cap :=
               Rose.Server.Get_Instance_Cap
-                (Server_Instance,
+                (Table.Server_Instance,
                  Release_Endpoint,
                  Identifier);
             Rose.System_Calls.Send_Cap (Parameters, Cap);
@@ -819,12 +888,14 @@ package body Rose.Interfaces.Lease.Server is
    ----------------------
 
    procedure Handle_Increment
-     (Parameters : in out Rose.Invocation.Invocation_Record)
+     (Server_Context : in out Rose.Server.Server_Context;
+      Parameters     : in out Rose.Invocation.Invocation_Record)
    is
    begin
       begin
          declare
-            Object : constant Object_Access := Find (Parameters.Identifier);
+            Object : constant Object_Access :=
+              Find (Server_Context, Parameters.Identifier);
             By     : constant Rose.Words.Word :=
               Rose.System_Calls.Get_Word_32 (Parameters, 0);
          begin
@@ -858,12 +929,14 @@ package body Rose.Interfaces.Lease.Server is
    --------------------
 
    procedure Handle_Release
-     (Parameters : in out Rose.Invocation.Invocation_Record)
+     (Server_Context : in out Rose.Server.Server_Context;
+      Parameters     : in out Rose.Invocation.Invocation_Record)
    is
    begin
       begin
          declare
-            Object : constant Object_Access := Find (Parameters.Identifier);
+            Object : constant Object_Access :=
+              Find (Server_Context, Parameters.Identifier);
          begin
             if Object = null then
                Rose.System_Calls.Initialize_Reply
@@ -875,7 +948,7 @@ package body Rose.Interfaces.Lease.Server is
                return;
             end if;
             Object.Release;
-            Detach (Parameters.Identifier);
+            Detach (Server_Context, Parameters.Identifier);
             Rose.System_Calls.Initialize_Reply
               (Parameters,
                Parameters.Reply_Cap);
@@ -896,12 +969,14 @@ package body Rose.Interfaces.Lease.Server is
    ----------------------
 
    procedure Handle_Remaining
-     (Parameters : in out Rose.Invocation.Invocation_Record)
+     (Server_Context : in out Rose.Server.Server_Context;
+      Parameters     : in out Rose.Invocation.Invocation_Record)
    is
    begin
       begin
          declare
-            Object : constant Object_Access := Find (Parameters.Identifier);
+            Object : constant Object_Access :=
+              Find (Server_Context, Parameters.Identifier);
             Result : Rose.Words.Word;
          begin
             if Object = null then
@@ -935,12 +1010,14 @@ package body Rose.Interfaces.Lease.Server is
    ------------------
 
    procedure Handle_Value
-     (Parameters : in out Rose.Invocation.Invocation_Record)
+     (Server_Context : in out Rose.Server.Server_Context;
+      Parameters     : in out Rose.Invocation.Invocation_Record)
    is
    begin
       begin
          declare
-            Object : constant Object_Access := Find (Parameters.Identifier);
+            Object : constant Object_Access :=
+              Find (Server_Context, Parameters.Identifier);
             Result : Rose.Words.Word;
          begin
             if Object = null then
@@ -974,15 +1051,21 @@ package body Rose.Interfaces.Lease.Server is
    -------------------
 
    function Identifier_Of
-     (Object : not null access Lease_Interface'Class)
+     (Server_Context : Rose.Server.Server_Context;
+      Object         : not null access Lease_Interface'Class)
       return Rose.Objects.Capability_Identifier
    is
+      Table : constant Table_Access := Table_Of (Server_Context);
    begin
-      for Item of Attached loop
-         if Item.Object = Object_Access (Object) then
-            return Item.Identifier;
-         end if;
-      end loop;
+      if Table /= null and then Table.By_Address.Contains (Object.all'Address)
+      then
+         declare
+            Slot : constant Natural :=
+              Table.By_Address.Element (Object.all'Address);
+         begin
+            return Table.Attached (Slot).Identifier;
+         end;
+      end if;
       return 0;
    end Identifier_Of;
 
@@ -991,15 +1074,21 @@ package body Rose.Interfaces.Lease.Server is
    -------------------
 
    function Interface_Cap
-     (Object : not null access Lease_Interface'Class)
+     (Server_Context : Rose.Server.Server_Context;
+      Object         : not null access Lease_Interface'Class)
       return Rose.Capabilities.Capability
    is
+      Table : constant Table_Access := Table_Of (Server_Context);
    begin
-      for Item of Attached loop
-         if Item.Object = Object_Access (Object) then
-            return Item.Cap;
-         end if;
-      end loop;
+      if Table /= null and then Table.By_Address.Contains (Object.all'Address)
+      then
+         declare
+            Slot : constant Natural :=
+              Table.By_Address.Element (Object.all'Address);
+         begin
+            return Table.Attached (Slot).Cap;
+         end;
+      end if;
       return Rose.Capabilities.Null_Capability;
    end Interface_Cap;
 
@@ -1008,12 +1097,10 @@ package body Rose.Interfaces.Lease.Server is
    ----------
 
    function Owns
-     (Identifier : Rose.Objects.Capability_Identifier)
+     (Server_Context : Rose.Server.Server_Context;
+      Identifier     : Rose.Objects.Capability_Identifier)
       return Boolean
-   is
-   begin
-      return Find (Identifier) /= null;
-   end Owns;
+   is (Find (Server_Context, Identifier) /= null);
 
    -------------
    -- Publish --
@@ -1025,7 +1112,7 @@ package body Rose.Interfaces.Lease.Server is
    is
    begin
       Attach (Server_Context, Object);
-      Rose.Server.Publish_Interface (Interface_Cap (Object));
+      Rose.Server.Publish_Interface (Interface_Cap (Server_Context, Object));
    end Publish;
 
    -------------
@@ -1033,22 +1120,31 @@ package body Rose.Interfaces.Lease.Server is
    -------------
 
    function Slot_Of
-     (Identifier : Rose.Objects.Capability_Identifier)
+     (Table      : not null Table_Access;
+      Identifier : Rose.Objects.Capability_Identifier)
       return Natural
    is
       use type Rose.Objects.Capability_Identifier;
-      Index : Natural := 0;
    begin
       if Identifier = 0 then
          return 0;
       end if;
-      for Item of Attached loop
-         if Item.Object /= null and then Item.Identifier = Identifier then
-            return Index;
-         end if;
-         Index := Index + 1;
-      end loop;
-      return Natural (Attached.Length);
+      if Table.By_Identifier.Contains (Identifier) then
+         return Table.By_Identifier.Element (Identifier);
+      end if;
+      return Natural (Table.Attached.Length);
    end Slot_Of;
+
+   --------------
+   -- Table_Of --
+   --------------
+
+   function Table_Of
+     (Server_Context : Rose.Server.Server_Context)
+      return Table_Access
+   is (Table_Access
+     (Rose.Server.Table
+        (Server_Context,
+         Rose.Interfaces.Lease.Lease_Interface)));
 
 end Rose.Interfaces.Lease.Server;

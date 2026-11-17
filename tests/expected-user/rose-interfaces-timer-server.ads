@@ -17,16 +17,19 @@ package Rose.Interfaces.Timer.Server is
       Object         : not null access Timer_Interface'Class);
 
    function Interface_Cap
-     (Object : not null access Timer_Interface'Class)
+     (Server_Context : Rose.Server.Server_Context;
+      Object         : not null access Timer_Interface'Class)
       return Rose.Capabilities.Capability;
 
    function Identifier_Of
-     (Object : not null access Timer_Interface'Class)
+     (Server_Context : Rose.Server.Server_Context;
+      Object         : not null access Timer_Interface'Class)
       return Rose.Objects.Capability_Identifier;
 
    function Cap_Of
-     (Object       : Timer_Interface'Class;
-      Interface_Id : Rose.Objects.Endpoint_Id :=
+     (Server_Context : Rose.Server.Server_Context;
+      Object         : Timer_Interface'Class;
+      Interface_Id   : Rose.Objects.Endpoint_Id :=
         Rose.Interfaces.Timer.Timer_Interface)
       return Rose.Capabilities.Capability;
 

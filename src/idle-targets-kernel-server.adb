@@ -99,6 +99,16 @@ package body Idle.Targets.Kernel.Server is
       --  The procedure that replies to an invocation of the interface id
       --  of For_Interface.
 
+      Instance_Name  : constant String :=
+        (if User then "Table.Server_Instance" else "Server_Instance");
+      --  The caps of an instanced server. The user target keeps them in
+      --  the table of the context, with the objects (idle#108); the
+      --  kernel target in the package.
+
+      Context_Parameter_Name : constant String := "Server_Context";
+      --  For the user target, the context that a handler, and each
+      --  subprogram that finds an object, is given (idle#108).
+
       function Handle (Subprogram : Idle.Syntax.Subprogram) return String
       is ("Handle_" & Name (Subprogram));
       --  The procedure that decodes an invocation of Subprogram.
@@ -160,6 +170,19 @@ package body Idle.Targets.Kernel.Server is
 
       function Handler_Parameters return Syn.Node_Array;
       --  A parameter for the handler of each subprogram.
+
+      function Handler_Spec_Parameters return Syn.Node_Array
+      is ((if User
+           then [F.New_Parameter
+                   (Context_Parameter_Name,
+                    F.New_Name ("Rose.Server.Server_Context"),
+                    Syn.In_Out_Mode)]
+           else Syn.No_Nodes)
+          & [F.New_Parameter
+               ("Parameters", F.New_Name (Record_Name), Syn.In_Out_Mode)]);
+      --  The parameters of a procedure that handles an invocation. For
+      --  the user target, it is a Rose.Server.Context_Handler, given the
+      --  context that received the call (idle#108).
 
       function Keep_Handlers return Syn.Node_Array;
       --  Statements that save each handler in its Local object.
@@ -248,8 +271,12 @@ package body Idle.Targets.Kernel.Server is
       --------------------------
 
       --  For the user target: the interface of a served object, and a
-      --  table of the attached objects, a vector that grows with them
-      --  (idle#83). Each object has an identifier from
+      --  table of the objects attached to each context (idle#108). The
+      --  table extends Rose.Server.Interface_Table, and the context keeps
+      --  it under the interface id, so that each context serves only its
+      --  own objects. It holds a vector of the objects, which grows with
+      --  them (idle#83), and maps from each object's address and from its
+      --  identifier to its slot. Each object has an identifier from
       --  Rose.Server.New_Identifier, unique in the process, so that the
       --  packages of interfaces with a common ancestor can share its
       --  endpoints: each handler serves the identifiers that Owns finds
@@ -264,8 +291,21 @@ package body Idle.Targets.Kernel.Server is
                                     & "'Class"));
          Context_Parameter : constant not null Syn.Node_Access :=
            F.New_Parameter
-             ("Server_Context", F.New_Name ("Rose.Server.Server_Context"),
+             (Context_Parameter_Name,
+              F.New_Name ("Rose.Server.Server_Context"),
               Syn.In_Out_Mode);
+         Lookup_Parameter : constant not null Syn.Node_Access :=
+           F.New_Parameter
+             (Context_Parameter_Name,
+              F.New_Name ("Rose.Server.Server_Context"));
+         --  The context whose objects a lookup searches. The table is
+         --  changed through its access value, so the context is only read.
+         Identifier_Parameter : constant not null Syn.Node_Access :=
+           F.New_Parameter
+             ("Identifier",
+              F.New_Name ("Rose.Objects.Capability_Identifier"));
+         Context_Name : constant not null Syn.Node_Access :=
+           F.New_Name (Context_Parameter_Name);
          Attach : constant not null Syn.Node_Access :=
            F.New_Procedure
              ("Attach",
@@ -283,32 +323,33 @@ package body Idle.Targets.Kernel.Server is
          Interface_Cap : constant not null Syn.Node_Access :=
            F.New_Function
              ("Interface_Cap", F.New_Name (Capability_Name),
-              [Object_Parameter]);
+              [Lookup_Parameter, Object_Parameter]);
          Identifier_Of : constant not null Syn.Node_Access :=
            F.New_Function
              ("Identifier_Of",
               F.New_Name ("Rose.Objects.Capability_Identifier"),
-              [Object_Parameter]);
+              [Lookup_Parameter, Object_Parameter]);
          --  The identifier of an attached object, or 0, which a
          --  replaceable server saves in its state.
+         Table_Of : constant not null Syn.Node_Access :=
+           F.New_Function
+             ("Table_Of", F.New_Name ("Table_Access"), [Lookup_Parameter]);
+         --  The context's table, or null if nothing is attached to it.
          Find : constant not null Syn.Node_Access :=
            F.New_Function
              ("Find", F.New_Name ("Object_Access"),
-              [F.New_Parameter
-                 ("Identifier",
-                  F.New_Name ("Rose.Objects.Capability_Identifier"))]);
+              [Lookup_Parameter, Identifier_Parameter]);
          Owns : constant not null Syn.Node_Access :=
            F.New_Function
              ("Owns", F.New_Name ("Boolean"),
-              [F.New_Parameter
-                 ("Identifier",
-                  F.New_Name ("Rose.Objects.Capability_Identifier"))]);
+              [Lookup_Parameter, Identifier_Parameter]);
          Count : constant not null Syn.Node_Access :=
-           F.New_Call ("Natural", [F.New_Name ("Attached.Length")]);
+           F.New_Call ("Natural", [F.New_Name ("Table.Attached.Length")]);
          Cap_Of : constant not null Syn.Node_Access :=
            F.New_Function
              ("Cap_Of", F.New_Name (Capability_Name),
-              [F.New_Parameter
+              [Lookup_Parameter,
+               F.New_Parameter
                  ("Object", F.New_Name (Interface_Type & "'Class")),
                F.New_Parameter
                  ("Interface_Id", F.New_Name ("Rose.Objects.Endpoint_Id"),
@@ -330,17 +371,55 @@ package body Idle.Targets.Kernel.Server is
          --  Interface_Id is that of one of the ancestors up to Last, as
          --  "A or else B or else C", which needs no parentheses.
 
+         function Has_Table return not null Syn.Node_Access
+         is (F.New_Binary
+               (F.New_Name ("Table"), "/=", F.New_Name ("null")));
+
+         function Table_Declaration return not null Syn.Node_Access
+         is (F.New_Object
+               ("Table", F.New_Name ("Table_Access"),
+                F.New_Call ("Table_Of", [Context_Name]),
+                Is_Constant => True));
+
+         function Slot_Of_Address (Address : String)
+           return not null Syn.Node_Access
+         is (F.New_Call ("Table.By_Address.Element", [F.New_Name (Address)]));
+         --  The slot of the object at Address, which is in the table.
+
+         function Is_Attached (Address : String)
+           return not null Syn.Node_Access
+         is (F.New_Binary
+               (Has_Table, "and then",
+                F.New_Call
+                  ("Table.By_Address.Contains", [F.New_Name (Address)])));
+         --  The context has a table, and the object at Address is in it.
+
+         function Slot_Block
+           (Slot_Value : not null Syn.Node_Access;
+            Component  : String)
+            return not null Syn.Node_Access
+         is (F.New_Block
+               (Declarations =>
+                  [F.New_Object
+                     ("Slot", F.New_Name ("Natural"), Slot_Value,
+                      Is_Constant => True)],
+                Statements   =>
+                  [F.New_Return
+                     (F.New_Name ("Table.Attached (Slot)." & Component))]));
+         --  Return Component of the object in slot Slot_Value of the
+         --  table. The block keeps each line short enough.
+
          Instance : constant Syn.Node_Array :=
-           [F.New_Name ("Server_Instance"),
+           [F.New_Name (Instance_Name),
             F.New_Name ("Interface_Id"),
-            F.New_Name ("Item.Identifier")];
+            F.New_Name ("Table.Attached (Slot).Identifier")];
          Ancestor_Cap : constant Syn.Node_Array :=
            [Call (Server & "Set_Instance_Cap",
                   Instance
                   & [F.New_Call
                        (Server & "Create_Endpoint",
                         [F.New_Name ("Interface_Id"),
-                         F.New_Name ("Item.Identifier")])])];
+                         F.New_Name ("Table.Attached (Slot).Identifier")])])];
          --  The ancestor's interface cap for the object, made the first
          --  time, as the handler of the object's interface cap makes it.
       begin
@@ -380,24 +459,61 @@ package body Idle.Targets.Kernel.Server is
               ("package Attached_Vectors is" & ASCII.LF
                & "  new Ada.Containers.Vectors (Natural, Attached_Object);"));
          Objects.Append
-           (F.New_Object
-              ("Attached", F.New_Name ("Attached_Vectors.Vector")));
+           (F.New_Raw
+              ("package Address_Maps is" & ASCII.LF
+               & "  new Ada.Containers.Ordered_Maps" & ASCII.LF
+               & "    (System.Address, Natural, System." & '"' & "<" & '"'
+               & ");"));
          Objects.Append
-           (F.New_Object
-              ("Registered", F.New_Name ("Boolean"), F.New_Name ("False")));
+           (F.New_Raw
+              ("package Identifier_Maps is" & ASCII.LF
+               & "  new Ada.Containers.Ordered_Maps" & ASCII.LF
+               & "    (Rose.Objects.Capability_Identifier, Natural," & ASCII.LF
+               & "     Rose.Objects." & '"' & "<" & '"' & ");"));
+         Objects.Append
+           (F.New_Raw
+              ("type Attached_Table is" & ASCII.LF
+               & "  new Rose.Server.Interface_Table with" & ASCII.LF
+               & "   record" & ASCII.LF
+               & "      Attached        : Attached_Vectors.Vector;"
+               & ASCII.LF
+               & "      By_Address      : Address_Maps.Map;" & ASCII.LF
+               & "      By_Identifier   : Identifier_Maps.Map;" & ASCII.LF
+               & "      Server_Instance : Rose.Server.Server_Instance;"
+               & ASCII.LF
+               & "   end record;"));
+         Objects.Append
+           (F.New_Access_Type
+              ("Table_Access", F.New_Name ("Attached_Table"),
+               Is_All => True));
 
+         Handler_Specs.Append (Table_Of);
          Handler_Specs.Append (Find);
          Handler_Specs.Append (Owns);
 
-         --  An object is attached at a new slot at the end, or for a
-         --  resource at the first free one, since a released object frees
-         --  its slot. Its identifier is the process's, not the slot's.
+         --  The conversion checks the tag, and keeps null.
+
+         Bodies.Add
+           ("Table_Of",
+            F.New_Expression_Function
+              (Table_Of,
+               F.New_Call
+                 ("Table_Access",
+                  [F.New_Call
+                     (Server & "Table",
+                      [Context_Name, F.New_Name (Id (Item))])])));
+
+         --  The first object attached to a context makes its table, and
+         --  registers the handlers. An object is attached at a new slot at
+         --  the end, or for a resource at the first free one, since a
+         --  released object frees its slot. Its identifier is the
+         --  process's, not the slot's.
 
          declare
             Slot     : constant String :=
-              (if Resource then "Slot" else "Attached.Last_Index");
+              (if Resource then "Slot" else "Table.Attached.Last_Index");
             Next     : constant not null Syn.Node_Access :=
-              Call ("Attached.Append",
+              Call ("Table.Attached.Append",
                     [F.New_Raw ("Attached_Object'(others => <>)")]);
          begin
             Bodies.Add
@@ -406,55 +522,77 @@ package body Idle.Targets.Kernel.Server is
                  (Specification => Attach,
                   Declarations  =>
                     [F.New_Use ("Rose.Objects.Capability_Identifier",
-                                Use_Type => True)]
+                                Use_Type => True),
+                     F.New_Object
+                       ("Table", F.New_Name ("Table_Access"),
+                        F.New_Call ("Table_Of", [Context_Name]))]
                     & (if Resource
-                       then [F.New_Object
-                               ("Slot", F.New_Name ("Natural"),
-                                F.New_Name ("Free_Slot"),
-                                Is_Constant => True)]
+                       then [F.New_Object ("Slot", F.New_Name ("Natural"))]
                        else Syn.No_Nodes),
                   Statements    =>
                     [F.New_If
                        (Condition =>
-                          F.New_Unary ("not", F.New_Name ("Registered")),
-                        Then_Part =>
-                          Registrations
-                          & [F.New_Assignment
-                               (F.New_Name ("Registered"),
-                                F.New_Name ("True"))]),
-                     (if Resource
-                      then F.New_If
-                             (Condition =>
-                                F.New_Binary
-                                  (F.New_Name ("Slot"), "=", Count),
-                              Then_Part => [Next])
-                      else Next),
-                     F.New_Assignment
-                       (F.New_Name ("Attached (" & Slot & ").Object"),
-                        F.New_Call
-                          ("Object_Access", [F.New_Name ("Object")])),
-                     F.New_If
-                       (Condition =>
                           F.New_Binary
-                            (F.New_Name ("Identifier"), "=",
-                             F.New_Integer_Literal (0)),
+                            (F.New_Name ("Table"), "=", F.New_Name ("null")),
                         Then_Part =>
                           [F.New_Assignment
-                             (F.New_Name
-                                ("Attached (" & Slot & ").Identifier"),
-                              F.New_Name (Server & "New_Identifier"))],
-                        Else_Part =>
-                          [F.New_Assignment
-                             (F.New_Name
-                                ("Attached (" & Slot & ").Identifier"),
-                              F.New_Name ("Identifier"))]),
-                     F.New_Assignment
-                       (F.New_Name ("Attached (" & Slot & ").Cap"),
-                        F.New_Call
-                          (Server & "Create_Endpoint",
-                           [F.New_Name (Id (Item)),
-                            F.New_Name
-                              ("Attached (" & Slot & ").Identifier")]))]));
+                             (F.New_Name ("Table"),
+                              F.New_Name ("new Attached_Table")),
+                           Call (Server & "Add_Table",
+                                 [Context_Name,
+                                  F.New_Name (Id (Item)),
+                                  F.New_Call
+                                    (Server & "Interface_Table_Access",
+                                     [F.New_Name ("Table")])])]
+                          & Registrations)]
+                    & (if Resource
+                       then [F.New_Assignment
+                               (F.New_Name ("Slot"),
+                                F.New_Call
+                                  ("Free_Slot", [F.New_Name ("Table")])),
+                             F.New_If
+                               (Condition =>
+                                  F.New_Binary
+                                    (F.New_Name ("Slot"), "=", Count),
+                                Then_Part => [Next])]
+                       else [Next])
+                    & [F.New_Assignment
+                         (F.New_Name ("Table.Attached (" & Slot & ").Object"),
+                          F.New_Call
+                            ("Object_Access", [F.New_Name ("Object")])),
+                       F.New_If
+                         (Condition =>
+                            F.New_Binary
+                              (F.New_Name ("Identifier"), "=",
+                               F.New_Integer_Literal (0)),
+                          Then_Part =>
+                            [F.New_Assignment
+                               (F.New_Name
+                                  ("Table.Attached (" & Slot
+                                   & ").Identifier"),
+                                F.New_Name (Server & "New_Identifier"))],
+                          Else_Part =>
+                            [F.New_Assignment
+                               (F.New_Name
+                                  ("Table.Attached (" & Slot
+                                   & ").Identifier"),
+                                F.New_Name ("Identifier"))]),
+                       F.New_Assignment
+                         (F.New_Name ("Table.Attached (" & Slot & ").Cap"),
+                          F.New_Call
+                            (Server & "Create_Endpoint",
+                             [F.New_Name (Id (Item)),
+                              F.New_Name
+                                ("Table.Attached (" & Slot
+                                 & ").Identifier")])),
+                       Call ("Table.By_Address.Include",
+                             [F.New_Name ("Object.all'Address"),
+                              F.New_Name (Slot)]),
+                       Call ("Table.By_Identifier.Include",
+                             [F.New_Name
+                                ("Table.Attached (" & Slot
+                                 & ").Identifier"),
+                              F.New_Name (Slot)])]));
          end;
 
          if Resource then
@@ -471,53 +609,51 @@ package body Idle.Targets.Kernel.Server is
             F.New_Subprogram_Body
               (Specification => Cap_Of,
                Declarations  =>
-                 [F.New_Use ("System.Address", Use_Type => True),
-                  F.New_Use ("Rose.Objects.Endpoint_Id", Use_Type => True)],
+                 [F.New_Use ("Rose.Objects.Endpoint_Id", Use_Type => True),
+                  Table_Declaration],
                Statements    =>
-                 [F.New_For_Of_Loop
-                    ("Item", F.New_Name ("Attached"),
-                     [F.New_If
-                        (Condition =>
-                           F.New_Binary
-                             (F.New_Binary
-                                (F.New_Name ("Item.Object"), "/=",
-                                 F.New_Name ("null")),
-                              "and then",
-                              F.New_Binary
-                                (F.New_Attribute
-                                   (F.New_Name ("Item.Object.all"),
-                                    "Address"),
-                                 "=",
-                                 F.New_Attribute
-                                   (F.New_Name ("Object"), "Address"))),
-                         Then_Part =>
-                           [F.New_If
-                              (Condition =>
-                                 F.New_Binary
-                                   (F.New_Name ("Interface_Id"), "=",
-                                    F.New_Name (Id (Item))),
-                               Then_Part =>
-                                 [F.New_Return (F.New_Name ("Item.Cap"))],
-                               Else_Part =>
-                                 (if Ancestors.Is_Empty
-                                  then Syn.No_Nodes
-                                  else
-                                    [F.New_If
-                                       (Condition =>
-                                          Is_Ancestor (Ancestors.Last_Index),
-                                        Then_Part =>
-                                          [F.New_If
-                                             (Condition =>
-                                                F.New_Unary
-                                                  ("not",
-                                                   F.New_Call
-                                                     (Server & "Has_Instance",
-                                                      Instance)),
-                                              Then_Part => Ancestor_Cap),
-                                           F.New_Return
-                                             (F.New_Call
-                                                (Server & "Get_Instance_Cap",
-                                                 Instance))])]))])]),
+                 [F.New_If
+                    (Condition => Is_Attached ("Object'Address"),
+                     Then_Part =>
+                       [F.New_Block
+                          (Declarations =>
+                             [F.New_Object
+                                ("Slot", F.New_Name ("Natural"),
+                                 Slot_Of_Address ("Object'Address"),
+                                 Is_Constant => True)],
+                           Statements   =>
+                             [F.New_If
+                                (Condition =>
+                                   F.New_Binary
+                                     (F.New_Name ("Interface_Id"), "=",
+                                      F.New_Name (Id (Item))),
+                                 Then_Part =>
+                                   [F.New_Return
+                                      (F.New_Name
+                                         ("Table.Attached (Slot).Cap"))],
+                                 Else_Part =>
+                                   (if Ancestors.Is_Empty
+                                    then Syn.No_Nodes
+                                    else
+                                      [F.New_If
+                                         (Condition =>
+                                            Is_Ancestor
+                                              (Ancestors.Last_Index),
+                                          Then_Part =>
+                                            [F.New_If
+                                               (Condition =>
+                                                  F.New_Unary
+                                                    ("not",
+                                                     F.New_Call
+                                                       (Server
+                                                        & "Has_Instance",
+                                                        Instance)),
+                                                Then_Part => Ancestor_Cap),
+                                             F.New_Return
+                                               (F.New_Call
+                                                  (Server
+                                                   & "Get_Instance_Cap",
+                                                   Instance))])]))])]),
                   F.New_Raise
                     (F.New_Name ("Rose.Interfaces.Objects.Not_Served"),
                      F.New_String_Literal (Package_Name & ".Cap_Of"))]));
@@ -528,59 +664,59 @@ package body Idle.Targets.Kernel.Server is
               (Specification => Find,
                Declarations  =>
                  [F.New_Use ("Rose.Objects.Capability_Identifier",
-                             Use_Type => True)],
+                             Use_Type => True),
+                  Table_Declaration],
                Statements    =>
                  [F.New_If
+                    (Condition =>
+                       F.New_Binary
+                         (F.New_Name ("Table"), "=", F.New_Name ("null")),
+                     Then_Part => [F.New_Return (F.New_Name ("null"))]),
+                  F.New_If
                     (Condition =>
                        F.New_Binary
                          (F.New_Name ("Identifier"), "=",
                           F.New_Integer_Literal (0)),
                      Then_Part =>
                        [F.New_If
-                          (Condition => F.New_Name ("Attached.Is_Empty"),
+                          (Condition =>
+                             F.New_Name ("Table.Attached.Is_Empty"),
                            Then_Part => [F.New_Return (F.New_Name ("null"))]),
-                        F.New_Return (F.New_Name ("Attached (0).Object"))]),
-                  F.New_For_Of_Loop
-                    ("Item", F.New_Name ("Attached"),
-                     [F.New_If
-                        (Condition =>
-                           F.New_Binary
-                             (F.New_Binary
-                                (F.New_Name ("Item.Object"), "/=",
-                                 F.New_Name ("null")),
-                              "and then",
-                              F.New_Binary
-                                (F.New_Name ("Item.Identifier"), "=",
-                                 F.New_Name ("Identifier"))),
-                         Then_Part =>
-                           [F.New_Return (F.New_Name ("Item.Object"))])]),
+                        F.New_Return
+                          (F.New_Name ("Table.Attached (0).Object"))]),
+                  F.New_If
+                    (Condition =>
+                       F.New_Call
+                         ("Table.By_Identifier.Contains",
+                          [F.New_Name ("Identifier")]),
+                     Then_Part =>
+                       [Slot_Block
+                          (F.New_Call
+                             ("Table.By_Identifier.Element",
+                              [F.New_Name ("Identifier")]),
+                           "Object")]),
                   F.New_Return (F.New_Name ("null"))]));
 
          Bodies.Add
            ("Owns",
-            F.New_Subprogram_Body
-              (Specification => Owns,
-               Statements    =>
-                 [F.New_Return
-                    (F.New_Binary
-                       (F.New_Call ("Find", [F.New_Name ("Identifier")]),
-                        "/=", F.New_Name ("null")))]));
+            F.New_Expression_Function
+              (Owns,
+               F.New_Binary
+                 (F.New_Call
+                    ("Find", [Context_Name, F.New_Name ("Identifier")]),
+                  "/=", F.New_Name ("null"))));
 
          Bodies.Add
            ("Interface_Cap",
             F.New_Subprogram_Body
               (Specification => Interface_Cap,
+               Declarations  => [Table_Declaration],
                Statements    =>
-                 [F.New_For_Of_Loop
-                    ("Item", F.New_Name ("Attached"),
-                     [F.New_If
-                        (Condition =>
-                           F.New_Binary
-                             (F.New_Name ("Item.Object"), "=",
-                              F.New_Call
-                                ("Object_Access", [F.New_Name ("Object")])),
-                         Then_Part =>
-                           [F.New_Return (F.New_Name ("Item.Cap"))])]),
+                 [F.New_If
+                    (Condition => Is_Attached ("Object.all'Address"),
+                     Then_Part =>
+                       [Slot_Block
+                          (Slot_Of_Address ("Object.all'Address"), "Cap")]),
                   F.New_Return
                     (F.New_Name ("Rose.Capabilities.Null_Capability"))]));
 
@@ -588,17 +724,14 @@ package body Idle.Targets.Kernel.Server is
            ("Identifier_Of",
             F.New_Subprogram_Body
               (Specification => Identifier_Of,
+               Declarations  => [Table_Declaration],
                Statements    =>
-                 [F.New_For_Of_Loop
-                    ("Item", F.New_Name ("Attached"),
-                     [F.New_If
-                        (Condition =>
-                           F.New_Binary
-                             (F.New_Name ("Item.Object"), "=",
-                              F.New_Call
-                                ("Object_Access", [F.New_Name ("Object")])),
-                         Then_Part =>
-                           [F.New_Return (F.New_Name ("Item.Identifier"))])]),
+                 [F.New_If
+                    (Condition => Is_Attached ("Object.all'Address"),
+                     Then_Part =>
+                       [Slot_Block
+                          (Slot_Of_Address ("Object.all'Address"),
+                           "Identifier")]),
                   F.New_Return (F.New_Integer_Literal (0))]));
 
          Bodies.Add
@@ -606,12 +739,11 @@ package body Idle.Targets.Kernel.Server is
             F.New_Subprogram_Body
               (Specification => Publish,
                Statements    =>
-                 [Call ("Attach",
-                        [F.New_Name ("Server_Context"),
-                         F.New_Name ("Object")]),
+                 [Call ("Attach", [Context_Name, F.New_Name ("Object")]),
                   Call (Server & "Publish_Interface",
                         [F.New_Call
-                           ("Interface_Cap", [F.New_Name ("Object")])])]));
+                           ("Interface_Cap",
+                            [Context_Name, F.New_Name ("Object")])])]));
       end Add_Attached_Objects;
 
       -----------------------
@@ -647,9 +779,7 @@ package body Idle.Targets.Kernel.Server is
 
          Specification : constant not null Syn.Node_Access :=
            F.New_Procedure
-             (Get_Interface (For_Interface),
-              [F.New_Parameter
-                 ("Parameters", F.New_Name (Record_Name), Syn.In_Out_Mode)]);
+             (Get_Interface (For_Interface), Handler_Spec_Parameters);
 
          Ancestors : constant Idle.Hierarchy.Interface_Vectors.Vector :=
            Idle.Hierarchy.Ancestors (For_Interface);
@@ -668,7 +798,7 @@ package body Idle.Targets.Kernel.Server is
             return Syn.Node_Array
          is
             Instance : constant Syn.Node_Array :=
-              [F.New_Name ("Server_Instance"),
+              [F.New_Name (Instance_Name),
                F.New_Name (Interface_Name (Ancestor)),
                F.New_Name ("Identifier")];
          begin
@@ -703,7 +833,7 @@ package body Idle.Targets.Kernel.Server is
             return Syn.Node_Array
          is
             Instance : constant Syn.Node_Array :=
-              [F.New_Name ("Server_Instance"),
+              [F.New_Name (Instance_Name),
                F.New_Name (Endpoint_Name (Subprogram)),
                F.New_Name ("Identifier")];
             Instance_Cap : constant Syn.Node_Array :=
@@ -767,6 +897,20 @@ package body Idle.Targets.Kernel.Server is
                   F.New_Name ("Rose.Objects.Capability_Identifier"),
                   F.New_Name ("Parameters.Identifier"),
                   Is_Constant => True));
+            if User then
+               --  The instance caps are in the context's table, which
+               --  has the object, since Owns found it.
+               Declarations.Append
+                 (F.New_Object
+                    ("Table", F.New_Name ("Table_Access"),
+                     F.New_Call
+                       ("Table_Of", [F.New_Name (Context_Parameter_Name)]),
+                     Is_Constant => True));
+            end if;
+         elsif User then
+            Declarations.Append
+              (F.New_Raw
+                 ("pragma Unreferenced (" & Context_Parameter_Name & ");"));
          end if;
 
          if not Ancestors.Is_Empty then
@@ -999,10 +1143,7 @@ package body Idle.Targets.Kernel.Server is
            Subprogram.Is_Function and then Result.Category = String_Value;
 
          Specification : constant not null Syn.Node_Access :=
-           F.New_Procedure
-             (Handle (Subprogram),
-              [F.New_Parameter
-                 ("Parameters", F.New_Name (Record_Name), Syn.In_Out_Mode)]);
+           F.New_Procedure (Handle (Subprogram), Handler_Spec_Parameters);
 
          function Parameters return not null Syn.Node_Access
          is (F.New_Name ("Parameters"));
@@ -1153,7 +1294,10 @@ package body Idle.Targets.Kernel.Server is
             Declarations.Append
               (F.New_Object
                  ("Object", F.New_Name ("Object_Access"),
-                  F.New_Call ("Find", [F.New_Name ("Parameters.Identifier")]),
+                  F.New_Call
+                    ("Find",
+                     [F.New_Name (Context_Parameter_Name),
+                      F.New_Name ("Parameters.Identifier")]),
                   Is_Constant => True));
          else
             Arguments.Append (F.New_Name ("Parameters.Identifier"));
@@ -1358,7 +1502,8 @@ package body Idle.Targets.Kernel.Server is
                      --  The object is gone: free its slot (Rose ADR 0010).
                      Statements.Append
                        (Call ("Detach",
-                              [F.New_Name ("Parameters.Identifier")]));
+                              [F.New_Name (Context_Parameter_Name),
+                               F.New_Name ("Parameters.Identifier")]));
                   end if;
                end if;
             end;
@@ -1655,16 +1800,27 @@ package body Idle.Targets.Kernel.Server is
            F.New_Parameter
              ("Identifier",
               F.New_Name ("Rose.Objects.Capability_Identifier"));
+         Table_Parameter : constant not null Syn.Node_Access :=
+           F.New_Parameter ("Table", F.New_Name ("not null Table_Access"));
          Free_Slot : constant not null Syn.Node_Access :=
-           F.New_Function ("Free_Slot", F.New_Name ("Natural"));
+           F.New_Function
+             ("Free_Slot", F.New_Name ("Natural"), [Table_Parameter]);
          Slot_Of   : constant not null Syn.Node_Access :=
            F.New_Function
-             ("Slot_Of", F.New_Name ("Natural"), [Identifier_Parameter]);
+             ("Slot_Of", F.New_Name ("Natural"),
+              [Table_Parameter, Identifier_Parameter]);
          Detach    : constant not null Syn.Node_Access :=
-           F.New_Procedure ("Detach", [Identifier_Parameter]);
-         Slot     : constant String := "Attached (Slot)";
+           F.New_Procedure
+             ("Detach",
+              [F.New_Parameter
+                 (Context_Parameter_Name,
+                  F.New_Name ("Rose.Server.Server_Context")),
+               Identifier_Parameter]);
+         --  Detach is called once the handler has found the object, so
+         --  the context has a table.
+         Slot     : constant String := "Table.Attached (Slot)";
          Count    : constant not null Syn.Node_Access :=
-           F.New_Call ("Natural", [F.New_Name ("Attached.Length")]);
+           F.New_Call ("Natural", [F.New_Name ("Table.Attached.Length")]);
          Rescind  : constant not null Syn.Node_Access :=
            F.New_Name (System_Calls & "Rescind_Cap_Capability");
          Null_Cap : constant not null Syn.Node_Access :=
@@ -1676,14 +1832,14 @@ package body Idle.Targets.Kernel.Server is
                (Condition =>
                   F.New_Call
                     (Server & "Has_Instance",
-                     [F.New_Name ("Server_Instance"),
+                     [F.New_Name (Instance_Name),
                       F.New_Name (Endpoint),
                       F.New_Name ("Identifier")]),
                 Then_Part =>
                   [Call (System_Calls & "Rescind_Cap",
                          [F.New_Call
                             (Server & "Get_Instance_Cap",
-                             [F.New_Name ("Server_Instance"),
+                             [F.New_Name (Instance_Name),
                               F.New_Name (Endpoint),
                               F.New_Name ("Identifier")])])]));
          --  Rescind the cap of Endpoint for the object, if one was made.
@@ -1719,10 +1875,7 @@ package body Idle.Targets.Kernel.Server is
               (Specification => Slot_Of,
                Declarations  =>
                  [F.New_Use ("Rose.Objects.Capability_Identifier",
-                             Use_Type => True),
-                  F.New_Object
-                    ("Index", F.New_Name ("Natural"),
-                     F.New_Integer_Literal (0))],
+                             Use_Type => True)],
                Statements    =>
                  [F.New_If
                     (Condition =>
@@ -1731,24 +1884,16 @@ package body Idle.Targets.Kernel.Server is
                           F.New_Integer_Literal (0)),
                      Then_Part =>
                        [F.New_Return (F.New_Integer_Literal (0))]),
-                  F.New_For_Of_Loop
-                    ("Item", F.New_Name ("Attached"),
-                     [F.New_If
-                        (Condition =>
-                           F.New_Binary
-                             (F.New_Binary
-                                (F.New_Name ("Item.Object"), "/=",
-                                 F.New_Name ("null")),
-                              "and then",
-                              F.New_Binary
-                                (F.New_Name ("Item.Identifier"), "=",
-                                 F.New_Name ("Identifier"))),
-                         Then_Part => [F.New_Return (F.New_Name ("Index"))]),
-                      F.New_Assignment
-                        (F.New_Name ("Index"),
-                         F.New_Binary
-                           (F.New_Name ("Index"), "+",
-                            F.New_Integer_Literal (1)))]),
+                  F.New_If
+                    (Condition =>
+                       F.New_Call
+                         ("Table.By_Identifier.Contains",
+                          [F.New_Name ("Identifier")]),
+                     Then_Part =>
+                       [F.New_Return
+                          (F.New_Call
+                             ("Table.By_Identifier.Element",
+                              [F.New_Name ("Identifier")]))]),
                   F.New_Return (Count)]));
 
          Bodies.Add
@@ -1761,7 +1906,7 @@ package body Idle.Targets.Kernel.Server is
                      F.New_Integer_Literal (0))],
                Statements    =>
                  [F.New_For_Of_Loop
-                    ("Item", F.New_Name ("Attached"),
+                    ("Item", F.New_Name ("Table.Attached"),
                      [F.New_If
                         (Condition =>
                            F.New_Binary
@@ -1779,6 +1924,8 @@ package body Idle.Targets.Kernel.Server is
                             F.New_Integer_Literal (1)))]),
                   F.New_Return (Count)]));
 
+         --  The maps forget the object before its slot is cleared.
+
          Bodies.Add
            ("Detach",
             F.New_Subprogram_Body
@@ -1789,8 +1936,16 @@ package body Idle.Targets.Kernel.Server is
                   F.New_Use ("Rose.Objects.Capability_Identifier",
                              Use_Type => True),
                   F.New_Object
+                    ("Table", F.New_Name ("Table_Access"),
+                     F.New_Call
+                       ("Table_Of", [F.New_Name (Context_Parameter_Name)]),
+                     Is_Constant => True),
+                  F.New_Object
                     ("Slot", F.New_Name ("Natural"),
-                     F.New_Call ("Slot_Of", [F.New_Name ("Identifier")]),
+                     F.New_Call
+                       ("Slot_Of",
+                        [F.New_Name ("Table"),
+                         F.New_Name ("Identifier")]),
                      Is_Constant => True)],
                Statements    =>
                  [F.New_If
@@ -1805,10 +1960,20 @@ package body Idle.Targets.Kernel.Server is
                            F.New_Name ("True"))],
                      Else_Part => Rescinds.To_Array),
                   Call (Server & "Remove_Instance",
-                        [F.New_Name ("Server_Instance"),
+                        [F.New_Name (Instance_Name),
                          F.New_Name ("Identifier")]),
                   Call (System_Calls & "Delete_Cap",
                         [F.New_Name (Slot & ".Cap")]),
+                  F.New_If
+                    (Condition =>
+                       F.New_Binary
+                         (F.New_Name (Slot & ".Object"), "/=",
+                          F.New_Name ("null")),
+                     Then_Part =>
+                       [Call ("Table.By_Address.Exclude",
+                              [F.New_Name (Slot & ".Object.all'Address")])]),
+                  Call ("Table.By_Identifier.Exclude",
+                        [F.New_Name (Slot & ".Identifier")]),
                   F.New_Assignment
                     (F.New_Name (Slot & ".Object"), F.New_Name ("null")),
                   F.New_Assignment (F.New_Name (Slot & ".Cap"), Null_Cap)]));
@@ -1892,9 +2057,13 @@ package body Idle.Targets.Kernel.Server is
       begin
          --  A user-target handler serves only its own package's objects,
          --  so that packages whose interfaces share an ancestor can share
-         --  its endpoints (idle#84).
+         --  its endpoints (idle#84), and it and Owns are given the
+         --  context, to find them in (idle#108).
 
-         return Call (Server & "Register_Handler",
+         return Call (Server
+                      & (if User
+                         then "Register_Context_Handler"
+                         else "Register_Handler"),
                       [F.New_Name ("Server_Context"),
                        F.New_Name (Endpoint),
                        F.New_Attribute (F.New_Name (Handler), "Access")]
@@ -2008,9 +2177,12 @@ package body Idle.Targets.Kernel.Server is
          Spec_Context.Add ("Rose.Objects");
       end if;
 
-      Objects.Append
-        (F.New_Object
-           ("Server_Instance", F.New_Name ("Rose.Server.Server_Instance")));
+      if not User then
+         Objects.Append
+           (F.New_Object
+              ("Server_Instance",
+               F.New_Name ("Rose.Server.Server_Instance")));
+      end if;
 
       if User then
          Add_Attached_Objects;
@@ -2050,6 +2222,7 @@ package body Idle.Targets.Kernel.Server is
       Body_Context.Add ("Rose.System_Calls");
       if User then
          --  For the table of attached objects, and Cap_Of.
+         Body_Context.Add ("Ada.Containers.Ordered_Maps");
          Body_Context.Add ("Ada.Containers.Vectors");
          Body_Context.Add ("Rose.Interfaces.Objects");
          Body_Context.Add ("System");
