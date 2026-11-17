@@ -17,16 +17,19 @@ package Rose.Interfaces.Flags.Server is
       Object         : not null access Flags_Interface'Class);
 
    function Interface_Cap
-     (Object : not null access Flags_Interface'Class)
+     (Server_Context : Rose.Server.Server_Context;
+      Object         : not null access Flags_Interface'Class)
       return Rose.Capabilities.Capability;
 
    function Identifier_Of
-     (Object : not null access Flags_Interface'Class)
+     (Server_Context : Rose.Server.Server_Context;
+      Object         : not null access Flags_Interface'Class)
       return Rose.Objects.Capability_Identifier;
 
    function Cap_Of
-     (Object       : Flags_Interface'Class;
-      Interface_Id : Rose.Objects.Endpoint_Id :=
+     (Server_Context : Rose.Server.Server_Context;
+      Object         : Flags_Interface'Class;
+      Interface_Id   : Rose.Objects.Endpoint_Id :=
         Rose.Interfaces.Flags.Flags_Interface)
       return Rose.Capabilities.Capability;
 

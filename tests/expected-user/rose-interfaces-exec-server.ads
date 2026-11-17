@@ -17,16 +17,19 @@ package Rose.Interfaces.Exec.Server is
       Object         : not null access Exec_Interface'Class);
 
    function Interface_Cap
-     (Object : not null access Exec_Interface'Class)
+     (Server_Context : Rose.Server.Server_Context;
+      Object         : not null access Exec_Interface'Class)
       return Rose.Capabilities.Capability;
 
    function Identifier_Of
-     (Object : not null access Exec_Interface'Class)
+     (Server_Context : Rose.Server.Server_Context;
+      Object         : not null access Exec_Interface'Class)
       return Rose.Objects.Capability_Identifier;
 
    function Cap_Of
-     (Object       : Exec_Interface'Class;
-      Interface_Id : Rose.Objects.Endpoint_Id :=
+     (Server_Context : Rose.Server.Server_Context;
+      Object         : Exec_Interface'Class;
+      Interface_Id   : Rose.Objects.Endpoint_Id :=
         Rose.Interfaces.Exec.Exec_Interface)
       return Rose.Capabilities.Capability;
 

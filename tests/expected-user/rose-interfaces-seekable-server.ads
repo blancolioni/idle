@@ -17,16 +17,19 @@ package Rose.Interfaces.Seekable.Server is
       Object         : not null access Seekable_Interface'Class);
 
    function Interface_Cap
-     (Object : not null access Seekable_Interface'Class)
+     (Server_Context : Rose.Server.Server_Context;
+      Object         : not null access Seekable_Interface'Class)
       return Rose.Capabilities.Capability;
 
    function Identifier_Of
-     (Object : not null access Seekable_Interface'Class)
+     (Server_Context : Rose.Server.Server_Context;
+      Object         : not null access Seekable_Interface'Class)
       return Rose.Objects.Capability_Identifier;
 
    function Cap_Of
-     (Object       : Seekable_Interface'Class;
-      Interface_Id : Rose.Objects.Endpoint_Id :=
+     (Server_Context : Rose.Server.Server_Context;
+      Object         : Seekable_Interface'Class;
+      Interface_Id   : Rose.Objects.Endpoint_Id :=
         Rose.Interfaces.Seekable.Seekable_Interface)
       return Rose.Capabilities.Capability;
 

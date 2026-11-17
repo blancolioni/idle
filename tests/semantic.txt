@@ -6,3 +6,4 @@ boolean_in
 boolean_out
 reader
 stream_writer
+resource

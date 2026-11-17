@@ -17,16 +17,19 @@ package Rose.Interfaces.Cap_Set.Server is
       Object         : not null access Cap_Set_Interface'Class);
 
    function Interface_Cap
-     (Object : not null access Cap_Set_Interface'Class)
+     (Server_Context : Rose.Server.Server_Context;
+      Object         : not null access Cap_Set_Interface'Class)
       return Rose.Capabilities.Capability;
 
    function Identifier_Of
-     (Object : not null access Cap_Set_Interface'Class)
+     (Server_Context : Rose.Server.Server_Context;
+      Object         : not null access Cap_Set_Interface'Class)
       return Rose.Objects.Capability_Identifier;
 
    function Cap_Of
-     (Object       : Cap_Set_Interface'Class;
-      Interface_Id : Rose.Objects.Endpoint_Id :=
+     (Server_Context : Rose.Server.Server_Context;
+      Object         : Cap_Set_Interface'Class;
+      Interface_Id   : Rose.Objects.Endpoint_Id :=
         Rose.Interfaces.Cap_Set.Cap_Set_Interface)
       return Rose.Capabilities.Capability;
 

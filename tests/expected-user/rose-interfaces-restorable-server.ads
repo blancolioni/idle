@@ -17,16 +17,19 @@ package Rose.Interfaces.Restorable.Server is
       Object         : not null access Restorable_Interface'Class);
 
    function Interface_Cap
-     (Object : not null access Restorable_Interface'Class)
+     (Server_Context : Rose.Server.Server_Context;
+      Object         : not null access Restorable_Interface'Class)
       return Rose.Capabilities.Capability;
 
    function Identifier_Of
-     (Object : not null access Restorable_Interface'Class)
+     (Server_Context : Rose.Server.Server_Context;
+      Object         : not null access Restorable_Interface'Class)
       return Rose.Objects.Capability_Identifier;
 
    function Cap_Of
-     (Object       : Restorable_Interface'Class;
-      Interface_Id : Rose.Objects.Endpoint_Id :=
+     (Server_Context : Rose.Server.Server_Context;
+      Object         : Restorable_Interface'Class;
+      Interface_Id   : Rose.Objects.Endpoint_Id :=
         Rose.Interfaces.Restorable.Restorable_Interface)
       return Rose.Capabilities.Capability;
 

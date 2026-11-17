@@ -17,16 +17,19 @@ package Rose.Interfaces.Directory.Server is
       Object         : not null access Directory_Interface'Class);
 
    function Interface_Cap
-     (Object : not null access Directory_Interface'Class)
+     (Server_Context : Rose.Server.Server_Context;
+      Object         : not null access Directory_Interface'Class)
       return Rose.Capabilities.Capability;
 
    function Identifier_Of
-     (Object : not null access Directory_Interface'Class)
+     (Server_Context : Rose.Server.Server_Context;
+      Object         : not null access Directory_Interface'Class)
       return Rose.Objects.Capability_Identifier;
 
    function Cap_Of
-     (Object       : Directory_Interface'Class;
-      Interface_Id : Rose.Objects.Endpoint_Id :=
+     (Server_Context : Rose.Server.Server_Context;
+      Object         : Directory_Interface'Class;
+      Interface_Id   : Rose.Objects.Endpoint_Id :=
         Rose.Interfaces.Directory.Directory_Interface)
       return Rose.Capabilities.Capability;
 

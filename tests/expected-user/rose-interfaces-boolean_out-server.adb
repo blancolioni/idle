@@ -1,3 +1,4 @@
+with Ada.Containers.Ordered_Maps;
 with Ada.Containers.Vectors;
 with Rose.Interfaces.Objects;
 with Rose.Invocation;
@@ -5,8 +6,6 @@ with Rose.System_Calls;
 with System;
 
 package body Rose.Interfaces.Boolean_Out.Server is
-
-   Server_Instance : Rose.Server.Server_Instance;
 
    type Object_Access is access all Boolean_Out_Interface'Class;
 
@@ -20,23 +19,47 @@ package body Rose.Interfaces.Boolean_Out.Server is
    package Attached_Vectors is
      new Ada.Containers.Vectors (Natural, Attached_Object);
 
-   Attached        : Attached_Vectors.Vector;
+   package Address_Maps is
+     new Ada.Containers.Ordered_Maps
+       (System.Address, Natural, System."<");
 
-   Registered      : Boolean := False;
+   package Identifier_Maps is
+     new Ada.Containers.Ordered_Maps
+       (Rose.Objects.Capability_Identifier, Natural,
+        Rose.Objects."<");
+
+   type Attached_Table is
+     new Rose.Server.Interface_Table with
+      record
+         Attached        : Attached_Vectors.Vector;
+         By_Address      : Address_Maps.Map;
+         By_Identifier   : Identifier_Maps.Map;
+         Server_Instance : Rose.Server.Server_Instance;
+      end record;
+
+   type Table_Access is access all Attached_Table;
+
+   function Table_Of
+     (Server_Context : Rose.Server.Server_Context)
+      return Table_Access;
 
    function Find
-     (Identifier : Rose.Objects.Capability_Identifier)
+     (Server_Context : Rose.Server.Server_Context;
+      Identifier     : Rose.Objects.Capability_Identifier)
       return Object_Access;
 
    function Owns
-     (Identifier : Rose.Objects.Capability_Identifier)
+     (Server_Context : Rose.Server.Server_Context;
+      Identifier     : Rose.Objects.Capability_Identifier)
       return Boolean;
 
    procedure Handle_Get_Boolean_Out_Interface
-     (Parameters : in out Rose.Invocation.Invocation_Record);
+     (Server_Context : in out Rose.Server.Server_Context;
+      Parameters     : in out Rose.Invocation.Invocation_Record);
 
    procedure Handle_Get
-     (Parameters : in out Rose.Invocation.Invocation_Record);
+     (Server_Context : in out Rose.Server.Server_Context;
+      Parameters     : in out Rose.Invocation.Invocation_Record);
 
    ------------
    -- Attach --
@@ -48,32 +71,42 @@ package body Rose.Interfaces.Boolean_Out.Server is
       Identifier     : Rose.Objects.Capability_Identifier := 0)
    is
       use type Rose.Objects.Capability_Identifier;
+      Table : Table_Access := Table_Of (Server_Context);
    begin
-      if not Registered then
-         Rose.Server.Register_Handler
+      if Table = null then
+         Table := new Attached_Table;
+         Rose.Server.Add_Table
+           (Server_Context,
+            Rose.Interfaces.Boolean_Out.Boolean_Out_Interface,
+            Rose.Server.Interface_Table_Access (Table));
+         Rose.Server.Register_Context_Handler
            (Server_Context,
             Rose.Interfaces.Boolean_Out.Boolean_Out_Interface,
             Handle_Get_Boolean_Out_Interface'Access,
             Owns'Access);
-         Rose.Server.Register_Handler
+         Rose.Server.Register_Context_Handler
            (Server_Context,
             Get_Endpoint,
             Handle_Get'Access,
             Owns'Access);
-         Registered := True;
       end if;
-      Attached.Append (Attached_Object'(others => <>));
-      Attached (Attached.Last_Index).Object := Object_Access (Object);
+      Table.Attached.Append (Attached_Object'(others => <>));
+      Table.Attached (Table.Attached.Last_Index).Object :=
+        Object_Access (Object);
       if Identifier = 0 then
-         Attached (Attached.Last_Index).Identifier :=
+         Table.Attached (Table.Attached.Last_Index).Identifier :=
            Rose.Server.New_Identifier;
       else
-         Attached (Attached.Last_Index).Identifier := Identifier;
+         Table.Attached (Table.Attached.Last_Index).Identifier := Identifier;
       end if;
-      Attached (Attached.Last_Index).Cap :=
+      Table.Attached (Table.Attached.Last_Index).Cap :=
         Rose.Server.Create_Endpoint
           (Rose.Interfaces.Boolean_Out.Boolean_Out_Interface,
-           Attached (Attached.Last_Index).Identifier);
+           Table.Attached (Table.Attached.Last_Index).Identifier);
+      Table.By_Address.Include (Object.all'Address, Table.Attached.Last_Index);
+      Table.By_Identifier.Include
+        (Table.Attached (Table.Attached.Last_Index).Identifier,
+         Table.Attached.Last_Index);
    end Attach;
 
    ------------
@@ -81,24 +114,26 @@ package body Rose.Interfaces.Boolean_Out.Server is
    ------------
 
    function Cap_Of
-     (Object       : Boolean_Out_Interface'Class;
-      Interface_Id : Rose.Objects.Endpoint_Id :=
+     (Server_Context : Rose.Server.Server_Context;
+      Object         : Boolean_Out_Interface'Class;
+      Interface_Id   : Rose.Objects.Endpoint_Id :=
         Rose.Interfaces.Boolean_Out.Boolean_Out_Interface)
       return Rose.Capabilities.Capability
    is
-      use type System.Address;
       use type Rose.Objects.Endpoint_Id;
+      Table : constant Table_Access := Table_Of (Server_Context);
    begin
-      for Item of Attached loop
-         if Item.Object /= null
-           and then Item.Object.all'Address = Object'Address
-         then
+      if Table /= null and then Table.By_Address.Contains (Object'Address) then
+         declare
+            Slot : constant Natural :=
+              Table.By_Address.Element (Object'Address);
+         begin
             if Interface_Id = Rose.Interfaces.Boolean_Out.Boolean_Out_Interface
             then
-               return Item.Cap;
+               return Table.Attached (Slot).Cap;
             end if;
-         end if;
-      end loop;
+         end;
+      end if;
       raise Rose.Interfaces.Objects.Not_Served
         with "Rose.Interfaces.Boolean_Out.Server.Cap_Of";
    end Cap_Of;
@@ -108,22 +143,30 @@ package body Rose.Interfaces.Boolean_Out.Server is
    ----------
 
    function Find
-     (Identifier : Rose.Objects.Capability_Identifier)
+     (Server_Context : Rose.Server.Server_Context;
+      Identifier     : Rose.Objects.Capability_Identifier)
       return Object_Access
    is
       use type Rose.Objects.Capability_Identifier;
+      Table : constant Table_Access := Table_Of (Server_Context);
    begin
+      if Table = null then
+         return null;
+      end if;
       if Identifier = 0 then
-         if Attached.Is_Empty then
+         if Table.Attached.Is_Empty then
             return null;
          end if;
-         return Attached (0).Object;
+         return Table.Attached (0).Object;
       end if;
-      for Item of Attached loop
-         if Item.Object /= null and then Item.Identifier = Identifier then
-            return Item.Object;
-         end if;
-      end loop;
+      if Table.By_Identifier.Contains (Identifier) then
+         declare
+            Slot : constant Natural :=
+              Table.By_Identifier.Element (Identifier);
+         begin
+            return Table.Attached (Slot).Object;
+         end;
+      end if;
       return null;
    end Find;
 
@@ -132,12 +175,14 @@ package body Rose.Interfaces.Boolean_Out.Server is
    ----------------
 
    procedure Handle_Get
-     (Parameters : in out Rose.Invocation.Invocation_Record)
+     (Server_Context : in out Rose.Server.Server_Context;
+      Parameters     : in out Rose.Invocation.Invocation_Record)
    is
    begin
       begin
          declare
-            Object : constant Object_Access := Find (Parameters.Identifier);
+            Object : constant Object_Access :=
+              Find (Server_Context, Parameters.Identifier);
             On     : Boolean;
          begin
             if Object = null then
@@ -173,11 +218,13 @@ package body Rose.Interfaces.Boolean_Out.Server is
    --------------------------------------
 
    procedure Handle_Get_Boolean_Out_Interface
-     (Parameters : in out Rose.Invocation.Invocation_Record)
+     (Server_Context : in out Rose.Server.Server_Context;
+      Parameters     : in out Rose.Invocation.Invocation_Record)
    is
       Cap        : Rose.Capabilities.Capability;
       Identifier : constant Rose.Objects.Capability_Identifier :=
         Parameters.Identifier;
+      Table      : constant Table_Access := Table_Of (Server_Context);
       First      : Natural := 0;
       Page       : Natural := Rose.Invocation.Max_Capabilities;
    begin
@@ -195,19 +242,19 @@ package body Rose.Interfaces.Boolean_Out.Server is
       else
          if 0 in First .. (First + Page - 1) then
             if not Rose.Server.Has_Instance
-              (Server_Instance,
+              (Table.Server_Instance,
                Get_Endpoint,
                Identifier)
             then
                Rose.Server.Set_Instance_Cap
-                 (Server_Instance,
+                 (Table.Server_Instance,
                   Get_Endpoint,
                   Identifier,
                   Rose.Server.Create_Endpoint (Get_Endpoint, Identifier));
             end if;
             Cap :=
               Rose.Server.Get_Instance_Cap
-                (Server_Instance,
+                (Table.Server_Instance,
                  Get_Endpoint,
                  Identifier);
             Rose.System_Calls.Send_Cap (Parameters, Cap);
@@ -220,15 +267,21 @@ package body Rose.Interfaces.Boolean_Out.Server is
    -------------------
 
    function Identifier_Of
-     (Object : not null access Boolean_Out_Interface'Class)
+     (Server_Context : Rose.Server.Server_Context;
+      Object         : not null access Boolean_Out_Interface'Class)
       return Rose.Objects.Capability_Identifier
    is
+      Table : constant Table_Access := Table_Of (Server_Context);
    begin
-      for Item of Attached loop
-         if Item.Object = Object_Access (Object) then
-            return Item.Identifier;
-         end if;
-      end loop;
+      if Table /= null and then Table.By_Address.Contains (Object.all'Address)
+      then
+         declare
+            Slot : constant Natural :=
+              Table.By_Address.Element (Object.all'Address);
+         begin
+            return Table.Attached (Slot).Identifier;
+         end;
+      end if;
       return 0;
    end Identifier_Of;
 
@@ -237,15 +290,21 @@ package body Rose.Interfaces.Boolean_Out.Server is
    -------------------
 
    function Interface_Cap
-     (Object : not null access Boolean_Out_Interface'Class)
+     (Server_Context : Rose.Server.Server_Context;
+      Object         : not null access Boolean_Out_Interface'Class)
       return Rose.Capabilities.Capability
    is
+      Table : constant Table_Access := Table_Of (Server_Context);
    begin
-      for Item of Attached loop
-         if Item.Object = Object_Access (Object) then
-            return Item.Cap;
-         end if;
-      end loop;
+      if Table /= null and then Table.By_Address.Contains (Object.all'Address)
+      then
+         declare
+            Slot : constant Natural :=
+              Table.By_Address.Element (Object.all'Address);
+         begin
+            return Table.Attached (Slot).Cap;
+         end;
+      end if;
       return Rose.Capabilities.Null_Capability;
    end Interface_Cap;
 
@@ -254,12 +313,10 @@ package body Rose.Interfaces.Boolean_Out.Server is
    ----------
 
    function Owns
-     (Identifier : Rose.Objects.Capability_Identifier)
+     (Server_Context : Rose.Server.Server_Context;
+      Identifier     : Rose.Objects.Capability_Identifier)
       return Boolean
-   is
-   begin
-      return Find (Identifier) /= null;
-   end Owns;
+   is (Find (Server_Context, Identifier) /= null);
 
    -------------
    -- Publish --
@@ -271,7 +328,19 @@ package body Rose.Interfaces.Boolean_Out.Server is
    is
    begin
       Attach (Server_Context, Object);
-      Rose.Server.Publish_Interface (Interface_Cap (Object));
+      Rose.Server.Publish_Interface (Interface_Cap (Server_Context, Object));
    end Publish;
+
+   --------------
+   -- Table_Of --
+   --------------
+
+   function Table_Of
+     (Server_Context : Rose.Server.Server_Context)
+      return Table_Access
+   is (Table_Access
+     (Rose.Server.Table
+        (Server_Context,
+         Rose.Interfaces.Boolean_Out.Boolean_Out_Interface)));
 
 end Rose.Interfaces.Boolean_Out.Server;
