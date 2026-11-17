@@ -47,6 +47,33 @@ package body Rose.Interfaces.File_Reader.Client is
       return Rose.Capabilities.Capability
    is (Item.Interface_Cap);
 
+   ------------
+   -- Forget --
+   ------------
+
+   procedure Forget (Client : in out File_Reader_Client) is
+      use type Rose.Capabilities.Capability;
+   begin
+      if Client.Is_Open then
+         Rose.System_Calls.Delete_Cap (Client.Read);
+         Rose.System_Calls.Delete_Cap (Client.Release);
+      end if;
+      Client.Is_Open := False;
+      if Client.Stream_Reader_Interface_Cap /= Rose.Capabilities
+        .Null_Capability
+      then
+         Rose.System_Calls.Delete_Cap (Client.Stream_Reader_Interface_Cap);
+         Client.Stream_Reader_Interface_Cap :=
+           Rose.Capabilities.Null_Capability;
+      end if;
+      if Client.Resource_Interface_Cap /= Rose.Capabilities.Null_Capability
+      then
+         Rose.System_Calls.Delete_Cap (Client.Resource_Interface_Cap);
+         Client.Resource_Interface_Cap := Rose.Capabilities.Null_Capability;
+      end if;
+      Rose.System_Calls.Delete_Cap (Client.Interface_Cap);
+   end Forget;
+
    --------------
    -- From_Cap --
    --------------

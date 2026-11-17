@@ -91,6 +91,37 @@ package body Rose.Interfaces.Lease.Client is
       return Item.Counter_Interface_Cap;
    end Counter_Cap;
 
+   ------------
+   -- Forget --
+   ------------
+
+   procedure Forget (Client : in out Lease_Client) is
+      use type Rose.Capabilities.Capability;
+   begin
+      if Client.Is_Open then
+         Rose.System_Calls.Delete_Cap (Client.Badge);
+         Rose.System_Calls.Delete_Cap (Client.Increment);
+         Rose.System_Calls.Delete_Cap (Client.Value);
+         Rose.System_Calls.Delete_Cap (Client.Release);
+         Rose.System_Calls.Delete_Cap (Client.Remaining);
+      end if;
+      Client.Is_Open := False;
+      if Client.Named_Interface_Cap /= Rose.Capabilities.Null_Capability then
+         Rose.System_Calls.Delete_Cap (Client.Named_Interface_Cap);
+         Client.Named_Interface_Cap := Rose.Capabilities.Null_Capability;
+      end if;
+      if Client.Counter_Interface_Cap /= Rose.Capabilities.Null_Capability then
+         Rose.System_Calls.Delete_Cap (Client.Counter_Interface_Cap);
+         Client.Counter_Interface_Cap := Rose.Capabilities.Null_Capability;
+      end if;
+      if Client.Resource_Interface_Cap /= Rose.Capabilities.Null_Capability
+      then
+         Rose.System_Calls.Delete_Cap (Client.Resource_Interface_Cap);
+         Client.Resource_Interface_Cap := Rose.Capabilities.Null_Capability;
+      end if;
+      Rose.System_Calls.Delete_Cap (Client.Interface_Cap);
+   end Forget;
+
    --------------
    -- From_Cap --
    --------------

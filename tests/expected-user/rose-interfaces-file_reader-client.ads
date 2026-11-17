@@ -22,6 +22,8 @@ package Rose.Interfaces.File_Reader.Client is
 
    procedure Close (Client : in out File_Reader_Client);
 
+   procedure Forget (Client : in out File_Reader_Client);
+
    overriding procedure Read
      (Item   : in out File_Reader_Client;
       Buffer : out System.Storage_Elements.Storage_Array;

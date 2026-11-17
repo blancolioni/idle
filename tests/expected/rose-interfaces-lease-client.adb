@@ -41,6 +41,21 @@ package body Rose.Interfaces.Lease.Client is
       Rose.System_Calls.Delete_Cap (Client.Interface_Cap);
    end Close;
 
+   ------------
+   -- Forget --
+   ------------
+
+   procedure Forget (Client : in out Lease_Client) is
+   begin
+      Client.Is_Open := False;
+      Rose.System_Calls.Delete_Cap (Client.Badge);
+      Rose.System_Calls.Delete_Cap (Client.Increment);
+      Rose.System_Calls.Delete_Cap (Client.Value);
+      Rose.System_Calls.Delete_Cap (Client.Release);
+      Rose.System_Calls.Delete_Cap (Client.Remaining);
+      Rose.System_Calls.Delete_Cap (Client.Interface_Cap);
+   end Forget;
+
    -------------------
    -- Get_Badge_Cap --
    -------------------

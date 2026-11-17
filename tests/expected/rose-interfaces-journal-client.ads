@@ -27,6 +27,8 @@ package Rose.Interfaces.Journal.Client is
 
    procedure Close (Client : in out Journal_Client);
 
+   procedure Forget (Client : in out Journal_Client);
+
    function Size
      (Item : Journal_Client)
       return System.Storage_Elements.Storage_Count;

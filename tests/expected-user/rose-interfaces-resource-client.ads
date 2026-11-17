@@ -20,6 +20,8 @@ package Rose.Interfaces.Resource.Client is
 
    procedure Close (Client : in out Resource_Client);
 
+   procedure Forget (Client : in out Resource_Client);
+
    overriding procedure Release (Item : in out Resource_Client);
 
    overriding function Resource_Cap
