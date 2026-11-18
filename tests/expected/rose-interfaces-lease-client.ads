@@ -20,6 +20,8 @@ package Rose.Interfaces.Lease.Client is
 
    procedure Close (Client : in out Lease_Client);
 
+   procedure Forget (Client : in out Lease_Client);
+
    function Badge (Item : Lease_Client) return Rose.Capabilities.Capability;
 
    procedure Increment (Item : Lease_Client; By : Rose.Words.Word);

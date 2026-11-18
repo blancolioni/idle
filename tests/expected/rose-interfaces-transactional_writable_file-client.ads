@@ -26,6 +26,8 @@ package Rose.Interfaces.Transactional_Writable_File.Client is
 
    procedure Close (Client : in out Transactional_Writable_File_Client);
 
+   procedure Forget (Client : in out Transactional_Writable_File_Client);
+
    function Size
      (Item : Transactional_Writable_File_Client)
       return System.Storage_Elements.Storage_Count;

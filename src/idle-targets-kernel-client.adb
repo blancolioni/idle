@@ -131,7 +131,8 @@ package body Idle.Targets.Kernel.Client is
       --  subprograms needs neither.
 
       procedure Add_Cap_Functions;
-      procedure Add_Close;
+      procedure Add_Close (Close_Name : String; Release_First : Boolean);
+      --  Close, which releases a resource first, or Forget, which doesn't.
       procedure Add_Error_Functions;
       procedure Add_From_Cap;
       procedure Add_Getters;
@@ -252,9 +253,14 @@ package body Idle.Targets.Kernel.Client is
       -- Add_Close --
       ---------------
 
-      procedure Add_Close is
+      --  Close deletes the client's caps. For a resource it releases the
+      --  object first (Rose ADR 0010). Forget, which only a resource's
+      --  client has, deletes the caps without releasing it: the client
+      --  has handed the object to someone else, who releases it (rose#403).
+
+      procedure Add_Close (Close_Name : String; Release_First : Boolean) is
          Specification : constant not null Syn.Node_Access :=
-           F.New_Procedure ("Close", [Client_Parameter (Syn.In_Out_Mode)]);
+           F.New_Procedure (Close_Name, [Client_Parameter (Syn.In_Out_Mode)]);
 
          function Delete (Cap : String) return Syn.Node_Array
          is ([Call (System_Calls & "Delete_Cap",
@@ -264,7 +270,7 @@ package body Idle.Targets.Kernel.Client is
          Statements : Node_List;
          Own_Caps   : Node_List;
       begin
-         if Resource then
+         if Release_First then
             --  A resource is released first (Rose ADR 0010). A user-target
             --  client that has made no call has only its interface cap,
             --  and gets the others in Release.
@@ -328,11 +334,12 @@ package body Idle.Targets.Kernel.Client is
 
          Public_Part.Append (Specification);
          Bodies.Add
-           ("Close",
+           (Close_Name,
             F.New_Subprogram_Body
               (Specification => Specification,
                Declarations  =>
-                 (if User and then (Resource or else not Ancestors.Is_Empty)
+                 (if User
+                    and then (Release_First or else not Ancestors.Is_Empty)
                   then [F.New_Use ("Rose.Capabilities.Capability",
                                    Use_Type => True)]
                   else Syn.No_Nodes),
@@ -1466,7 +1473,10 @@ package body Idle.Targets.Kernel.Client is
          Add_From_Cap;
          Add_Load;
       end if;
-      Add_Close;
+      Add_Close ("Close", Release_First => Resource);
+      if Resource then
+         Add_Close ("Forget", Release_First => False);
+      end if;
       for Member of Idle.Hierarchy.Members (Item) loop
          Add_Subprogram (Member);
       end loop;

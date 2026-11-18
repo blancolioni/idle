@@ -25,6 +25,19 @@ package body Rose.Interfaces.Resource.Client is
       Rose.System_Calls.Delete_Cap (Client.Interface_Cap);
    end Close;
 
+   ------------
+   -- Forget --
+   ------------
+
+   procedure Forget (Client : in out Resource_Client) is
+   begin
+      if Client.Is_Open then
+         Rose.System_Calls.Delete_Cap (Client.Release);
+      end if;
+      Client.Is_Open := False;
+      Rose.System_Calls.Delete_Cap (Client.Interface_Cap);
+   end Forget;
+
    --------------
    -- From_Cap --
    --------------

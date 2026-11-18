@@ -113,6 +113,58 @@ package body Rose.Interfaces.Transactional_Writable_File.Client is
       return Item.File_Interface_Cap;
    end File_Cap;
 
+   ------------
+   -- Forget --
+   ------------
+
+   procedure Forget (Client : in out Transactional_Writable_File_Client) is
+      use type Rose.Capabilities.Capability;
+   begin
+      if Client.Is_Open then
+         Rose.System_Calls.Delete_Cap (Client.Size);
+         Rose.System_Calls.Delete_Cap (Client.Open_Reader);
+         Rose.System_Calls.Delete_Cap (Client.Open_Seekable_Reader);
+         Rose.System_Calls.Delete_Cap (Client.Write);
+         Rose.System_Calls.Delete_Cap (Client.Truncate);
+         Rose.System_Calls.Delete_Cap (Client.New_Version);
+         Rose.System_Calls.Delete_Cap (Client.Commit);
+         Rose.System_Calls.Delete_Cap (Client.Rollback);
+         Rose.System_Calls.Delete_Cap (Client.Release);
+      end if;
+      Client.Is_Open := False;
+      if Client.File_Interface_Cap /= Rose.Capabilities.Null_Capability then
+         Rose.System_Calls.Delete_Cap (Client.File_Interface_Cap);
+         Client.File_Interface_Cap := Rose.Capabilities.Null_Capability;
+      end if;
+      if Client.Stream_Writer_Interface_Cap /= Rose.Capabilities
+        .Null_Capability
+      then
+         Rose.System_Calls.Delete_Cap (Client.Stream_Writer_Interface_Cap);
+         Client.Stream_Writer_Interface_Cap :=
+           Rose.Capabilities.Null_Capability;
+      end if;
+      if Client.Writable_File_Interface_Cap /= Rose.Capabilities
+        .Null_Capability
+      then
+         Rose.System_Calls.Delete_Cap (Client.Writable_File_Interface_Cap);
+         Client.Writable_File_Interface_Cap :=
+           Rose.Capabilities.Null_Capability;
+      end if;
+      if Client.Transactional_Interface_Cap /= Rose.Capabilities
+        .Null_Capability
+      then
+         Rose.System_Calls.Delete_Cap (Client.Transactional_Interface_Cap);
+         Client.Transactional_Interface_Cap :=
+           Rose.Capabilities.Null_Capability;
+      end if;
+      if Client.Resource_Interface_Cap /= Rose.Capabilities.Null_Capability
+      then
+         Rose.System_Calls.Delete_Cap (Client.Resource_Interface_Cap);
+         Client.Resource_Interface_Cap := Rose.Capabilities.Null_Capability;
+      end if;
+      Rose.System_Calls.Delete_Cap (Client.Interface_Cap);
+   end Forget;
+
    --------------
    -- From_Cap --
    --------------

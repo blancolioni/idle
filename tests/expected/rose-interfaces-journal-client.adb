@@ -43,6 +43,25 @@ package body Rose.Interfaces.Journal.Client is
       end if;
    end Commit;
 
+   ------------
+   -- Forget --
+   ------------
+
+   procedure Forget (Client : in out Journal_Client) is
+   begin
+      Client.Is_Open := False;
+      Rose.System_Calls.Delete_Cap (Client.Size);
+      Rose.System_Calls.Delete_Cap (Client.Open_Reader);
+      Rose.System_Calls.Delete_Cap (Client.Open_Seekable_Reader);
+      Rose.System_Calls.Delete_Cap (Client.Write);
+      Rose.System_Calls.Delete_Cap (Client.Truncate);
+      Rose.System_Calls.Delete_Cap (Client.New_Version);
+      Rose.System_Calls.Delete_Cap (Client.Commit);
+      Rose.System_Calls.Delete_Cap (Client.Rollback);
+      Rose.System_Calls.Delete_Cap (Client.Release);
+      Rose.System_Calls.Delete_Cap (Client.Interface_Cap);
+   end Forget;
+
    --------------------
    -- Get_Commit_Cap --
    --------------------

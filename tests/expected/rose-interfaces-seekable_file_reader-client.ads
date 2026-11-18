@@ -19,6 +19,8 @@ package Rose.Interfaces.Seekable_File_Reader.Client is
 
    procedure Close (Client : in out Seekable_File_Reader_Client);
 
+   procedure Forget (Client : in out Seekable_File_Reader_Client);
+
    procedure Read
      (Item   : Seekable_File_Reader_Client;
       Buffer : out System.Storage_Elements.Storage_Array;

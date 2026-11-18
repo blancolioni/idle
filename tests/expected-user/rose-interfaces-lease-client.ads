@@ -23,6 +23,8 @@ package Rose.Interfaces.Lease.Client is
 
    procedure Close (Client : in out Lease_Client);
 
+   procedure Forget (Client : in out Lease_Client);
+
    overriding function Badge
      (Item : in out Lease_Client)
       return Rose.Capabilities.Capability;
