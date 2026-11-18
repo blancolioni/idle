@@ -26,13 +26,11 @@ package Rose.Interfaces.Exec.Client is
 
    function Launch
      (Item        : Exec_Client;
-      Caps        : Rose.Capabilities.Capability_Array;
       Environment : System.Storage_Elements.Storage_Array)
       return Rose.Interfaces.Process.Client.Process_Client;
 
    function Launch_Command
-     (Item : Exec_Client;
-      Caps : Rose.Capabilities.Capability_Array)
+     (Item : Exec_Client)
       return Rose.Capabilities.Capability;
 
    procedure Metadata
@@ -44,7 +42,7 @@ package Rose.Interfaces.Exec.Client is
      (Item         : Exec_Client;
       Executable   : Rose.Interfaces.Stream_Reader.Client.Stream_Reader_Client;
       Name         : String;
-      Install_Caps : Rose.Capabilities.Capability_Array)
+      Install_Caps : Rose.Capabilities.Capability)
       return Rose.Interfaces.Launch.Client.Launch_Client;
 
    procedure Set_Standard_Output

@@ -97,7 +97,7 @@ package body Rose.Interfaces.Exec.Client is
      (Item         : Exec_Client;
       Executable   : Rose.Interfaces.Stream_Reader.Client.Stream_Reader_Client;
       Name         : String;
-      Install_Caps : Rose.Capabilities.Capability_Array)
+      Install_Caps : Rose.Capabilities.Capability)
       return Rose.Interfaces.Launch.Client.Launch_Client
    is
       Params : aliased Rose.Invocation.Invocation_Record;
@@ -107,9 +107,7 @@ package body Rose.Interfaces.Exec.Client is
         (Params,
          Rose.Interfaces.Stream_Reader.Client.Get_Interface_Cap (Executable));
       Rose.System_Calls.Send_Text (Params, Name);
-      for Cap of Install_Caps loop
-         Rose.System_Calls.Send_Cap (Params, Cap);
-      end loop;
+      Rose.System_Calls.Send_Cap (Params, Install_Caps);
       Rose.System_Calls.Receive_Caps (Params, 1);
       Rose.System_Calls.Invoke_Capability (Params);
       Last_Error := Rose.Invocation.OK;
@@ -130,16 +128,12 @@ package body Rose.Interfaces.Exec.Client is
 
    function Launch
      (Item        : Exec_Client;
-      Caps        : Rose.Capabilities.Capability_Array;
       Environment : System.Storage_Elements.Storage_Array)
       return Rose.Interfaces.Process.Client.Process_Client
    is
       Params : aliased Rose.Invocation.Invocation_Record;
    begin
       Rose.System_Calls.Initialize_Send (Params, Item.Launch);
-      for Cap of Caps loop
-         Rose.System_Calls.Send_Cap (Params, Cap);
-      end loop;
       Rose.System_Calls.Send_Storage_Array (Params, Environment, False);
       Rose.System_Calls.Receive_Caps (Params, 1);
       Rose.System_Calls.Invoke_Capability (Params);
@@ -160,16 +154,12 @@ package body Rose.Interfaces.Exec.Client is
    --------------------
 
    function Launch_Command
-     (Item : Exec_Client;
-      Caps : Rose.Capabilities.Capability_Array)
+     (Item : Exec_Client)
       return Rose.Capabilities.Capability
    is
       Params : aliased Rose.Invocation.Invocation_Record;
    begin
       Rose.System_Calls.Initialize_Send (Params, Item.Launch_Command);
-      for Cap of Caps loop
-         Rose.System_Calls.Send_Cap (Params, Cap);
-      end loop;
       Rose.System_Calls.Receive_Caps (Params, 1);
       Rose.System_Calls.Invoke_Capability (Params);
       Last_Error := Rose.Invocation.OK;

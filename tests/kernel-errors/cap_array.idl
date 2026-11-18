@@ -1,0 +1,8 @@
+--  There is no Capability_Array: an invocation carries at most four
+--  capabilities (Rose #234), and a set of them is sent as a cap set.
+
+interface Cap_Array is
+
+   procedure Collect (Caps : Capability_Array);
+
+end Cap_Array;

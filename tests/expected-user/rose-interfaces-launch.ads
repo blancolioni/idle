@@ -9,10 +9,10 @@ package Rose.Interfaces.Launch is
      16#8B8B_A324_FA51_3FD2#;
 
    Launch_Endpoint         : constant Rose.Objects.Endpoint_Id :=
-     16#FC1_B77F_4AA3_E406#;
+     16#1E89_E16B_EF48_3A33#;
 
    Launch_Command_Endpoint : constant Rose.Objects.Endpoint_Id :=
-     16#D74B_62A6_3FD9_8B4F#;
+     16#8329_BE24_AEF6_AF8F#;
 
    Metadata_Endpoint       : constant Rose.Objects.Endpoint_Id :=
      16#2B7A_157F_3FEB_540B#;
@@ -33,13 +33,11 @@ package Rose.Interfaces.Launch is
 
    function Launch
      (Item        : in out Launch_Object;
-      Caps        : Rose.Capabilities.Capability_Array;
       Environment : System.Storage_Elements.Storage_Array)
       return Rose.Interfaces.Process.Process_Object'Class is abstract;
 
    function Launch_Command
-     (Item : in out Launch_Object;
-      Caps : Rose.Capabilities.Capability_Array)
+     (Item : in out Launch_Object)
       return Rose.Capabilities.Capability is abstract;
 
    function Metadata (Item : in out Launch_Object) return String is abstract;

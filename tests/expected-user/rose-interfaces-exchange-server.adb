@@ -76,10 +76,6 @@ package body Rose.Interfaces.Exchange.Server is
      (Server_Context : in out Rose.Server.Server_Context;
       Parameters     : in out Rose.Invocation.Invocation_Record);
 
-   procedure Handle_Gather
-     (Server_Context : in out Rose.Server.Server_Context;
-      Parameters     : in out Rose.Invocation.Invocation_Record);
-
    ------------
    -- Attach --
    ------------
@@ -122,11 +118,6 @@ package body Rose.Interfaces.Exchange.Server is
            (Server_Context,
             Partner_Endpoint,
             Handle_Partner'Access,
-            Owns'Access);
-         Rose.Server.Register_Context_Handler
-           (Server_Context,
-            Gather_Endpoint,
-            Handle_Gather'Access,
             Owns'Access);
       end if;
       Table.Attached.Append (Attached_Object'(others => <>));
@@ -255,62 +246,6 @@ package body Rose.Interfaces.Exchange.Server is
       end;
    end Handle_Create_Endpoint;
 
-   -------------------
-   -- Handle_Gather --
-   -------------------
-
-   procedure Handle_Gather
-     (Server_Context : in out Rose.Server.Server_Context;
-      Parameters     : in out Rose.Invocation.Invocation_Record)
-   is
-      Received       : Rose.Capabilities.Capability_Array
-        (1 .. Rose.Invocation.Max_Capabilities);
-      Received_Count : constant Natural :=
-        Rose.System_Calls.Copy_Received_Caps (Parameters, 0, Received);
-   begin
-      begin
-         declare
-            Object     : constant Object_Access :=
-              Find (Server_Context, Parameters.Identifier);
-            Caps       : Rose.Capabilities.Capability_Array
-              (1 .. Rose.Invocation.Max_Capabilities);
-            Caps_Count : constant Natural :=
-              Rose.System_Calls.Copy_Received_Caps (Parameters, 0, Caps);
-            First      : Rose.Capabilities.Capability :=
-              Rose.Capabilities.Null_Capability;
-         begin
-            if Object = null then
-               for Cap of Received (1 .. Received_Count) loop
-                  Rose.System_Calls.Delete_Cap (Cap);
-               end loop;
-               Rose.System_Calls.Initialize_Reply
-                 (Parameters,
-                  Parameters.Reply_Cap);
-               Rose.System_Calls.Send_Error
-                 (Parameters,
-                  Rose.Invocation.Invalid_Operation);
-               return;
-            end if;
-            Object.Gather (Caps (1 .. Caps_Count), First);
-            Rose.System_Calls.Initialize_Reply
-              (Parameters,
-               Parameters.Reply_Cap);
-            Rose.System_Calls.Send_Cap (Parameters, First);
-         end;
-      exception
-         when others =>
-            for Cap of Received (1 .. Received_Count) loop
-               Rose.System_Calls.Delete_Cap (Cap);
-            end loop;
-            Rose.System_Calls.Initialize_Reply
-              (Parameters,
-               Parameters.Reply_Cap);
-            Rose.System_Calls.Send_Error
-              (Parameters,
-               Rose.Invocation.Exception_Raised);
-      end;
-   end Handle_Gather;
-
    -----------------------------------
    -- Handle_Get_Exchange_Interface --
    -----------------------------------
@@ -333,7 +268,7 @@ package body Rose.Interfaces.Exchange.Server is
          Page := Natural'Min (Page, Natural (Parameters.Data (2)));
       end if;
       Rose.System_Calls.Initialize_Reply (Parameters, Parameters.Reply_Cap);
-      if First >= 5 then
+      if First >= 4 then
          Rose.System_Calls.Send_Error
            (Parameters,
             Rose.Invocation.Invalid_Operation);
@@ -413,25 +348,6 @@ package body Rose.Interfaces.Exchange.Server is
               Rose.Server.Get_Instance_Cap
                 (Table.Server_Instance,
                  Partner_Endpoint,
-                 Identifier);
-            Rose.System_Calls.Send_Cap (Parameters, Cap);
-         end if;
-         if 4 in First .. (First + Page - 1) then
-            if not Rose.Server.Has_Instance
-              (Table.Server_Instance,
-               Gather_Endpoint,
-               Identifier)
-            then
-               Rose.Server.Set_Instance_Cap
-                 (Table.Server_Instance,
-                  Gather_Endpoint,
-                  Identifier,
-                  Rose.Server.Create_Endpoint (Gather_Endpoint, Identifier));
-            end if;
-            Cap :=
-              Rose.Server.Get_Instance_Cap
-                (Table.Server_Instance,
-                 Gather_Endpoint,
                  Identifier);
             Rose.System_Calls.Send_Cap (Parameters, Cap);
          end if;

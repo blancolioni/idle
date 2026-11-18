@@ -24,7 +24,7 @@ package Rose.Interfaces.Cap_Set.Client is
 
    overriding procedure Append
      (Item : in out Cap_Set_Client;
-      Caps : Rose.Capabilities.Capability_Array);
+      Cap  : Rose.Capabilities.Capability);
 
    overriding function Get_Cap
      (Item  : in out Cap_Set_Client;

@@ -290,27 +290,16 @@ package body Rose.Interfaces.Launch.Server is
      (Server_Context : in out Rose.Server.Server_Context;
       Parameters     : in out Rose.Invocation.Invocation_Record)
    is
-      Received       : Rose.Capabilities.Capability_Array
-        (1 .. Rose.Invocation.Max_Capabilities);
-      Received_Count : constant Natural :=
-        Rose.System_Calls.Copy_Received_Caps (Parameters, 0, Received);
    begin
       begin
          declare
             Object      : constant Object_Access :=
               Find (Server_Context, Parameters.Identifier);
-            Caps        : Rose.Capabilities.Capability_Array
-              (1 .. Rose.Invocation.Max_Capabilities);
-            Caps_Count  : constant Natural :=
-              Rose.System_Calls.Copy_Received_Caps (Parameters, 0, Caps);
             Environment : System.Storage_Elements.Storage_Array
               (1 .. Parameters.Buffer_Length)
               with Import, Address => Parameters.Buffer_Address;
          begin
             if Object = null then
-               for Cap of Received (1 .. Received_Count) loop
-                  Rose.System_Calls.Delete_Cap (Cap);
-               end loop;
                Rose.System_Calls.Initialize_Reply
                  (Parameters,
                   Parameters.Reply_Cap);
@@ -320,8 +309,7 @@ package body Rose.Interfaces.Launch.Server is
                return;
             end if;
             declare
-               Result : Process_Object_Class :=
-                 Object.Launch (Caps (1 .. Caps_Count), Environment);
+               Result : Process_Object_Class := Object.Launch (Environment);
             begin
                Rose.System_Calls.Initialize_Reply
                  (Parameters,
@@ -331,9 +319,6 @@ package body Rose.Interfaces.Launch.Server is
          end;
       exception
          when others =>
-            for Cap of Received (1 .. Received_Count) loop
-               Rose.System_Calls.Delete_Cap (Cap);
-            end loop;
             Rose.System_Calls.Initialize_Reply
               (Parameters,
                Parameters.Reply_Cap);
@@ -351,25 +336,14 @@ package body Rose.Interfaces.Launch.Server is
      (Server_Context : in out Rose.Server.Server_Context;
       Parameters     : in out Rose.Invocation.Invocation_Record)
    is
-      Received       : Rose.Capabilities.Capability_Array
-        (1 .. Rose.Invocation.Max_Capabilities);
-      Received_Count : constant Natural :=
-        Rose.System_Calls.Copy_Received_Caps (Parameters, 0, Received);
    begin
       begin
          declare
-            Object     : constant Object_Access :=
+            Object : constant Object_Access :=
               Find (Server_Context, Parameters.Identifier);
-            Caps       : Rose.Capabilities.Capability_Array
-              (1 .. Rose.Invocation.Max_Capabilities);
-            Caps_Count : constant Natural :=
-              Rose.System_Calls.Copy_Received_Caps (Parameters, 0, Caps);
-            Result     : Rose.Capabilities.Capability;
+            Result : Rose.Capabilities.Capability;
          begin
             if Object = null then
-               for Cap of Received (1 .. Received_Count) loop
-                  Rose.System_Calls.Delete_Cap (Cap);
-               end loop;
                Rose.System_Calls.Initialize_Reply
                  (Parameters,
                   Parameters.Reply_Cap);
@@ -378,7 +352,7 @@ package body Rose.Interfaces.Launch.Server is
                   Rose.Invocation.Invalid_Operation);
                return;
             end if;
-            Result := Object.Launch_Command (Caps (1 .. Caps_Count));
+            Result := Object.Launch_Command;
             Rose.System_Calls.Initialize_Reply
               (Parameters,
                Parameters.Reply_Cap);
@@ -386,9 +360,6 @@ package body Rose.Interfaces.Launch.Server is
          end;
       exception
          when others =>
-            for Cap of Received (1 .. Received_Count) loop
-               Rose.System_Calls.Delete_Cap (Cap);
-            end loop;
             Rose.System_Calls.Initialize_Reply
               (Parameters,
                Parameters.Reply_Cap);

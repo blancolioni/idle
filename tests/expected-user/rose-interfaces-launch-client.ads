@@ -24,13 +24,11 @@ package Rose.Interfaces.Launch.Client is
 
    overriding function Launch
      (Item        : in out Launch_Client;
-      Caps        : Rose.Capabilities.Capability_Array;
       Environment : System.Storage_Elements.Storage_Array)
       return Rose.Interfaces.Process.Process_Object'Class;
 
    overriding function Launch_Command
-     (Item : in out Launch_Client;
-      Caps : Rose.Capabilities.Capability_Array)
+     (Item : in out Launch_Client)
       return Rose.Capabilities.Capability;
 
    overriding function Metadata (Item : in out Launch_Client) return String;

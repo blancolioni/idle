@@ -22,8 +22,6 @@ private package Idle.Targets.Kernel.Types is
       --  Two data words, low word first, with no alignment.
       Capability_Value,
       --  One cap slot.
-      Capability_Array_Value,
-      --  One cap slot for each element, after every other cap.
       String_Value,
       --  The invocation buffer.
       Storage_Value,

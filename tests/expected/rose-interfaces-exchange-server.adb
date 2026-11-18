@@ -25,11 +25,6 @@ package body Rose.Interfaces.Exchange.Server is
    Partner_Cap           : Rose.Capabilities.Capability :=
      Rose.Capabilities.Null_Capability;
 
-   Local_Gather          : Gather_Handler;
-
-   Gather_Cap            : Rose.Capabilities.Capability :=
-     Rose.Capabilities.Null_Capability;
-
    Published_Cap         : Rose.Capabilities.Capability :=
      Rose.Capabilities.Null_Capability;
 
@@ -48,9 +43,6 @@ package body Rose.Interfaces.Exchange.Server is
    procedure Handle_Partner
      (Parameters : in out Rose.Invocation.Invocation_Record);
 
-   procedure Handle_Gather
-     (Parameters : in out Rose.Invocation.Invocation_Record);
-
    ----------------------
    -- Attach_Interface --
    ----------------------
@@ -61,7 +53,6 @@ package body Rose.Interfaces.Exchange.Server is
       Split           : Split_Handler;
       Rename          : Rename_Handler;
       Partner         : Partner_Handler;
-      Gather          : Gather_Handler;
       Instanced       : Boolean := False)
    is
    begin
@@ -69,7 +60,6 @@ package body Rose.Interfaces.Exchange.Server is
       Local_Split := Split;
       Local_Rename := Rename;
       Local_Partner := Partner;
-      Local_Gather := Gather;
       Rose.Server.Register_Handler
         (Server_Context,
          Exchange_Interface,
@@ -80,7 +70,6 @@ package body Rose.Interfaces.Exchange.Server is
          Split_Cap := Rose.Server.Create_Endpoint (Split_Endpoint);
          Rename_Cap := Rose.Server.Create_Endpoint (Rename_Endpoint);
          Partner_Cap := Rose.Server.Create_Endpoint (Partner_Endpoint);
-         Gather_Cap := Rose.Server.Create_Endpoint (Gather_Endpoint);
          Rose.Server.Create_Anonymous_Endpoint (Exchange_Interface);
       end if;
       Rose.Server.Register_Handler
@@ -99,10 +88,6 @@ package body Rose.Interfaces.Exchange.Server is
         (Server_Context,
          Partner_Endpoint,
          Handle_Partner'Access);
-      Rose.Server.Register_Handler
-        (Server_Context,
-         Gather_Endpoint,
-         Handle_Gather'Access);
    end Attach_Interface;
 
    -------------------
@@ -115,7 +100,6 @@ package body Rose.Interfaces.Exchange.Server is
       Split           : Split_Handler;
       Rename          : Rename_Handler;
       Partner         : Partner_Handler;
-      Gather          : Gather_Handler;
       Instanced       : Boolean := False)
    is
    begin
@@ -125,7 +109,6 @@ package body Rose.Interfaces.Exchange.Server is
          Split,
          Rename,
          Partner,
-         Gather,
          Instanced);
    end Create_Server;
 
@@ -136,12 +119,6 @@ package body Rose.Interfaces.Exchange.Server is
    function Get_Create_Endpoint_Cap
       return Rose.Capabilities.Capability
    is (Create_Endpoint_Cap);
-
-   --------------------
-   -- Get_Gather_Cap --
-   --------------------
-
-   function Get_Gather_Cap return Rose.Capabilities.Capability is (Gather_Cap);
 
    ---------------------
    -- Get_Partner_Cap --
@@ -183,25 +160,6 @@ package body Rose.Interfaces.Exchange.Server is
       Rose.System_Calls.Send_Cap (Parameters, Send);
    end Handle_Create_Endpoint;
 
-   -------------------
-   -- Handle_Gather --
-   -------------------
-
-   procedure Handle_Gather
-     (Parameters : in out Rose.Invocation.Invocation_Record)
-   is
-      Caps       : Rose.Capabilities.Capability_Array
-        (1 .. Rose.Invocation.Max_Capabilities);
-      Caps_Count : constant Natural :=
-        Rose.System_Calls.Copy_Received_Caps (Parameters, 0, Caps);
-      First      : Rose.Capabilities.Capability :=
-        Rose.Capabilities.Null_Capability;
-   begin
-      Local_Gather (Parameters.Identifier, Caps (1 .. Caps_Count), First);
-      Rose.System_Calls.Initialize_Reply (Parameters, Parameters.Reply_Cap);
-      Rose.System_Calls.Send_Cap (Parameters, First);
-   end Handle_Gather;
-
    -----------------------------------
    -- Handle_Get_Exchange_Interface --
    -----------------------------------
@@ -223,7 +181,7 @@ package body Rose.Interfaces.Exchange.Server is
          Page := Natural'Min (Page, Natural (Parameters.Data (2)));
       end if;
       Rose.System_Calls.Initialize_Reply (Parameters, Parameters.Reply_Cap);
-      if First >= 5 then
+      if First >= 4 then
          Rose.System_Calls.Send_Error
            (Parameters,
             Rose.Invocation.Invalid_Operation);
@@ -326,31 +284,6 @@ package body Rose.Interfaces.Exchange.Server is
             end if;
             Rose.System_Calls.Send_Cap (Parameters, Cap);
          end if;
-         if 4 in First .. (First + Page - 1) then
-            if Gather_Cap = Rose.Capabilities.Null_Capability then
-               if not Rose.Server.Has_Instance
-                 (Server_Instance,
-                  Gather_Endpoint,
-                  Identifier)
-               then
-                  Rose.Server.Set_Instance_Cap
-                    (Server_Instance,
-                     Gather_Endpoint,
-                     Identifier,
-                     Rose.Server.Create_Endpoint
-                       (Gather_Endpoint,
-                        Identifier));
-               end if;
-               Cap :=
-                 Rose.Server.Get_Instance_Cap
-                   (Server_Instance,
-                    Gather_Endpoint,
-                    Identifier);
-            else
-               Cap := Gather_Cap;
-            end if;
-            Rose.System_Calls.Send_Cap (Parameters, Cap);
-         end if;
       end if;
    end Handle_Get_Exchange_Interface;
 
@@ -418,21 +351,18 @@ package body Rose.Interfaces.Exchange.Server is
       Create_Endpoint : Create_Endpoint_Handler;
       Split           : Split_Handler;
       Rename          : Rename_Handler;
-      Partner         : Partner_Handler;
-      Gather          : Gather_Handler)
+      Partner         : Partner_Handler)
    is
    begin
       Local_Create_Endpoint := Create_Endpoint;
       Local_Split := Split;
       Local_Rename := Rename;
       Local_Partner := Partner;
-      Local_Gather := Gather;
       Create_Endpoint_Cap :=
         Rose.Server.Create_Endpoint (Create_Endpoint_Endpoint);
       Split_Cap := Rose.Server.Create_Endpoint (Split_Endpoint);
       Rename_Cap := Rose.Server.Create_Endpoint (Rename_Endpoint);
       Partner_Cap := Rose.Server.Create_Endpoint (Partner_Endpoint);
-      Gather_Cap := Rose.Server.Create_Endpoint (Gather_Endpoint);
       Published_Cap := Rose.Server.Create_Endpoint (Exchange_Interface);
       Rose.Server.Register_Handler
         (Server_Context,
@@ -454,10 +384,6 @@ package body Rose.Interfaces.Exchange.Server is
         (Server_Context,
          Partner_Endpoint,
          Handle_Partner'Access);
-      Rose.Server.Register_Handler
-        (Server_Context,
-         Gather_Endpoint,
-         Handle_Gather'Access);
       Rose.Server.Publish_Interface (Published_Cap);
    end Publish_Interface;
 

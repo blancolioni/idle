@@ -26,6 +26,7 @@ launch
 exec
 region
 executable
+starting_process
 memory
 memory_restore
 process

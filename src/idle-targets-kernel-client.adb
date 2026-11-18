@@ -787,12 +787,6 @@ package body Idle.Targets.Kernel.Client is
                                              (Client_Package (Parameter_Info),
                                               "Get_Interface_Cap"),
                                            [Value]))]));
-                     when Capability_Array_Value =>
-                        Statements.Append
-                          (F.New_For_Of_Loop
-                             ("Cap", Value,
-                              [Call (System_Calls & "Send_Cap",
-                                     [Params, F.New_Name ("Cap")])]));
                      when String_Value =>
                         Statements.Append
                           (Call (System_Calls & "Send_Text",
@@ -1076,7 +1070,7 @@ package body Idle.Targets.Kernel.Client is
                                F.New_Name ("Result"),
                                F.New_Name ("Last")]));
                   end if;
-               when Capability_Array_Value | Storage_Value | Unknown =>
+               when Storage_Value | Unknown =>
                   raise Program_Error;
             end case;
          end if;

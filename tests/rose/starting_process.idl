@@ -1,0 +1,10 @@
+--  A process that Executable.Launch has made and loaded, but not yet
+--  started. Its caps are given one at a time (Rose #234).
+
+interface Starting_Process is
+
+   procedure Add_Cap (Cap : Capability);
+
+   function Start return Capability;
+
+end Starting_Process;

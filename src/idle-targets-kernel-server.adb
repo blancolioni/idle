@@ -1310,7 +1310,8 @@ package body Idle.Targets.Kernel.Server is
                Object_Name : constant String := Name (Parameter);
                Object_Type : constant not null Syn.Node_Access :=
                  F.New_Name (Server_Type_Of (Info));
-               Argument    : Syn.Node_Access := F.New_Name (Object_Name);
+               Argument    : constant Syn.Node_Access :=
+                 F.New_Name (Object_Name);
             begin
                if Packed and then Parameter.Mode = Idle.Syntax.In_Mode
                  and then Types.Is_Buffer (Info)
@@ -1366,32 +1367,6 @@ package body Idle.Targets.Kernel.Server is
                                    Parameter.Mode = Idle.Syntax.In_Mode));
                            Next_Cap := Next_Cap + 1;
                         end if;
-                     when Capability_Array_Value =>
-                        Takes_Caps := True;
-                        Declarations.Append
-                          (F.New_Object
-                             (Object_Name,
-                              F.New_Call
-                                (Capability_Name & "_Array",
-                                 [F.New_Binary
-                                    (Literal (1), "..",
-                                     F.New_Name
-                                       ("Rose.Invocation"
-                                        & ".Max_Capabilities"))])));
-                        Declarations.Append
-                          (F.New_Object
-                             (Object_Name & "_Count", F.New_Name ("Natural"),
-                              F.New_Call
-                                (System_Calls & "Copy_Received_Caps",
-                                 [Parameters, Literal (Next_Cap),
-                                  F.New_Name (Object_Name)]),
-                              Is_Constant => True));
-                        Argument :=
-                          F.New_Call
-                            (Object_Name,
-                             [F.New_Binary
-                                (Literal (1), "..",
-                                 F.New_Name (Object_Name & "_Count"))]);
                      when String_Value =>
                         if User and then Parameter.Mode /= Idle.Syntax.In_Mode
                         then
@@ -1567,7 +1542,7 @@ package body Idle.Targets.Kernel.Server is
                                   F.New_Name (Name (Parameter) & "_Last")]));
                      when Storage_Value =>
                         null;
-                     when Capability_Array_Value | Unknown =>
+                     when Unknown =>
                         raise Program_Error;
                   end case;
                end;
@@ -1593,7 +1568,7 @@ package body Idle.Targets.Kernel.Server is
                   Reply.Append
                     (Call (System_Calls & "Send_Word",
                            [Parameters, F.New_Name ("Last")]));
-               when Capability_Array_Value | Storage_Value | Unknown =>
+               when Storage_Value | Unknown =>
                   raise Program_Error;
             end case;
          end if;

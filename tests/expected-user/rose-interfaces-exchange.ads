@@ -21,9 +21,6 @@ package Rose.Interfaces.Exchange is
    Partner_Endpoint         : constant Rose.Objects.Endpoint_Id :=
      16#7C39_929A_8C5D_E6CF#;
 
-   Gather_Endpoint          : constant Rose.Objects.Endpoint_Id :=
-     16#8A1A_E55F_4C75_9986#;
-
    Create_Endpoint_Index    : constant := 0;
 
    Split_Index              : constant := 1;
@@ -32,9 +29,7 @@ package Rose.Interfaces.Exchange is
 
    Partner_Index            : constant := 3;
 
-   Gather_Index             : constant := 4;
-
-   Subprogram_Count         : constant := 5;
+   Subprogram_Count         : constant := 4;
 
    type Exchange_Object is limited interface;
 
@@ -63,10 +58,5 @@ package Rose.Interfaces.Exchange is
      (Item  : in out Exchange_Object;
       Other : in out Rose.Interfaces.Exchange.Client.Exchange_Client;
       Label : out Rose.Texts.Text) is abstract;
-
-   procedure Gather
-     (Item  : in out Exchange_Object;
-      Caps  : Rose.Capabilities.Capability_Array;
-      First : out Rose.Capabilities.Capability) is abstract;
 
 end Rose.Interfaces.Exchange;

@@ -19,8 +19,4 @@ interface Exchange is
    --  An out interface, and an out string.
    procedure Partner (Other : out interface Exchange; Label : out String);
 
-   --  An out cap after a capability array, which is allowed, because the
-   --  out cap is not sent.
-   procedure Gather (Caps : Capability_Array; First : out Capability);
-
 end Exchange;

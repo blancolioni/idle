@@ -11,8 +11,7 @@ package Rose.Interfaces.Exchange.Client is
       Create_Endpoint : Rose.Capabilities.Capability;
       Split           : Rose.Capabilities.Capability;
       Rename          : Rose.Capabilities.Capability;
-      Partner         : Rose.Capabilities.Capability;
-      Gather          : Rose.Capabilities.Capability);
+      Partner         : Rose.Capabilities.Capability);
 
    procedure Open
      (Client        : out Exchange_Client;
@@ -44,11 +43,6 @@ package Rose.Interfaces.Exchange.Client is
       Label      : out String;
       Label_Last : out Natural);
 
-   procedure Gather
-     (Item  : Exchange_Client;
-      Caps  : Rose.Capabilities.Capability_Array;
-      First : out Rose.Capabilities.Capability);
-
    function Get_Interface_Cap
      (Item : Exchange_Client)
       return Rose.Capabilities.Capability;
@@ -69,10 +63,6 @@ package Rose.Interfaces.Exchange.Client is
      (Item : Exchange_Client)
       return Rose.Capabilities.Capability;
 
-   function Get_Gather_Cap
-     (Item : Exchange_Client)
-      return Rose.Capabilities.Capability;
-
    function Has_Error return Boolean;
 
    function Get_Last_Error return Rose.Invocation.Invocation_Error;
@@ -90,8 +80,6 @@ private
       Rename          : Rose.Capabilities.Capability :=
         Rose.Capabilities.Null_Capability;
       Partner         : Rose.Capabilities.Capability :=
-        Rose.Capabilities.Null_Capability;
-      Gather          : Rose.Capabilities.Capability :=
         Rose.Capabilities.Null_Capability;
    end record;
 

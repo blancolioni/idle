@@ -5,8 +5,8 @@ with Rose.Server;
 package Rose.Interfaces.Cap_Set.Server is
 
    type Append_Handler is access procedure
-     (Id   : Rose.Objects.Capability_Identifier;
-      Caps : Rose.Capabilities.Capability_Array);
+     (Id  : Rose.Objects.Capability_Identifier;
+      Cap : Rose.Capabilities.Capability);
 
    type Get_Cap_Handler is access function
      (Id    : Rose.Objects.Capability_Identifier;

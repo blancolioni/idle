@@ -13,8 +13,7 @@ package Rose.Interfaces.Exchange.Client is
       Create_Endpoint : Rose.Capabilities.Capability;
       Split           : Rose.Capabilities.Capability;
       Rename          : Rose.Capabilities.Capability;
-      Partner         : Rose.Capabilities.Capability;
-      Gather          : Rose.Capabilities.Capability);
+      Partner         : Rose.Capabilities.Capability);
 
    procedure Open
      (Client        : out Exchange_Client;
@@ -48,11 +47,6 @@ package Rose.Interfaces.Exchange.Client is
       Other : in out Exchange_Client;
       Label : out Rose.Texts.Text);
 
-   overriding procedure Gather
-     (Item  : in out Exchange_Client;
-      Caps  : Rose.Capabilities.Capability_Array;
-      First : out Rose.Capabilities.Capability);
-
    overriding function Exchange_Cap
      (Item : in out Exchange_Client)
       return Rose.Capabilities.Capability;
@@ -77,10 +71,6 @@ package Rose.Interfaces.Exchange.Client is
      (Item : in out Exchange_Client)
       return Rose.Capabilities.Capability;
 
-   function Get_Gather_Cap
-     (Item : in out Exchange_Client)
-      return Rose.Capabilities.Capability;
-
 private
 
    type Exchange_Client is
@@ -96,8 +86,6 @@ private
       Rename          : Rose.Capabilities.Capability :=
         Rose.Capabilities.Null_Capability;
       Partner         : Rose.Capabilities.Capability :=
-        Rose.Capabilities.Null_Capability;
-      Gather          : Rose.Capabilities.Capability :=
         Rose.Capabilities.Null_Capability;
    end record;
 

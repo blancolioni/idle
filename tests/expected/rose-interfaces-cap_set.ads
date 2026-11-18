@@ -6,7 +6,7 @@ package Rose.Interfaces.Cap_Set is
      16#720D_CF10_0839_5218#;
 
    Append_Endpoint   : constant Rose.Objects.Endpoint_Id :=
-     16#86FD_BC71_1664_1081#;
+     16#5DC3_6B4F_732B_EB8F#;
 
    Get_Cap_Endpoint  : constant Rose.Objects.Endpoint_Id :=
      16#F010_4D9A_C273_39E9#;
