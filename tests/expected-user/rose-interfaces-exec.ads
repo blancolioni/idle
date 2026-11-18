@@ -13,16 +13,16 @@ package Rose.Interfaces.Exec is
      16#4279_2F9D_69F2_5EA9#;
 
    Launch_Endpoint              : constant Rose.Objects.Endpoint_Id :=
-     16#FC1_B77F_4AA3_E406#;
+     16#1E89_E16B_EF48_3A33#;
 
    Launch_Command_Endpoint      : constant Rose.Objects.Endpoint_Id :=
-     16#D74B_62A6_3FD9_8B4F#;
+     16#8329_BE24_AEF6_AF8F#;
 
    Metadata_Endpoint            : constant Rose.Objects.Endpoint_Id :=
      16#2B7A_157F_3FEB_540B#;
 
    Install_Endpoint             : constant Rose.Objects.Endpoint_Id :=
-     16#9B08_144B_8994_B97B#;
+     16#8A1C_7544_62D5_0C26#;
 
    Set_Standard_Output_Endpoint : constant Rose.Objects.Endpoint_Id :=
      16#FDE0_0BDD_7A19_06B9#;
@@ -51,7 +51,7 @@ package Rose.Interfaces.Exec is
       Executable   : in out
         Rose.Interfaces.Stream_Reader.Stream_Reader_Object'Class;
       Name         : String;
-      Install_Caps : Rose.Capabilities.Capability_Array)
+      Install_Caps : Rose.Capabilities.Capability)
       return Rose.Interfaces.Launch.Launch_Object'Class is abstract;
 
    procedure Set_Standard_Output

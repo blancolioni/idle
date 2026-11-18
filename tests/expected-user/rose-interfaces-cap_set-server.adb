@@ -202,12 +202,10 @@ package body Rose.Interfaces.Cap_Set.Server is
    begin
       begin
          declare
-            Object     : constant Object_Access :=
+            Object : constant Object_Access :=
               Find (Server_Context, Parameters.Identifier);
-            Caps       : Rose.Capabilities.Capability_Array
-              (1 .. Rose.Invocation.Max_Capabilities);
-            Caps_Count : constant Natural :=
-              Rose.System_Calls.Copy_Received_Caps (Parameters, 0, Caps);
+            Cap    : constant Rose.Capabilities.Capability :=
+              Parameters.Caps (0);
          begin
             if Object = null then
                for Cap of Received (1 .. Received_Count) loop
@@ -221,7 +219,7 @@ package body Rose.Interfaces.Cap_Set.Server is
                   Rose.Invocation.Invalid_Operation);
                return;
             end if;
-            Object.Append (Caps (1 .. Caps_Count));
+            Object.Append (Cap);
             Rose.System_Calls.Initialize_Reply
               (Parameters,
                Parameters.Reply_Cap);

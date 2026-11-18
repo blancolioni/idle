@@ -1,20 +1,21 @@
 interface Executable is
 
+   --  The process is made and loaded, but not started: its caps are given
+   --  through the result, one at a time (Rose #234).
+
    function Launch
      (Name  : String;
       Image : interface Region;
-      Store : interface Storage;
-      Caps  : Capability_Array)
-     return interface Process;
+      Store : interface Storage)
+     return interface Starting_Process;
 
    --  As Launch, but the process also starts with the receive cap of a
-   --  command endpoint, and the result is the endpoint cap (ADR 0002).
+   --  command endpoint, and Start gives the endpoint cap (ADR 0002).
 
    function Launch_Command
      (Name  : String;
       Image : interface Region;
-      Store : interface Storage;
-      Caps  : Capability_Array)
-     return Capability;
+      Store : interface Storage)
+     return interface Starting_Process;
 
 end Executable;

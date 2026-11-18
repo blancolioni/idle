@@ -472,20 +472,14 @@ package body Rose.Interfaces.Exec.Server is
    procedure Handle_Install
      (Parameters : in out Rose.Invocation.Invocation_Record)
    is
-      Executable         : constant Rose.Capabilities.Capability :=
+      Executable   : constant Rose.Capabilities.Capability :=
         Parameters.Caps (0);
-      Name               : String (1 .. Natural (Parameters.Buffer_Length))
+      Name         : String (1 .. Natural (Parameters.Buffer_Length))
         with Import, Address => Parameters.Buffer_Address;
-      Install_Caps       : Rose.Capabilities.Capability_Array
-        (1 .. Rose.Invocation.Max_Capabilities);
-      Install_Caps_Count : constant Natural :=
-        Rose.System_Calls.Copy_Received_Caps (Parameters, 1, Install_Caps);
-      Result             : constant Rose.Capabilities.Capability :=
-        Local_Install
-          (Parameters.Identifier,
-           Executable,
-           Name,
-           Install_Caps (1 .. Install_Caps_Count));
+      Install_Caps : constant Rose.Capabilities.Capability :=
+        Parameters.Caps (1);
+      Result       : constant Rose.Capabilities.Capability :=
+        Local_Install (Parameters.Identifier, Executable, Name, Install_Caps);
    begin
       Rose.System_Calls.Initialize_Reply (Parameters, Parameters.Reply_Cap);
       Rose.System_Calls.Send_Cap (Parameters, Result);
@@ -498,18 +492,11 @@ package body Rose.Interfaces.Exec.Server is
    procedure Handle_Launch
      (Parameters : in out Rose.Invocation.Invocation_Record)
    is
-      Caps        : Rose.Capabilities.Capability_Array
-        (1 .. Rose.Invocation.Max_Capabilities);
-      Caps_Count  : constant Natural :=
-        Rose.System_Calls.Copy_Received_Caps (Parameters, 0, Caps);
       Environment : System.Storage_Elements.Storage_Array
         (1 .. Parameters.Buffer_Length)
         with Import, Address => Parameters.Buffer_Address;
       Result      : constant Rose.Capabilities.Capability :=
-        Local_Launch
-          (Parameters.Identifier,
-           Caps (1 .. Caps_Count),
-           Environment);
+        Local_Launch (Parameters.Identifier, Environment);
    begin
       Rose.System_Calls.Initialize_Reply (Parameters, Parameters.Reply_Cap);
       Rose.System_Calls.Send_Cap (Parameters, Result);
@@ -522,12 +509,8 @@ package body Rose.Interfaces.Exec.Server is
    procedure Handle_Launch_Command
      (Parameters : in out Rose.Invocation.Invocation_Record)
    is
-      Caps       : Rose.Capabilities.Capability_Array
-        (1 .. Rose.Invocation.Max_Capabilities);
-      Caps_Count : constant Natural :=
-        Rose.System_Calls.Copy_Received_Caps (Parameters, 0, Caps);
-      Result     : constant Rose.Capabilities.Capability :=
-        Local_Launch_Command (Parameters.Identifier, Caps (1 .. Caps_Count));
+      Result : constant Rose.Capabilities.Capability :=
+        Local_Launch_Command (Parameters.Identifier);
    begin
       Rose.System_Calls.Initialize_Reply (Parameters, Parameters.Reply_Cap);
       Rose.System_Calls.Send_Cap (Parameters, Result);

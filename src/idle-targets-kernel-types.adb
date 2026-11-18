@@ -191,10 +191,6 @@ package body Idle.Targets.Kernel.Types is
       elsif Key = "capability" then
          return Info (Capability_Value, Not_A_Word,
                       "Rose.Capabilities.Capability", "Rose.Capabilities");
-      elsif Key = "capability_array" then
-         return Info (Capability_Array_Value, Not_A_Word,
-                      "Rose.Capabilities.Capability_Array",
-                      "Rose.Capabilities");
       elsif Key = "string" then
          return Info (String_Value, Not_A_Word, "String", "");
       elsif Key in "storage_array" | "stream_element_array" then

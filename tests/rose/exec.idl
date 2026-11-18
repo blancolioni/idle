@@ -3,7 +3,7 @@ interface Exec : Launch is
    function Install 
      (Executable   : interface Stream_Reader;
       Name         : String;
-      Install_Caps : Capability_Array)
+      Install_Caps : Capability)
      return interface Launch;
 
    --  The standard output that exec gives the programs it launches, and

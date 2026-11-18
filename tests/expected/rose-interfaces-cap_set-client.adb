@@ -12,14 +12,12 @@ package body Rose.Interfaces.Cap_Set.Client is
 
    procedure Append
      (Item : Cap_Set_Client;
-      Caps : Rose.Capabilities.Capability_Array)
+      Cap  : Rose.Capabilities.Capability)
    is
       Params : aliased Rose.Invocation.Invocation_Record;
    begin
       Rose.System_Calls.Initialize_Send (Params, Item.Append);
-      for Cap of Caps loop
-         Rose.System_Calls.Send_Cap (Params, Cap);
-      end loop;
+      Rose.System_Calls.Send_Cap (Params, Cap);
       Rose.System_Calls.Invoke_Capability (Params);
       Last_Error := Rose.Invocation.OK;
       if Params.Control.Flags (Rose.Invocation.Error) then

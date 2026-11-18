@@ -29,18 +29,12 @@ package Rose.Interfaces.Exchange.Server is
       Label      : out String;
       Label_Last : out Natural);
 
-   type Gather_Handler is access procedure
-     (Id    : Rose.Objects.Capability_Identifier;
-      Caps  : Rose.Capabilities.Capability_Array;
-      First : out Rose.Capabilities.Capability);
-
    procedure Create_Server
      (Server_Context  : in out Rose.Server.Server_Context;
       Create_Endpoint : Create_Endpoint_Handler;
       Split           : Split_Handler;
       Rename          : Rename_Handler;
       Partner         : Partner_Handler;
-      Gather          : Gather_Handler;
       Instanced       : Boolean := False);
 
    procedure Attach_Interface
@@ -49,7 +43,6 @@ package Rose.Interfaces.Exchange.Server is
       Split           : Split_Handler;
       Rename          : Rename_Handler;
       Partner         : Partner_Handler;
-      Gather          : Gather_Handler;
       Instanced       : Boolean := False);
 
    procedure Publish_Interface
@@ -57,8 +50,7 @@ package Rose.Interfaces.Exchange.Server is
       Create_Endpoint : Create_Endpoint_Handler;
       Split           : Split_Handler;
       Rename          : Rename_Handler;
-      Partner         : Partner_Handler;
-      Gather          : Gather_Handler);
+      Partner         : Partner_Handler);
 
    function Get_Create_Endpoint_Cap return Rose.Capabilities.Capability;
 
@@ -67,8 +59,6 @@ package Rose.Interfaces.Exchange.Server is
    function Get_Rename_Cap return Rose.Capabilities.Capability;
 
    function Get_Partner_Cap return Rose.Capabilities.Capability;
-
-   function Get_Gather_Cap return Rose.Capabilities.Capability;
 
    procedure Remove_Instance (Identifier : Rose.Objects.Capability_Identifier);
 

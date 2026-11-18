@@ -1,0 +1,1 @@
+kernel-errors/cap_array.idl:6:23: error: unknown type Capability_Array

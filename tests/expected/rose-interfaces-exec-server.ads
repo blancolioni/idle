@@ -7,13 +7,11 @@ package Rose.Interfaces.Exec.Server is
 
    type Launch_Handler is access function
      (Id          : Rose.Objects.Capability_Identifier;
-      Caps        : Rose.Capabilities.Capability_Array;
       Environment : System.Storage_Elements.Storage_Array)
       return Rose.Capabilities.Capability;
 
    type Launch_Command_Handler is access function
-     (Id   : Rose.Objects.Capability_Identifier;
-      Caps : Rose.Capabilities.Capability_Array)
+     (Id : Rose.Objects.Capability_Identifier)
       return Rose.Capabilities.Capability;
 
    type Metadata_Handler is access procedure
@@ -25,7 +23,7 @@ package Rose.Interfaces.Exec.Server is
      (Id           : Rose.Objects.Capability_Identifier;
       Executable   : Rose.Capabilities.Capability;
       Name         : String;
-      Install_Caps : Rose.Capabilities.Capability_Array)
+      Install_Caps : Rose.Capabilities.Capability)
       return Rose.Capabilities.Capability;
 
    type Set_Standard_Output_Handler is access procedure

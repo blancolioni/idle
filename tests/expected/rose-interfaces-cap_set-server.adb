@@ -116,12 +116,9 @@ package body Rose.Interfaces.Cap_Set.Server is
    procedure Handle_Append
      (Parameters : in out Rose.Invocation.Invocation_Record)
    is
-      Caps       : Rose.Capabilities.Capability_Array
-        (1 .. Rose.Invocation.Max_Capabilities);
-      Caps_Count : constant Natural :=
-        Rose.System_Calls.Copy_Received_Caps (Parameters, 0, Caps);
+      Cap : constant Rose.Capabilities.Capability := Parameters.Caps (0);
    begin
-      Local_Append (Parameters.Identifier, Caps (1 .. Caps_Count));
+      Local_Append (Parameters.Identifier, Cap);
       Rose.System_Calls.Initialize_Reply (Parameters, Parameters.Reply_Cap);
    end Handle_Append;
 

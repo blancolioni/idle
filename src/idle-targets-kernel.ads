@@ -21,11 +21,10 @@ package Idle.Targets.Kernel is
    --
    --  The packages use the encoding of the original IDL compiler (see
    --  Idle.Targets.Kernel.Types), and interoperate with code it generated
-   --  and with the kernel. Not yet supported: out and in out capability
-   --  arrays; results that are capability arrays or storage arrays; and
-   --  more than one string or array in a subprogram. These, and unknown
-   --  types, are reported as errors through Idle.Diagnostics, and nothing
-   --  is written.
+   --  and with the kernel. Not yet supported: results that are storage
+   --  arrays, and more than one string or array in a subprogram. These,
+   --  and unknown types, are reported as errors through Idle.Diagnostics,
+   --  and nothing is written.
    --
    --  For the user target, the packages have the same names and the same
    --  encoding, from the same code, but:

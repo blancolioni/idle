@@ -303,12 +303,10 @@ package body Idle.Targets.Kernel is
          Packable       : Boolean := True;
          --  Several buffers can be sent as items if they are all in
          --  arguments (idle#58): there is one buffer for the reply.
-         Cap_Array_Seen : Boolean := False;
          Sent_Caps      : Natural := 0;
          Reply_Caps     : Natural := 0;
          --  The caps and interfaces that the invocation and its reply
-         --  carry, not counting a capability array, whose length is only
-         --  known when it is sent.
+         --  carry.
 
          function Unsupported_Text (What : String) return String
          is (What & " are not yet supported by the kernel target");
@@ -356,23 +354,6 @@ package body Idle.Targets.Kernel is
                   --  Only the caps that are sent are counted: out caps come
                   --  back in the reply.
 
-                  if Cap_Array_Seen
-                    and then Parameter.Mode /= Idle.Syntax.Out_Mode
-                    and then Info.Category in
-                      Capability_Value | Interface_Value
-                      | Capability_Array_Value
-                  then
-                     Error (Member.File_Name, Parameter.Position,
-                            "a capability array must be the last "
-                            & "capability parameter");
-                  end if;
-
-                  if Info.Category = Capability_Array_Value
-                    and then Parameter.Mode /= Idle.Syntax.Out_Mode
-                  then
-                     Cap_Array_Seen := True;
-                  end if;
-
                   if Info.Category in Capability_Value | Interface_Value then
                      if Parameter.Mode /= Idle.Syntax.Out_Mode then
                         Sent_Caps := Sent_Caps + 1;
@@ -387,15 +368,6 @@ package body Idle.Targets.Kernel is
                      if Parameter.Mode /= Idle.Syntax.In_Mode then
                         Packable := False;
                      end if;
-                  end if;
-
-                  if Parameter.Mode /= Idle.Syntax.In_Mode
-                    and then Info.Category = Capability_Array_Value
-                  then
-                     Error (Member.File_Name, Parameter.Position,
-                            Unsupported_Text
-                              ("out and in out parameters of type "
-                               & Type_Name));
                   end if;
                end if;
             end;
@@ -412,7 +384,7 @@ package body Idle.Targets.Kernel is
                   when Unknown =>
                      Error (Member.File_Name, Subprogram.Position,
                             "unknown type " & Type_Name);
-                  when Capability_Array_Value | Storage_Value =>
+                  when Storage_Value =>
                      Error (Member.File_Name, Subprogram.Position,
                             Unsupported_Text ("results of type " & Type_Name));
                   when String_Value =>

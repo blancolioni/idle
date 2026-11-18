@@ -29,13 +29,11 @@ package Rose.Interfaces.Exec.Client is
 
    overriding function Launch
      (Item        : in out Exec_Client;
-      Caps        : Rose.Capabilities.Capability_Array;
       Environment : System.Storage_Elements.Storage_Array)
       return Rose.Interfaces.Process.Process_Object'Class;
 
    overriding function Launch_Command
-     (Item : in out Exec_Client;
-      Caps : Rose.Capabilities.Capability_Array)
+     (Item : in out Exec_Client)
       return Rose.Capabilities.Capability;
 
    overriding function Metadata (Item : in out Exec_Client) return String;
@@ -45,7 +43,7 @@ package Rose.Interfaces.Exec.Client is
       Executable   : in out
         Rose.Interfaces.Stream_Reader.Stream_Reader_Object'Class;
       Name         : String;
-      Install_Caps : Rose.Capabilities.Capability_Array)
+      Install_Caps : Rose.Capabilities.Capability)
       return Rose.Interfaces.Launch.Launch_Object'Class;
 
    overriding procedure Set_Standard_Output

@@ -12,7 +12,7 @@ package body Rose.Interfaces.Cap_Set.Client is
 
    overriding procedure Append
      (Item : in out Cap_Set_Client;
-      Caps : Rose.Capabilities.Capability_Array)
+      Cap  : Rose.Capabilities.Capability)
    is
       Params : aliased Rose.Invocation.Invocation_Record;
    begin
@@ -20,9 +20,7 @@ package body Rose.Interfaces.Cap_Set.Client is
          Load (Item);
       end if;
       Rose.System_Calls.Initialize_Send (Params, Item.Append);
-      for Cap of Caps loop
-         Rose.System_Calls.Send_Cap (Params, Cap);
-      end loop;
+      Rose.System_Calls.Send_Cap (Params, Cap);
       Rose.System_Calls.Invoke_Capability (Params);
       if Params.Control.Flags (Rose.Invocation.Error) then
          raise Rose.Interfaces.Objects.Invocation_Error with "Cap_Set.Append";

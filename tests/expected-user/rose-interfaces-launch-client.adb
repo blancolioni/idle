@@ -91,7 +91,6 @@ package body Rose.Interfaces.Launch.Client is
 
    overriding function Launch
      (Item        : in out Launch_Client;
-      Caps        : Rose.Capabilities.Capability_Array;
       Environment : System.Storage_Elements.Storage_Array)
       return Rose.Interfaces.Process.Process_Object'Class
    is
@@ -101,9 +100,6 @@ package body Rose.Interfaces.Launch.Client is
          Load (Item);
       end if;
       Rose.System_Calls.Initialize_Send (Params, Item.Launch);
-      for Cap of Caps loop
-         Rose.System_Calls.Send_Cap (Params, Cap);
-      end loop;
       Rose.System_Calls.Send_Storage_Array (Params, Environment, False);
       Rose.System_Calls.Receive_Caps (Params, 1);
       Rose.System_Calls.Invoke_Capability (Params);
@@ -127,8 +123,7 @@ package body Rose.Interfaces.Launch.Client is
    --------------------
 
    overriding function Launch_Command
-     (Item : in out Launch_Client;
-      Caps : Rose.Capabilities.Capability_Array)
+     (Item : in out Launch_Client)
       return Rose.Capabilities.Capability
    is
       Params : aliased Rose.Invocation.Invocation_Record;
@@ -137,9 +132,6 @@ package body Rose.Interfaces.Launch.Client is
          Load (Item);
       end if;
       Rose.System_Calls.Initialize_Send (Params, Item.Launch_Command);
-      for Cap of Caps loop
-         Rose.System_Calls.Send_Cap (Params, Cap);
-      end loop;
       Rose.System_Calls.Receive_Caps (Params, 1);
       Rose.System_Calls.Invoke_Capability (Params);
       if Params.Control.Flags (Rose.Invocation.Error) then

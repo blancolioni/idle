@@ -17,7 +17,6 @@ package body Rose.Interfaces.Exchange.Client is
       Rose.System_Calls.Delete_Cap (Client.Split);
       Rose.System_Calls.Delete_Cap (Client.Rename);
       Rose.System_Calls.Delete_Cap (Client.Partner);
-      Rose.System_Calls.Delete_Cap (Client.Gather);
       Rose.System_Calls.Delete_Cap (Client.Interface_Cap);
    end Close;
 
@@ -45,30 +44,6 @@ package body Rose.Interfaces.Exchange.Client is
       Send := Params.Caps (1);
    end Create_Endpoint;
 
-   ------------
-   -- Gather --
-   ------------
-
-   procedure Gather
-     (Item  : Exchange_Client;
-      Caps  : Rose.Capabilities.Capability_Array;
-      First : out Rose.Capabilities.Capability)
-   is
-      Params : aliased Rose.Invocation.Invocation_Record;
-   begin
-      Rose.System_Calls.Initialize_Send (Params, Item.Gather);
-      for Cap of Caps loop
-         Rose.System_Calls.Send_Cap (Params, Cap);
-      end loop;
-      Rose.System_Calls.Receive_Caps (Params, 1);
-      Rose.System_Calls.Invoke_Capability (Params);
-      Last_Error := Rose.Invocation.OK;
-      if Params.Control.Flags (Rose.Invocation.Error) then
-         Last_Error := Params.Error;
-      end if;
-      First := Params.Caps (0);
-   end Gather;
-
    -----------------------------
    -- Get_Create_Endpoint_Cap --
    -----------------------------
@@ -77,15 +52,6 @@ package body Rose.Interfaces.Exchange.Client is
      (Item : Exchange_Client)
       return Rose.Capabilities.Capability
    is (Item.Create_Endpoint);
-
-   --------------------
-   -- Get_Gather_Cap --
-   --------------------
-
-   function Get_Gather_Cap
-     (Item : Exchange_Client)
-      return Rose.Capabilities.Capability
-   is (Item.Gather);
 
    -----------------------
    -- Get_Interface_Cap --
@@ -179,7 +145,6 @@ package body Rose.Interfaces.Exchange.Client is
       Client.Split := Caps (Split_Index + 1);
       Client.Rename := Caps (Rename_Index + 1);
       Client.Partner := Caps (Partner_Index + 1);
-      Client.Gather := Caps (Gather_Index + 1);
       Client.Is_Open := True;
    end Open;
 
@@ -192,15 +157,13 @@ package body Rose.Interfaces.Exchange.Client is
       Create_Endpoint : Rose.Capabilities.Capability;
       Split           : Rose.Capabilities.Capability;
       Rename          : Rose.Capabilities.Capability;
-      Partner         : Rose.Capabilities.Capability;
-      Gather          : Rose.Capabilities.Capability)
+      Partner         : Rose.Capabilities.Capability)
    is
    begin
       Client.Create_Endpoint := Create_Endpoint;
       Client.Split := Split;
       Client.Rename := Rename;
       Client.Partner := Partner;
-      Client.Gather := Gather;
       Client.Is_Open := True;
    end Open_Cap_Set;
 

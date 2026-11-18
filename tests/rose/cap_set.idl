@@ -1,7 +1,7 @@
 interface Cap_Set is
 
    procedure Append
-     (Caps : Capability_Array);
+     (Cap : Capability);
      
    function Get_Cap
      (Index : Positive)

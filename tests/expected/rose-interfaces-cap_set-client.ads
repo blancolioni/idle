@@ -19,7 +19,7 @@ package Rose.Interfaces.Cap_Set.Client is
 
    procedure Append
      (Item : Cap_Set_Client;
-      Caps : Rose.Capabilities.Capability_Array);
+      Cap  : Rose.Capabilities.Capability);
 
    function Get_Cap
      (Item  : Cap_Set_Client;
