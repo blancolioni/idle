@@ -21,7 +21,7 @@ package body Rose.Interfaces.Counter.Client is
       Rose.System_Calls.Invoke_Capability (Params);
       Last_Error := Rose.Invocation.OK;
       if Params.Control.Flags (Rose.Invocation.Error) then
-         Last_Error := Params.Error;
+         Last_Error := Params.Control.Error;
       end if;
       return Params.Caps (0);
    end Badge;
@@ -101,7 +101,7 @@ package body Rose.Interfaces.Counter.Client is
       Rose.System_Calls.Invoke_Capability (Params);
       Last_Error := Rose.Invocation.OK;
       if Params.Control.Flags (Rose.Invocation.Error) then
-         Last_Error := Params.Error;
+         Last_Error := Params.Control.Error;
       end if;
    end Increment;
 
@@ -178,7 +178,7 @@ package body Rose.Interfaces.Counter.Client is
       Rose.System_Calls.Invoke_Capability (Params);
       Last_Error := Rose.Invocation.OK;
       if Params.Control.Flags (Rose.Invocation.Error) then
-         Last_Error := Params.Error;
+         Last_Error := Params.Control.Error;
       end if;
       return Rose.System_Calls.Get_Word_32 (Params, 0);
    end Value;

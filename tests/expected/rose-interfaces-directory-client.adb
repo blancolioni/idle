@@ -35,7 +35,7 @@ package body Rose.Interfaces.Directory.Client is
       Rose.System_Calls.Invoke_Capability (Params);
       Last_Error := Rose.Invocation.OK;
       if Params.Control.Flags (Rose.Invocation.Error) then
-         Last_Error := Params.Error;
+         Last_Error := Params.Control.Error;
       end if;
       return Natural (Rose.System_Calls.Get_Word_32 (Params, 0));
    end Directory_Entry_Count;
@@ -57,7 +57,7 @@ package body Rose.Interfaces.Directory.Client is
       Rose.System_Calls.Invoke_Capability (Params);
       Last_Error := Rose.Invocation.OK;
       if Params.Control.Flags (Rose.Invocation.Error) then
-         Last_Error := Params.Error;
+         Last_Error := Params.Control.Error;
       end if;
       return Rose.Interfaces.Directory.File_Kind'Val
         (Rose.System_Calls.Get_Word_32 (Params, 0));
@@ -82,7 +82,7 @@ package body Rose.Interfaces.Directory.Client is
       Rose.System_Calls.Invoke_Capability (Params);
       Last_Error := Rose.Invocation.OK;
       if Params.Control.Flags (Rose.Invocation.Error) then
-         Last_Error := Params.Error;
+         Last_Error := Params.Control.Error;
       end if;
       Rose.System_Calls.Copy_Text
         (Params,
@@ -108,7 +108,7 @@ package body Rose.Interfaces.Directory.Client is
       Rose.System_Calls.Invoke_Capability (Params);
       Last_Error := Rose.Invocation.OK;
       if Params.Control.Flags (Rose.Invocation.Error) then
-         Last_Error := Params.Error;
+         Last_Error := Params.Control.Error;
       end if;
       return System.Storage_Elements.Storage_Count
         (Rose.System_Calls.Get_Word_32 (Params, 0));
@@ -131,7 +131,7 @@ package body Rose.Interfaces.Directory.Client is
       Rose.System_Calls.Invoke_Capability (Params);
       Last_Error := Rose.Invocation.OK;
       if Params.Control.Flags (Rose.Invocation.Error) then
-         Last_Error := Params.Error;
+         Last_Error := Params.Control.Error;
       end if;
       return Natural (Rose.System_Calls.Get_Word_32 (Params, 0));
    end Find_Entry;
@@ -153,7 +153,7 @@ package body Rose.Interfaces.Directory.Client is
       Rose.System_Calls.Invoke_Capability (Params);
       Last_Error := Rose.Invocation.OK;
       if Params.Control.Flags (Rose.Invocation.Error) then
-         Last_Error := Params.Error;
+         Last_Error := Params.Control.Error;
       end if;
       declare
          Result : Directory_Client;
@@ -260,7 +260,7 @@ package body Rose.Interfaces.Directory.Client is
       Rose.System_Calls.Invoke_Capability (Params);
       Last_Error := Rose.Invocation.OK;
       if Params.Control.Flags (Rose.Invocation.Error) then
-         Last_Error := Params.Error;
+         Last_Error := Params.Control.Error;
       end if;
       declare
          Result : Rose.Interfaces.File.Client.File_Client;

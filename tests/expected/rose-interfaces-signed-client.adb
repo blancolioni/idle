@@ -22,7 +22,7 @@ package body Rose.Interfaces.Signed.Client is
       Rose.System_Calls.Invoke_Capability (Params);
       Last_Error := Rose.Invocation.OK;
       if Params.Control.Flags (Rose.Invocation.Error) then
-         Last_Error := Params.Error;
+         Last_Error := Params.Control.Error;
       end if;
       Low := Rose.System_Calls.Get_Integer_64 (Params, 0);
       High := Rose.System_Calls.Get_Integer_64 (Params, 2);
@@ -47,7 +47,7 @@ package body Rose.Interfaces.Signed.Client is
       Rose.System_Calls.Invoke_Capability (Params);
       Last_Error := Rose.Invocation.OK;
       if Params.Control.Flags (Rose.Invocation.Error) then
-         Last_Error := Params.Error;
+         Last_Error := Params.Control.Error;
       end if;
       return Rose.System_Calls.Get_Integer_32 (Params, 0);
    end Clamp;
@@ -86,7 +86,7 @@ package body Rose.Interfaces.Signed.Client is
       Rose.System_Calls.Invoke_Capability (Params);
       Last_Error := Rose.Invocation.OK;
       if Params.Control.Flags (Rose.Invocation.Error) then
-         Last_Error := Params.Error;
+         Last_Error := Params.Control.Error;
       end if;
       return Rose.System_Calls.Get_Integer_64 (Params, 0);
    end Difference;
@@ -175,7 +175,7 @@ package body Rose.Interfaces.Signed.Client is
       Rose.System_Calls.Invoke_Capability (Params);
       Last_Error := Rose.Invocation.OK;
       if Params.Control.Flags (Rose.Invocation.Error) then
-         Last_Error := Params.Error;
+         Last_Error := Params.Control.Error;
       end if;
       Delta_X := Rose.System_Calls.Get_Integer_32 (Params, 0);
    end Offset;
@@ -266,7 +266,7 @@ package body Rose.Interfaces.Signed.Client is
       Rose.System_Calls.Invoke_Capability (Params);
       Last_Error := Rose.Invocation.OK;
       if Params.Control.Flags (Rose.Invocation.Error) then
-         Last_Error := Params.Error;
+         Last_Error := Params.Control.Error;
       end if;
       X := Rose.System_Calls.Get_Integer_32 (Params, 0);
       Y := Rose.System_Calls.Get_Integer_32 (Params, 1);

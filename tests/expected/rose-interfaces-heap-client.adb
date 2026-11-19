@@ -30,7 +30,7 @@ package body Rose.Interfaces.Heap.Client is
       Rose.System_Calls.Invoke_Capability (Params);
       Last_Error := Rose.Invocation.OK;
       if Params.Control.Flags (Rose.Invocation.Error) then
-         Last_Error := Params.Error;
+         Last_Error := Params.Control.Error;
       end if;
       return Rose.System_Calls.Get_Word_32 (Params, 0);
    end Current_Bound;
@@ -149,7 +149,7 @@ package body Rose.Interfaces.Heap.Client is
       Rose.System_Calls.Invoke_Capability (Params);
       Last_Error := Rose.Invocation.OK;
       if Params.Control.Flags (Rose.Invocation.Error) then
-         Last_Error := Params.Error;
+         Last_Error := Params.Control.Error;
       end if;
    end Request_New_Bound;
 
