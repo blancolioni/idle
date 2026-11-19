@@ -307,6 +307,10 @@ package body Idle.Targets.Kernel is
          Reply_Caps     : Natural := 0;
          --  The caps and interfaces that the invocation and its reply
          --  carry.
+         Sent_Words     : Natural := 0;
+         Reply_Words    : Natural := 0;
+         --  The data words that they carry: a string or array in the reply
+         --  takes one, for its length, as the generated client counts.
 
          function Unsupported_Text (What : String) return String
          is (What & " are not yet supported by the kernel target");
@@ -363,6 +367,14 @@ package body Idle.Targets.Kernel is
                      end if;
                   end if;
 
+                  if Parameter.Mode /= Idle.Syntax.Out_Mode then
+                     Sent_Words := Sent_Words + Types.Words (Info);
+                  end if;
+                  if Parameter.Mode /= Idle.Syntax.In_Mode then
+                     Reply_Words := Reply_Words + Types.Words (Info)
+                       + (if Info.Category = String_Value then 1 else 0);
+                  end if;
+
                   if Types.Is_Buffer (Info) then
                      Buffers := Buffers + 1;
                      if Parameter.Mode /= Idle.Syntax.In_Mode then
@@ -390,7 +402,9 @@ package body Idle.Targets.Kernel is
                   when String_Value =>
                      Buffers := Buffers + 1;
                      Packable := False;
+                     Reply_Words := Reply_Words + 1;
                   when others =>
+                     Reply_Words := Reply_Words + Types.Words (Info);
                      Check_Interface (Info, Type_Name, Subprogram.Position);
                      if Info.Category in Capability_Value | Interface_Value
                      then
@@ -420,6 +434,22 @@ package body Idle.Targets.Kernel is
                    & Natural'Image (Max_Invocation_Caps)
                    & " capabilities, and the reply to this one has"
                    & Natural'Image (Reply_Caps));
+         end if;
+
+         if Sent_Words > Max_Invocation_Words then
+            Error (Member.File_Name, Subprogram.Position,
+                   "an invocation carries at most"
+                   & Natural'Image (Max_Invocation_Words)
+                   & " data words, and this one sends"
+                   & Natural'Image (Sent_Words));
+         end if;
+
+         if Reply_Words > Max_Invocation_Words then
+            Error (Member.File_Name, Subprogram.Position,
+                   "an invocation carries at most"
+                   & Natural'Image (Max_Invocation_Words)
+                   & " data words, and the reply to this one has"
+                   & Natural'Image (Reply_Words));
          end if;
       end Check_Member;
 

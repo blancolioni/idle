@@ -1,0 +1,4 @@
+kernel-errors/words.idl:10:4: error: an invocation carries at most 8 data words, and this one sends 9
+kernel-errors/words.idl:13:4: error: an invocation carries at most 8 data words, and the reply to this one has 9
+kernel-errors/words.idl:17:4: error: an invocation carries at most 8 data words, and the reply to this one has 9
+kernel-errors/words.idl:26:4: error: an invocation carries at most 8 data words, and the reply to this one has 9

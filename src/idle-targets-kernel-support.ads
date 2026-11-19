@@ -71,6 +71,10 @@ private package Idle.Targets.Kernel.Support is
    --  #234). The generated code uses Rose.Invocation.Max_Capabilities,
    --  but which subprograms can carry their caps is checked against this.
 
+   Max_Invocation_Words : constant := 8;
+   --  The most data words that an invocation, or its reply, carries (Rose
+   --  #985): a Word_64 or an Object_Id takes two.
+
    function Is_Resource
      (Item : Idle.Syntax.Interface_Declaration)
       return Boolean;

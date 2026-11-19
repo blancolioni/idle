@@ -1,0 +1,31 @@
+--  An invocation carries at most eight data words, and so does its
+--  reply (Rose #985). A Word_64 takes two, and a string in the reply
+--  one, for its length.
+
+interface Words is
+
+   procedure Eight
+     (A : Word_64; B : Word_64; C : Word_64; D : Word_64);
+
+   procedure Nine
+     (A : Word_64; B : Word_64; C : Word_64; D : Word_64; E : Word);
+
+   procedure Both
+     (A : in out Word_64; B : in out Word_64; C : in out Word_64;
+      D : out Word_64; E : out Word);
+
+   function Many
+     (A : Word_64; B : out Word_64; C : out Word_64; D : out Word_64;
+      E : out Word)
+     return Word_64;
+
+   function Fits
+     (A : out Word_64; B : out Word_64; C : out Word_64; D : out Word)
+     return String;
+
+   function Text
+     (A : out Word_64; B : out Word_64; C : out Word_64; D : out Word;
+      E : out Word)
+     return String;
+
+end Words;
