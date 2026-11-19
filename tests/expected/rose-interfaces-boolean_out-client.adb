@@ -32,7 +32,7 @@ package body Rose.Interfaces.Boolean_Out.Client is
       Rose.System_Calls.Invoke_Capability (Params);
       Last_Error := Rose.Invocation.OK;
       if Params.Control.Flags (Rose.Invocation.Error) then
-         Last_Error := Params.Error;
+         Last_Error := Params.Control.Error;
       end if;
       On := Rose.System_Calls.Get_Word_32 (Params, 0) /= 0;
    end Get;

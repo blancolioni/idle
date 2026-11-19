@@ -21,7 +21,7 @@ package body Rose.Interfaces.Memory.Client is
       Rose.System_Calls.Invoke_Capability (Params);
       Last_Error := Rose.Invocation.OK;
       if Params.Control.Flags (Rose.Invocation.Error) then
-         Last_Error := Params.Error;
+         Last_Error := Params.Control.Error;
       end if;
    end Checkpoint;
 
@@ -127,7 +127,7 @@ package body Rose.Interfaces.Memory.Client is
       Rose.System_Calls.Invoke_Capability (Params);
       Last_Error := Rose.Invocation.OK;
       if Params.Control.Flags (Rose.Invocation.Error) then
-         Last_Error := Params.Error;
+         Last_Error := Params.Control.Error;
       end if;
       declare
          Result : Rose.Interfaces.Process.Client.Process_Client;
@@ -227,7 +227,7 @@ package body Rose.Interfaces.Memory.Client is
       Rose.System_Calls.Invoke_Capability (Params);
       Last_Error := Rose.Invocation.OK;
       if Params.Control.Flags (Rose.Invocation.Error) then
-         Last_Error := Params.Error;
+         Last_Error := Params.Control.Error;
       end if;
    end Page_Fault;
 
@@ -266,7 +266,7 @@ package body Rose.Interfaces.Memory.Client is
       Rose.System_Calls.Invoke_Capability (Params);
       Last_Error := Rose.Invocation.OK;
       if Params.Control.Flags (Rose.Invocation.Error) then
-         Last_Error := Params.Error;
+         Last_Error := Params.Control.Error;
       end if;
    end Register_Process;
 
@@ -288,7 +288,7 @@ package body Rose.Interfaces.Memory.Client is
       Rose.System_Calls.Invoke_Capability (Params);
       Last_Error := Rose.Invocation.OK;
       if Params.Control.Flags (Rose.Invocation.Error) then
-         Last_Error := Params.Error;
+         Last_Error := Params.Control.Error;
       end if;
       Start := Rose.System_Calls.Get_Word_32 (Params, 0);
       Amount := Rose.System_Calls.Get_Word_32 (Params, 1);

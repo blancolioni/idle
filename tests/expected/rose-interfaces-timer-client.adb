@@ -123,7 +123,7 @@ package body Rose.Interfaces.Timer.Client is
       Rose.System_Calls.Invoke_Capability (Params);
       Last_Error := Rose.Invocation.OK;
       if Params.Control.Flags (Rose.Invocation.Error) then
-         Last_Error := Params.Error;
+         Last_Error := Params.Control.Error;
       end if;
       declare
          Result : Rose.Interfaces.Cap.Client.Cap_Client;

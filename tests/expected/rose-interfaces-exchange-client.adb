@@ -38,7 +38,7 @@ package body Rose.Interfaces.Exchange.Client is
       Rose.System_Calls.Invoke_Capability (Params);
       Last_Error := Rose.Invocation.OK;
       if Params.Control.Flags (Rose.Invocation.Error) then
-         Last_Error := Params.Error;
+         Last_Error := Params.Control.Error;
       end if;
       Receive := Params.Caps (0);
       Send := Params.Caps (1);
@@ -186,7 +186,7 @@ package body Rose.Interfaces.Exchange.Client is
       Rose.System_Calls.Invoke_Capability (Params);
       Last_Error := Rose.Invocation.OK;
       if Params.Control.Flags (Rose.Invocation.Error) then
-         Last_Error := Params.Error;
+         Last_Error := Params.Control.Error;
       end if;
       Open (Other, Params.Caps (0));
       Rose.System_Calls.Copy_Text
@@ -217,7 +217,7 @@ package body Rose.Interfaces.Exchange.Client is
       Rose.System_Calls.Invoke_Capability (Params);
       Last_Error := Rose.Invocation.OK;
       if Params.Control.Flags (Rose.Invocation.Error) then
-         Last_Error := Params.Error;
+         Last_Error := Params.Control.Error;
       end if;
       Cap := Params.Caps (0);
       Rose.System_Calls.Copy_Text
@@ -245,7 +245,7 @@ package body Rose.Interfaces.Exchange.Client is
       Rose.System_Calls.Invoke_Capability (Params);
       Last_Error := Rose.Invocation.OK;
       if Params.Control.Flags (Rose.Invocation.Error) then
-         Last_Error := Params.Error;
+         Last_Error := Params.Control.Error;
       end if;
       Part := Params.Caps (0);
       return Params.Caps (1);

@@ -39,7 +39,7 @@ package body Rose.Interfaces.Journal.Client is
       Rose.System_Calls.Invoke_Capability (Params);
       Last_Error := Rose.Invocation.OK;
       if Params.Control.Flags (Rose.Invocation.Error) then
-         Last_Error := Params.Error;
+         Last_Error := Params.Control.Error;
       end if;
    end Commit;
 
@@ -183,7 +183,7 @@ package body Rose.Interfaces.Journal.Client is
       Rose.System_Calls.Invoke_Capability (Params);
       Last_Error := Rose.Invocation.OK;
       if Params.Control.Flags (Rose.Invocation.Error) then
-         Last_Error := Params.Error;
+         Last_Error := Params.Control.Error;
       end if;
       declare
          Result : Rose.Interfaces.Transactional_Writable_File.Client
@@ -290,7 +290,7 @@ package body Rose.Interfaces.Journal.Client is
       Rose.System_Calls.Invoke_Capability (Params);
       Last_Error := Rose.Invocation.OK;
       if Params.Control.Flags (Rose.Invocation.Error) then
-         Last_Error := Params.Error;
+         Last_Error := Params.Control.Error;
       end if;
       declare
          Result : Rose.Interfaces.File_Reader.Client.File_Reader_Client;
@@ -316,7 +316,7 @@ package body Rose.Interfaces.Journal.Client is
       Rose.System_Calls.Invoke_Capability (Params);
       Last_Error := Rose.Invocation.OK;
       if Params.Control.Flags (Rose.Invocation.Error) then
-         Last_Error := Params.Error;
+         Last_Error := Params.Control.Error;
       end if;
       declare
          Result : Rose.Interfaces.Seekable_File_Reader.Client
@@ -340,7 +340,7 @@ package body Rose.Interfaces.Journal.Client is
       Rose.System_Calls.Invoke_Capability (Params);
       Last_Error := Rose.Invocation.OK;
       if Params.Control.Flags (Rose.Invocation.Error) then
-         Last_Error := Params.Error;
+         Last_Error := Params.Control.Error;
       end if;
    end Release;
 
@@ -355,7 +355,7 @@ package body Rose.Interfaces.Journal.Client is
       Rose.System_Calls.Invoke_Capability (Params);
       Last_Error := Rose.Invocation.OK;
       if Params.Control.Flags (Rose.Invocation.Error) then
-         Last_Error := Params.Error;
+         Last_Error := Params.Control.Error;
       end if;
    end Rollback;
 
@@ -374,7 +374,7 @@ package body Rose.Interfaces.Journal.Client is
       Rose.System_Calls.Invoke_Capability (Params);
       Last_Error := Rose.Invocation.OK;
       if Params.Control.Flags (Rose.Invocation.Error) then
-         Last_Error := Params.Error;
+         Last_Error := Params.Control.Error;
       end if;
       return System.Storage_Elements.Storage_Count
         (Rose.System_Calls.Get_Word_32 (Params, 0));
@@ -395,7 +395,7 @@ package body Rose.Interfaces.Journal.Client is
       Rose.System_Calls.Invoke_Capability (Params);
       Last_Error := Rose.Invocation.OK;
       if Params.Control.Flags (Rose.Invocation.Error) then
-         Last_Error := Params.Error;
+         Last_Error := Params.Control.Error;
       end if;
    end Truncate;
 
@@ -414,7 +414,7 @@ package body Rose.Interfaces.Journal.Client is
       Rose.System_Calls.Invoke_Capability (Params);
       Last_Error := Rose.Invocation.OK;
       if Params.Control.Flags (Rose.Invocation.Error) then
-         Last_Error := Params.Error;
+         Last_Error := Params.Control.Error;
       end if;
    end Write;
 

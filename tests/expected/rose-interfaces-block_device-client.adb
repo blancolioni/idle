@@ -62,7 +62,7 @@ package body Rose.Interfaces.Block_Device.Client is
       Rose.System_Calls.Invoke_Capability (Params);
       Last_Error := Rose.Invocation.OK;
       if Params.Control.Flags (Rose.Invocation.Error) then
-         Last_Error := Params.Error;
+         Last_Error := Params.Control.Error;
       end if;
       Block_Count :=
         Rose.Interfaces.Block_Device.Block_Address_Type
@@ -176,7 +176,7 @@ package body Rose.Interfaces.Block_Device.Client is
       Rose.System_Calls.Invoke_Capability (Params);
       Last_Error := Rose.Invocation.OK;
       if Params.Control.Flags (Rose.Invocation.Error) then
-         Last_Error := Params.Error;
+         Last_Error := Params.Control.Error;
       end if;
       Rose.System_Calls.Copy_Received_Buffer (Blocks'Length, Blocks'Address);
    end Read_Blocks;
@@ -200,7 +200,7 @@ package body Rose.Interfaces.Block_Device.Client is
       Rose.System_Calls.Invoke_Capability (Params);
       Last_Error := Rose.Invocation.OK;
       if Params.Control.Flags (Rose.Invocation.Error) then
-         Last_Error := Params.Error;
+         Last_Error := Params.Control.Error;
       end if;
    end Write_Blocks;
 

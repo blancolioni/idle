@@ -897,7 +897,7 @@ package body Idle.Targets.Kernel.Client is
                   Then_Part =>
                     [F.New_Assignment
                        (F.New_Name ("Last_Error"),
-                        F.New_Name ("Params.Error"))]));
+                        F.New_Name ("Params.Control.Error"))]));
          end if;
 
          for Parameter of Subprogram.Parameters loop

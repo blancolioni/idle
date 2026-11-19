@@ -112,7 +112,7 @@ package body Rose.Interfaces.Exec.Client is
       Rose.System_Calls.Invoke_Capability (Params);
       Last_Error := Rose.Invocation.OK;
       if Params.Control.Flags (Rose.Invocation.Error) then
-         Last_Error := Params.Error;
+         Last_Error := Params.Control.Error;
       end if;
       declare
          Result : Rose.Interfaces.Launch.Client.Launch_Client;
@@ -139,7 +139,7 @@ package body Rose.Interfaces.Exec.Client is
       Rose.System_Calls.Invoke_Capability (Params);
       Last_Error := Rose.Invocation.OK;
       if Params.Control.Flags (Rose.Invocation.Error) then
-         Last_Error := Params.Error;
+         Last_Error := Params.Control.Error;
       end if;
       declare
          Result : Rose.Interfaces.Process.Client.Process_Client;
@@ -164,7 +164,7 @@ package body Rose.Interfaces.Exec.Client is
       Rose.System_Calls.Invoke_Capability (Params);
       Last_Error := Rose.Invocation.OK;
       if Params.Control.Flags (Rose.Invocation.Error) then
-         Last_Error := Params.Error;
+         Last_Error := Params.Control.Error;
       end if;
       return Params.Caps (0);
    end Launch_Command;
@@ -186,7 +186,7 @@ package body Rose.Interfaces.Exec.Client is
       Rose.System_Calls.Invoke_Capability (Params);
       Last_Error := Rose.Invocation.OK;
       if Params.Control.Flags (Rose.Invocation.Error) then
-         Last_Error := Params.Error;
+         Last_Error := Params.Control.Error;
       end if;
       Rose.System_Calls.Copy_Text
         (Params,
@@ -279,7 +279,7 @@ package body Rose.Interfaces.Exec.Client is
       Rose.System_Calls.Invoke_Capability (Params);
       Last_Error := Rose.Invocation.OK;
       if Params.Control.Flags (Rose.Invocation.Error) then
-         Last_Error := Params.Error;
+         Last_Error := Params.Control.Error;
       end if;
    end Set_Standard_Output;
 
