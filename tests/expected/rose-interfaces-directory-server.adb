@@ -43,6 +43,8 @@ package body Rose.Interfaces.Directory.Server is
    Published_Cap               : Rose.Capabilities.Capability :=
      Rose.Capabilities.Null_Capability;
 
+   Local_Owns                  : Owns_Function := null;
+
    procedure Handle_Get_Directory_Interface
      (Parameters : in out Rose.Invocation.Invocation_Record);
 
@@ -343,189 +345,196 @@ package body Rose.Interfaces.Directory.Server is
          Page := Natural'Min (Page, Natural (Parameters.Data (2)));
       end if;
       Rose.System_Calls.Initialize_Reply (Parameters, Parameters.Reply_Cap);
-      if First >= 7 then
+      if Local_Owns /= null and then not Local_Owns (Identifier) then
          Rose.System_Calls.Send_Error
            (Parameters,
-            Rose.Invocation.Invalid_Operation);
+            Rose.Invocation.Invalid_Object);
       else
-         if 0 in First .. (First + Page - 1) then
-            if Directory_Entry_Count_Cap = Rose.Capabilities.Null_Capability
-            then
-               if not Rose.Server.Has_Instance
-                 (Server_Instance,
-                  Directory_Entry_Count_Endpoint,
-                  Identifier)
+         if First >= 7 then
+            Rose.System_Calls.Send_Error
+              (Parameters,
+               Rose.Invocation.Invalid_Operation);
+         else
+            if 0 in First .. (First + Page - 1) then
+               if Directory_Entry_Count_Cap = Rose.Capabilities.Null_Capability
                then
-                  Rose.Server.Set_Instance_Cap
+                  if not Rose.Server.Has_Instance
                     (Server_Instance,
                      Directory_Entry_Count_Endpoint,
-                     Identifier,
-                     Rose.Server.Create_Endpoint
-                       (Directory_Entry_Count_Endpoint,
-                        Identifier));
+                     Identifier)
+                  then
+                     Rose.Server.Set_Instance_Cap
+                       (Server_Instance,
+                        Directory_Entry_Count_Endpoint,
+                        Identifier,
+                        Rose.Server.Create_Endpoint
+                          (Directory_Entry_Count_Endpoint,
+                           Identifier));
+                  end if;
+                  Cap :=
+                    Rose.Server.Get_Instance_Cap
+                      (Server_Instance,
+                       Directory_Entry_Count_Endpoint,
+                       Identifier);
+               else
+                  Cap := Directory_Entry_Count_Cap;
                end if;
-               Cap :=
-                 Rose.Server.Get_Instance_Cap
-                   (Server_Instance,
-                    Directory_Entry_Count_Endpoint,
-                    Identifier);
-            else
-               Cap := Directory_Entry_Count_Cap;
+               Rose.System_Calls.Send_Cap (Parameters, Cap);
             end if;
-            Rose.System_Calls.Send_Cap (Parameters, Cap);
-         end if;
-         if 1 in First .. (First + Page - 1) then
-            if Directory_Entry_Name_Cap = Rose.Capabilities.Null_Capability
-            then
-               if not Rose.Server.Has_Instance
-                 (Server_Instance,
-                  Directory_Entry_Name_Endpoint,
-                  Identifier)
+            if 1 in First .. (First + Page - 1) then
+               if Directory_Entry_Name_Cap = Rose.Capabilities.Null_Capability
                then
-                  Rose.Server.Set_Instance_Cap
+                  if not Rose.Server.Has_Instance
                     (Server_Instance,
                      Directory_Entry_Name_Endpoint,
-                     Identifier,
-                     Rose.Server.Create_Endpoint
-                       (Directory_Entry_Name_Endpoint,
-                        Identifier));
+                     Identifier)
+                  then
+                     Rose.Server.Set_Instance_Cap
+                       (Server_Instance,
+                        Directory_Entry_Name_Endpoint,
+                        Identifier,
+                        Rose.Server.Create_Endpoint
+                          (Directory_Entry_Name_Endpoint,
+                           Identifier));
+                  end if;
+                  Cap :=
+                    Rose.Server.Get_Instance_Cap
+                      (Server_Instance,
+                       Directory_Entry_Name_Endpoint,
+                       Identifier);
+               else
+                  Cap := Directory_Entry_Name_Cap;
                end if;
-               Cap :=
-                 Rose.Server.Get_Instance_Cap
-                   (Server_Instance,
-                    Directory_Entry_Name_Endpoint,
-                    Identifier);
-            else
-               Cap := Directory_Entry_Name_Cap;
+               Rose.System_Calls.Send_Cap (Parameters, Cap);
             end if;
-            Rose.System_Calls.Send_Cap (Parameters, Cap);
-         end if;
-         if 2 in First .. (First + Page - 1) then
-            if Directory_Entry_Kind_Cap = Rose.Capabilities.Null_Capability
-            then
-               if not Rose.Server.Has_Instance
-                 (Server_Instance,
-                  Directory_Entry_Kind_Endpoint,
-                  Identifier)
+            if 2 in First .. (First + Page - 1) then
+               if Directory_Entry_Kind_Cap = Rose.Capabilities.Null_Capability
                then
-                  Rose.Server.Set_Instance_Cap
+                  if not Rose.Server.Has_Instance
                     (Server_Instance,
                      Directory_Entry_Kind_Endpoint,
-                     Identifier,
-                     Rose.Server.Create_Endpoint
-                       (Directory_Entry_Kind_Endpoint,
-                        Identifier));
+                     Identifier)
+                  then
+                     Rose.Server.Set_Instance_Cap
+                       (Server_Instance,
+                        Directory_Entry_Kind_Endpoint,
+                        Identifier,
+                        Rose.Server.Create_Endpoint
+                          (Directory_Entry_Kind_Endpoint,
+                           Identifier));
+                  end if;
+                  Cap :=
+                    Rose.Server.Get_Instance_Cap
+                      (Server_Instance,
+                       Directory_Entry_Kind_Endpoint,
+                       Identifier);
+               else
+                  Cap := Directory_Entry_Kind_Cap;
                end if;
-               Cap :=
-                 Rose.Server.Get_Instance_Cap
-                   (Server_Instance,
-                    Directory_Entry_Kind_Endpoint,
-                    Identifier);
-            else
-               Cap := Directory_Entry_Kind_Cap;
+               Rose.System_Calls.Send_Cap (Parameters, Cap);
             end if;
-            Rose.System_Calls.Send_Cap (Parameters, Cap);
-         end if;
-         if 3 in First .. (First + Page - 1) then
-            if Directory_Entry_Size_Cap = Rose.Capabilities.Null_Capability
-            then
-               if not Rose.Server.Has_Instance
-                 (Server_Instance,
-                  Directory_Entry_Size_Endpoint,
-                  Identifier)
+            if 3 in First .. (First + Page - 1) then
+               if Directory_Entry_Size_Cap = Rose.Capabilities.Null_Capability
                then
-                  Rose.Server.Set_Instance_Cap
+                  if not Rose.Server.Has_Instance
                     (Server_Instance,
                      Directory_Entry_Size_Endpoint,
-                     Identifier,
-                     Rose.Server.Create_Endpoint
-                       (Directory_Entry_Size_Endpoint,
-                        Identifier));
+                     Identifier)
+                  then
+                     Rose.Server.Set_Instance_Cap
+                       (Server_Instance,
+                        Directory_Entry_Size_Endpoint,
+                        Identifier,
+                        Rose.Server.Create_Endpoint
+                          (Directory_Entry_Size_Endpoint,
+                           Identifier));
+                  end if;
+                  Cap :=
+                    Rose.Server.Get_Instance_Cap
+                      (Server_Instance,
+                       Directory_Entry_Size_Endpoint,
+                       Identifier);
+               else
+                  Cap := Directory_Entry_Size_Cap;
                end if;
-               Cap :=
-                 Rose.Server.Get_Instance_Cap
-                   (Server_Instance,
-                    Directory_Entry_Size_Endpoint,
-                    Identifier);
-            else
-               Cap := Directory_Entry_Size_Cap;
+               Rose.System_Calls.Send_Cap (Parameters, Cap);
             end if;
-            Rose.System_Calls.Send_Cap (Parameters, Cap);
-         end if;
-         if 4 in First .. (First + Page - 1) then
-            if Find_Entry_Cap = Rose.Capabilities.Null_Capability then
-               if not Rose.Server.Has_Instance
-                 (Server_Instance,
-                  Find_Entry_Endpoint,
-                  Identifier)
-               then
-                  Rose.Server.Set_Instance_Cap
+            if 4 in First .. (First + Page - 1) then
+               if Find_Entry_Cap = Rose.Capabilities.Null_Capability then
+                  if not Rose.Server.Has_Instance
                     (Server_Instance,
                      Find_Entry_Endpoint,
-                     Identifier,
-                     Rose.Server.Create_Endpoint
-                       (Find_Entry_Endpoint,
-                        Identifier));
+                     Identifier)
+                  then
+                     Rose.Server.Set_Instance_Cap
+                       (Server_Instance,
+                        Find_Entry_Endpoint,
+                        Identifier,
+                        Rose.Server.Create_Endpoint
+                          (Find_Entry_Endpoint,
+                           Identifier));
+                  end if;
+                  Cap :=
+                    Rose.Server.Get_Instance_Cap
+                      (Server_Instance,
+                       Find_Entry_Endpoint,
+                       Identifier);
+               else
+                  Cap := Find_Entry_Cap;
                end if;
-               Cap :=
-                 Rose.Server.Get_Instance_Cap
-                   (Server_Instance,
-                    Find_Entry_Endpoint,
-                    Identifier);
-            else
-               Cap := Find_Entry_Cap;
+               Rose.System_Calls.Send_Cap (Parameters, Cap);
             end if;
-            Rose.System_Calls.Send_Cap (Parameters, Cap);
-         end if;
-         if 5 in First .. (First + Page - 1) then
-            if Get_Ordinary_File_Cap = Rose.Capabilities.Null_Capability then
-               if not Rose.Server.Has_Instance
-                 (Server_Instance,
-                  Get_Ordinary_File_Endpoint,
-                  Identifier)
+            if 5 in First .. (First + Page - 1) then
+               if Get_Ordinary_File_Cap = Rose.Capabilities.Null_Capability
                then
-                  Rose.Server.Set_Instance_Cap
+                  if not Rose.Server.Has_Instance
                     (Server_Instance,
                      Get_Ordinary_File_Endpoint,
-                     Identifier,
-                     Rose.Server.Create_Endpoint
-                       (Get_Ordinary_File_Endpoint,
-                        Identifier));
+                     Identifier)
+                  then
+                     Rose.Server.Set_Instance_Cap
+                       (Server_Instance,
+                        Get_Ordinary_File_Endpoint,
+                        Identifier,
+                        Rose.Server.Create_Endpoint
+                          (Get_Ordinary_File_Endpoint,
+                           Identifier));
+                  end if;
+                  Cap :=
+                    Rose.Server.Get_Instance_Cap
+                      (Server_Instance,
+                       Get_Ordinary_File_Endpoint,
+                       Identifier);
+               else
+                  Cap := Get_Ordinary_File_Cap;
                end if;
-               Cap :=
-                 Rose.Server.Get_Instance_Cap
-                   (Server_Instance,
-                    Get_Ordinary_File_Endpoint,
-                    Identifier);
-            else
-               Cap := Get_Ordinary_File_Cap;
+               Rose.System_Calls.Send_Cap (Parameters, Cap);
             end if;
-            Rose.System_Calls.Send_Cap (Parameters, Cap);
-         end if;
-         if 6 in First .. (First + Page - 1) then
-            if Get_Directory_Cap = Rose.Capabilities.Null_Capability then
-               if not Rose.Server.Has_Instance
-                 (Server_Instance,
-                  Get_Directory_Endpoint,
-                  Identifier)
-               then
-                  Rose.Server.Set_Instance_Cap
+            if 6 in First .. (First + Page - 1) then
+               if Get_Directory_Cap = Rose.Capabilities.Null_Capability then
+                  if not Rose.Server.Has_Instance
                     (Server_Instance,
                      Get_Directory_Endpoint,
-                     Identifier,
-                     Rose.Server.Create_Endpoint
-                       (Get_Directory_Endpoint,
-                        Identifier));
+                     Identifier)
+                  then
+                     Rose.Server.Set_Instance_Cap
+                       (Server_Instance,
+                        Get_Directory_Endpoint,
+                        Identifier,
+                        Rose.Server.Create_Endpoint
+                          (Get_Directory_Endpoint,
+                           Identifier));
+                  end if;
+                  Cap :=
+                    Rose.Server.Get_Instance_Cap
+                      (Server_Instance,
+                       Get_Directory_Endpoint,
+                       Identifier);
+               else
+                  Cap := Get_Directory_Cap;
                end if;
-               Cap :=
-                 Rose.Server.Get_Instance_Cap
-                   (Server_Instance,
-                    Get_Directory_Endpoint,
-                    Identifier);
-            else
-               Cap := Get_Directory_Cap;
+               Rose.System_Calls.Send_Cap (Parameters, Cap);
             end if;
-            Rose.System_Calls.Send_Cap (Parameters, Cap);
          end if;
       end if;
    end Handle_Get_Directory_Interface;
@@ -627,5 +636,14 @@ package body Rose.Interfaces.Directory.Server is
    begin
       Rose.Server.Remove_Instance (Server_Instance, Identifier);
    end Remove_Instance;
+
+   --------------
+   -- Set_Owns --
+   --------------
+
+   procedure Set_Owns (Owns : Owns_Function) is
+   begin
+      Local_Owns := Owns;
+   end Set_Owns;
 
 end Rose.Interfaces.Directory.Server;

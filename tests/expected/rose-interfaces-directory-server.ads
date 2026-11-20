@@ -86,6 +86,12 @@ package Rose.Interfaces.Directory.Server is
 
    function Get_Get_Directory_Cap return Rose.Capabilities.Capability;
 
+   type Owns_Function is access function
+     (Identifier : Rose.Objects.Capability_Identifier)
+      return Boolean;
+
+   procedure Set_Owns (Owns : Owns_Function);
+
    procedure Remove_Instance (Identifier : Rose.Objects.Capability_Identifier);
 
 end Rose.Interfaces.Directory.Server;

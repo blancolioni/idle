@@ -130,6 +130,7 @@ package body Idle.Targets.Kernel.Server is
       procedure Add_Getters;
       procedure Add_Handler (Member : Idle.Hierarchy.Member);
       procedure Add_Handler_Type (Member : Idle.Hierarchy.Member);
+      procedure Add_Owns;
       procedure Add_Publish;
       procedure Add_Remove_Instance;
 
@@ -877,6 +878,8 @@ package body Idle.Targets.Kernel.Server is
 
          Declarations : Node_List;
          Statements   : Node_List;
+         Reply        : Node_List;
+         --  What follows Initialize_Reply: the caps, or an error.
          Own_Caps     : Node_List;
 
       begin
@@ -1041,7 +1044,7 @@ package body Idle.Targets.Kernel.Server is
 
          if Ancestors.Is_Empty then
             for Statement of Own_Caps.To_Array loop
-               Statements.Append (Statement);
+               Reply.Append (Statement);
             end loop;
          else
             --  if Ancestor = 0 then the caps of the subprograms, elsif
@@ -1080,7 +1083,7 @@ package body Idle.Targets.Kernel.Server is
                end Choose;
 
             begin
-               Statements.Append
+               Reply.Append
                  (F.New_If
                     (Condition =>
                        F.New_Binary
@@ -1089,6 +1092,39 @@ package body Idle.Targets.Kernel.Server is
                      Then_Part => Own_Caps.To_Array,
                      Else_Part => Choose (1)));
             end;
+         end if;
+
+         --  The kernel target makes the caps of an identifier the
+         --  first time it is asked for them, so it asks the server's
+         --  Owns function first, if there is one: a client can ask
+         --  with the cap of an object that is gone, and the caps made
+         --  for it would never be removed (Rose #967). The user target
+         --  dispatches only the identifiers that Owns finds.
+
+         if User or else (Sent.Is_Empty and then Ancestors.Is_Empty) then
+            for Statement of Reply.To_Array loop
+               Statements.Append (Statement);
+            end loop;
+         else
+            Statements.Append
+              (F.New_If
+                 (Condition =>
+                    F.New_Binary
+                      (F.New_Binary
+                         (F.New_Name ("Local_Owns"), "/=",
+                          F.New_Name ("null")),
+                       "and then",
+                       F.New_Unary
+                         ("not",
+                          F.New_Call
+                            ("Local_Owns",
+                             [F.New_Name ("Identifier")]))),
+                  Then_Part =>
+                    [Call (System_Calls & "Send_Error",
+                           [F.New_Name ("Parameters"),
+                            F.New_Name
+                              ("Rose.Invocation.Invalid_Object")])],
+                  Else_Part => Reply.To_Array));
          end if;
 
          Bodies.Add
@@ -1709,6 +1745,44 @@ package body Idle.Targets.Kernel.Server is
                F.New_Name ("Rose.Capabilities.Null_Capability")));
       end Add_Handler_Type;
 
+      --------------
+      -- Add_Owns --
+      --------------
+
+      --  For the kernel target: the server can give a function that
+      --  says whether it still has the object of an identifier. The
+      --  handler of an interface cap asks it before it makes the caps
+      --  of the identifier, and replies Invalid_Object if not (see
+      --  Add_Get_Interface). Without one, every identifier is served.
+
+      procedure Add_Owns is
+         Identifier : constant not null Syn.Node_Access :=
+           F.New_Parameter
+             ("Identifier",
+              F.New_Name ("Rose.Objects.Capability_Identifier"));
+         Specification : constant not null Syn.Node_Access :=
+           F.New_Procedure
+             ("Set_Owns",
+              [F.New_Parameter ("Owns", F.New_Name ("Owns_Function"))]);
+      begin
+         Spec_Context.Add ("Rose.Objects");
+         Public_Part.Append
+           (F.New_Access_Function_Type
+              ("Owns_Function", F.New_Name ("Boolean"), [Identifier]));
+         Public_Part.Append (Specification);
+         Objects.Append
+           (F.New_Object
+              ("Local_Owns", F.New_Name ("Owns_Function"),
+               F.New_Name ("null")));
+         Bodies.Add
+           ("Set_Owns",
+            F.New_Subprogram_Body
+              (Specification => Specification,
+               Statements    =>
+                 [F.New_Assignment
+                    (F.New_Name ("Local_Owns"), F.New_Name ("Owns"))]));
+      end Add_Owns;
+
       -----------------
       -- Add_Publish --
       -----------------
@@ -2183,6 +2257,7 @@ package body Idle.Targets.Kernel.Server is
          Add_Attach;
          Add_Publish;
          Add_Getters;
+         Add_Owns;
          Add_Remove_Instance;
       end if;
 

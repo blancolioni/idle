@@ -70,6 +70,12 @@ package Rose.Interfaces.Writable_File.Server is
 
    function Get_New_Version_Cap return Rose.Capabilities.Capability;
 
+   type Owns_Function is access function
+     (Identifier : Rose.Objects.Capability_Identifier)
+      return Boolean;
+
+   procedure Set_Owns (Owns : Owns_Function);
+
    procedure Remove_Instance (Identifier : Rose.Objects.Capability_Identifier);
 
 end Rose.Interfaces.Writable_File.Server;
