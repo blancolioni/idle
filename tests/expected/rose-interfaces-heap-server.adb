@@ -18,6 +18,8 @@ package body Rose.Interfaces.Heap.Server is
    Published_Cap           : Rose.Capabilities.Capability :=
      Rose.Capabilities.Null_Capability;
 
+   Local_Owns              : Owns_Function := null;
+
    procedure Handle_Get_Heap_Interface
      (Parameters : in out Rose.Invocation.Invocation_Record);
 
@@ -130,60 +132,67 @@ package body Rose.Interfaces.Heap.Server is
          Page := Natural'Min (Page, Natural (Parameters.Data (2)));
       end if;
       Rose.System_Calls.Initialize_Reply (Parameters, Parameters.Reply_Cap);
-      if First >= 2 then
+      if Local_Owns /= null and then not Local_Owns (Identifier) then
          Rose.System_Calls.Send_Error
            (Parameters,
-            Rose.Invocation.Invalid_Operation);
+            Rose.Invocation.Invalid_Object);
       else
-         if 0 in First .. (First + Page - 1) then
-            if Current_Bound_Cap = Rose.Capabilities.Null_Capability then
-               if not Rose.Server.Has_Instance
-                 (Server_Instance,
-                  Current_Bound_Endpoint,
-                  Identifier)
-               then
-                  Rose.Server.Set_Instance_Cap
+         if First >= 2 then
+            Rose.System_Calls.Send_Error
+              (Parameters,
+               Rose.Invocation.Invalid_Operation);
+         else
+            if 0 in First .. (First + Page - 1) then
+               if Current_Bound_Cap = Rose.Capabilities.Null_Capability then
+                  if not Rose.Server.Has_Instance
                     (Server_Instance,
                      Current_Bound_Endpoint,
-                     Identifier,
-                     Rose.Server.Create_Endpoint
-                       (Current_Bound_Endpoint,
-                        Identifier));
+                     Identifier)
+                  then
+                     Rose.Server.Set_Instance_Cap
+                       (Server_Instance,
+                        Current_Bound_Endpoint,
+                        Identifier,
+                        Rose.Server.Create_Endpoint
+                          (Current_Bound_Endpoint,
+                           Identifier));
+                  end if;
+                  Cap :=
+                    Rose.Server.Get_Instance_Cap
+                      (Server_Instance,
+                       Current_Bound_Endpoint,
+                       Identifier);
+               else
+                  Cap := Current_Bound_Cap;
                end if;
-               Cap :=
-                 Rose.Server.Get_Instance_Cap
-                   (Server_Instance,
-                    Current_Bound_Endpoint,
-                    Identifier);
-            else
-               Cap := Current_Bound_Cap;
+               Rose.System_Calls.Send_Cap (Parameters, Cap);
             end if;
-            Rose.System_Calls.Send_Cap (Parameters, Cap);
-         end if;
-         if 1 in First .. (First + Page - 1) then
-            if Request_New_Bound_Cap = Rose.Capabilities.Null_Capability then
-               if not Rose.Server.Has_Instance
-                 (Server_Instance,
-                  Request_New_Bound_Endpoint,
-                  Identifier)
+            if 1 in First .. (First + Page - 1) then
+               if Request_New_Bound_Cap = Rose.Capabilities.Null_Capability
                then
-                  Rose.Server.Set_Instance_Cap
+                  if not Rose.Server.Has_Instance
                     (Server_Instance,
                      Request_New_Bound_Endpoint,
-                     Identifier,
-                     Rose.Server.Create_Endpoint
-                       (Request_New_Bound_Endpoint,
-                        Identifier));
+                     Identifier)
+                  then
+                     Rose.Server.Set_Instance_Cap
+                       (Server_Instance,
+                        Request_New_Bound_Endpoint,
+                        Identifier,
+                        Rose.Server.Create_Endpoint
+                          (Request_New_Bound_Endpoint,
+                           Identifier));
+                  end if;
+                  Cap :=
+                    Rose.Server.Get_Instance_Cap
+                      (Server_Instance,
+                       Request_New_Bound_Endpoint,
+                       Identifier);
+               else
+                  Cap := Request_New_Bound_Cap;
                end if;
-               Cap :=
-                 Rose.Server.Get_Instance_Cap
-                   (Server_Instance,
-                    Request_New_Bound_Endpoint,
-                    Identifier);
-            else
-               Cap := Request_New_Bound_Cap;
+               Rose.System_Calls.Send_Cap (Parameters, Cap);
             end if;
-            Rose.System_Calls.Send_Cap (Parameters, Cap);
          end if;
       end if;
    end Handle_Get_Heap_Interface;
@@ -244,5 +253,14 @@ package body Rose.Interfaces.Heap.Server is
    begin
       Rose.Server.Remove_Instance (Server_Instance, Identifier);
    end Remove_Instance;
+
+   --------------
+   -- Set_Owns --
+   --------------
+
+   procedure Set_Owns (Owns : Owns_Function) is
+   begin
+      Local_Owns := Owns;
+   end Set_Owns;
 
 end Rose.Interfaces.Heap.Server;

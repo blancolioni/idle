@@ -25,6 +25,8 @@ package body Rose.Interfaces.Flags.Server is
    Published_Cap   : Rose.Capabilities.Capability :=
      Rose.Capabilities.Null_Capability;
 
+   Local_Owns      : Owns_Function := null;
+
    procedure Handle_Get_Flags_Interface
      (Parameters : in out Rose.Invocation.Invocation_Record);
 
@@ -130,83 +132,91 @@ package body Rose.Interfaces.Flags.Server is
          Page := Natural'Min (Page, Natural (Parameters.Data (2)));
       end if;
       Rose.System_Calls.Initialize_Reply (Parameters, Parameters.Reply_Cap);
-      if First >= 3 then
+      if Local_Owns /= null and then not Local_Owns (Identifier) then
          Rose.System_Calls.Send_Error
            (Parameters,
-            Rose.Invocation.Invalid_Operation);
+            Rose.Invocation.Invalid_Object);
       else
-         if 0 in First .. (First + Page - 1) then
-            if Is_Set_Cap = Rose.Capabilities.Null_Capability then
-               if not Rose.Server.Has_Instance
-                 (Server_Instance,
-                  Is_Set_Endpoint,
-                  Identifier)
-               then
-                  Rose.Server.Set_Instance_Cap
+         if First >= 3 then
+            Rose.System_Calls.Send_Error
+              (Parameters,
+               Rose.Invocation.Invalid_Operation);
+         else
+            if 0 in First .. (First + Page - 1) then
+               if Is_Set_Cap = Rose.Capabilities.Null_Capability then
+                  if not Rose.Server.Has_Instance
                     (Server_Instance,
                      Is_Set_Endpoint,
-                     Identifier,
-                     Rose.Server.Create_Endpoint
-                       (Is_Set_Endpoint,
-                        Identifier));
+                     Identifier)
+                  then
+                     Rose.Server.Set_Instance_Cap
+                       (Server_Instance,
+                        Is_Set_Endpoint,
+                        Identifier,
+                        Rose.Server.Create_Endpoint
+                          (Is_Set_Endpoint,
+                           Identifier));
+                  end if;
+                  Cap :=
+                    Rose.Server.Get_Instance_Cap
+                      (Server_Instance,
+                       Is_Set_Endpoint,
+                       Identifier);
+               else
+                  Cap := Is_Set_Cap;
                end if;
-               Cap :=
-                 Rose.Server.Get_Instance_Cap
-                   (Server_Instance,
-                    Is_Set_Endpoint,
-                    Identifier);
-            else
-               Cap := Is_Set_Cap;
+               Rose.System_Calls.Send_Cap (Parameters, Cap);
             end if;
-            Rose.System_Calls.Send_Cap (Parameters, Cap);
-         end if;
-         if 1 in First .. (First + Page - 1) then
-            if Query_Cap = Rose.Capabilities.Null_Capability then
-               if not Rose.Server.Has_Instance
-                 (Server_Instance,
-                  Query_Endpoint,
-                  Identifier)
-               then
-                  Rose.Server.Set_Instance_Cap
+            if 1 in First .. (First + Page - 1) then
+               if Query_Cap = Rose.Capabilities.Null_Capability then
+                  if not Rose.Server.Has_Instance
                     (Server_Instance,
                      Query_Endpoint,
-                     Identifier,
-                     Rose.Server.Create_Endpoint (Query_Endpoint, Identifier));
+                     Identifier)
+                  then
+                     Rose.Server.Set_Instance_Cap
+                       (Server_Instance,
+                        Query_Endpoint,
+                        Identifier,
+                        Rose.Server.Create_Endpoint
+                          (Query_Endpoint,
+                           Identifier));
+                  end if;
+                  Cap :=
+                    Rose.Server.Get_Instance_Cap
+                      (Server_Instance,
+                       Query_Endpoint,
+                       Identifier);
+               else
+                  Cap := Query_Cap;
                end if;
-               Cap :=
-                 Rose.Server.Get_Instance_Cap
-                   (Server_Instance,
-                    Query_Endpoint,
-                    Identifier);
-            else
-               Cap := Query_Cap;
+               Rose.System_Calls.Send_Cap (Parameters, Cap);
             end if;
-            Rose.System_Calls.Send_Cap (Parameters, Cap);
-         end if;
-         if 2 in First .. (First + Page - 1) then
-            if Toggle_Cap = Rose.Capabilities.Null_Capability then
-               if not Rose.Server.Has_Instance
-                 (Server_Instance,
-                  Toggle_Endpoint,
-                  Identifier)
-               then
-                  Rose.Server.Set_Instance_Cap
+            if 2 in First .. (First + Page - 1) then
+               if Toggle_Cap = Rose.Capabilities.Null_Capability then
+                  if not Rose.Server.Has_Instance
                     (Server_Instance,
                      Toggle_Endpoint,
-                     Identifier,
-                     Rose.Server.Create_Endpoint
-                       (Toggle_Endpoint,
-                        Identifier));
+                     Identifier)
+                  then
+                     Rose.Server.Set_Instance_Cap
+                       (Server_Instance,
+                        Toggle_Endpoint,
+                        Identifier,
+                        Rose.Server.Create_Endpoint
+                          (Toggle_Endpoint,
+                           Identifier));
+                  end if;
+                  Cap :=
+                    Rose.Server.Get_Instance_Cap
+                      (Server_Instance,
+                       Toggle_Endpoint,
+                       Identifier);
+               else
+                  Cap := Toggle_Cap;
                end if;
-               Cap :=
-                 Rose.Server.Get_Instance_Cap
-                   (Server_Instance,
-                    Toggle_Endpoint,
-                    Identifier);
-            else
-               Cap := Toggle_Cap;
+               Rose.System_Calls.Send_Cap (Parameters, Cap);
             end if;
-            Rose.System_Calls.Send_Cap (Parameters, Cap);
          end if;
       end if;
    end Handle_Get_Flags_Interface;
@@ -311,5 +321,14 @@ package body Rose.Interfaces.Flags.Server is
    begin
       Rose.Server.Remove_Instance (Server_Instance, Identifier);
    end Remove_Instance;
+
+   --------------
+   -- Set_Owns --
+   --------------
+
+   procedure Set_Owns (Owns : Owns_Function) is
+   begin
+      Local_Owns := Owns;
+   end Set_Owns;
 
 end Rose.Interfaces.Flags.Server;
