@@ -116,7 +116,8 @@ package body Rose.Interfaces.Cap_Set.Server is
    procedure Handle_Append
      (Parameters : in out Rose.Invocation.Invocation_Record)
    is
-      Cap : constant Rose.Capabilities.Capability := Parameters.Caps (0);
+      Cap : constant Rose.Capabilities.Capability :=
+        Rose.Invocation.Sent_Cap (Parameters, 0);
    begin
       Local_Append (Parameters.Identifier, Cap);
       Rose.System_Calls.Initialize_Reply (Parameters, Parameters.Reply_Cap);

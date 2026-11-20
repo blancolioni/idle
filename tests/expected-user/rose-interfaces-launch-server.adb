@@ -296,7 +296,7 @@ package body Rose.Interfaces.Launch.Server is
             Object      : constant Object_Access :=
               Find (Server_Context, Parameters.Identifier);
             Environment : System.Storage_Elements.Storage_Array
-              (1 .. Parameters.Buffer_Length)
+              (1 .. Rose.Invocation.Sent_Buffer_Length (Parameters))
               with Import, Address => Parameters.Buffer_Address;
          begin
             if Object = null then
@@ -383,7 +383,8 @@ package body Rose.Interfaces.Launch.Server is
             Object : constant Object_Access :=
               Find (Server_Context, Parameters.Identifier);
             Last   : Natural := 0;
-            Result : String (1 .. Natural (Parameters.Buffer_Length))
+            Result : String
+              (1 .. Natural (Rose.Invocation.Sent_Buffer_Length (Parameters)))
               with Import, Address => Parameters.Buffer_Address;
          begin
             if Object = null then

@@ -62,6 +62,16 @@ package body Idle.Targets.Kernel.Server is
       Handler_Specs  : Node_List;
       Bodies         : Body_List;
 
+      function Sent_Cap
+        (Index : not null Syn.Node_Access)
+         return not null Syn.Node_Access
+      is (F.New_Call
+            ("Rose.Invocation.Sent_Cap",
+             [F.New_Name ("Parameters"), Index]));
+      --  Parameters.Caps (Index), or the null cap if it wasn't
+      --  sent, so that a missing cap is null rather than whatever
+      --  was in the slot (rose#892).
+
       function Call
         (Name      : String;
          Arguments : Syn.Node_Array := Syn.No_Nodes)
@@ -1163,14 +1173,20 @@ package body Idle.Targets.Kernel.Server is
                      ("Address", F.New_Name ("Parameters.Buffer_Address"))]));
          --  An object of type Object_Type at the invocation buffer.
 
+         function Sent_Buffer_Length return not null Syn.Node_Access
+         is (F.New_Call
+               ("Rose.Invocation.Sent_Buffer_Length", [Parameters]));
+         --  The length of the buffer that the call sent, 0 if it sent none,
+         --  so that a call without one gives an empty string or array
+         --  rather than whatever Buffer_Length held (rose#892).
+
          function String_Type return not null Syn.Node_Access
          is (F.New_Call
                ("String",
                 [F.New_Binary
                    (Literal (1), "..",
                     F.New_Call
-                      ("Natural",
-                       [F.New_Name ("Parameters.Buffer_Length")]))]));
+                      ("Natural", [Sent_Buffer_Length]))]));
 
          function Storage_Type
            (Info   : Types.Type_Info;
@@ -1345,9 +1361,7 @@ package body Idle.Targets.Kernel.Server is
                                   then null
                                   else F.New_Call
                                          (To_String (Info.Unit) & ".From_Cap",
-                                          [F.New_Call
-                                             ("Parameters.Caps",
-                                              [Literal (Next_Cap)])]))));
+                                          [Sent_Cap (Literal (Next_Cap))]))));
                            if Parameter.Mode /= Idle.Syntax.Out_Mode then
                               Next_Cap := Next_Cap + 1;
                            end if;
@@ -1361,8 +1375,7 @@ package body Idle.Targets.Kernel.Server is
                            Declarations.Append
                              (F.New_Object
                                 (Object_Name, Object_Type,
-                                 F.New_Call
-                                   ("Parameters.Caps", [Literal (Next_Cap)]),
+                                 Sent_Cap (Literal (Next_Cap)),
                                  Is_Constant =>
                                    Parameter.Mode = Idle.Syntax.In_Mode));
                            Next_Cap := Next_Cap + 1;
@@ -1398,9 +1411,7 @@ package body Idle.Targets.Kernel.Server is
                         Declarations.Append
                           (Buffer_Overlay
                              (Object_Name,
-                              Storage_Type
-                                (Info,
-                                 F.New_Name ("Parameters.Buffer_Length"))));
+                              Storage_Type (Info, Sent_Buffer_Length)));
                      when Unknown =>
                         raise Program_Error;
                   end case;

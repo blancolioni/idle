@@ -150,7 +150,10 @@ package body Rose.Interfaces.Cap.Client is
                raise Rose.Interfaces.Objects.Invocation_Error with "Cap.Open";
             end if;
          end if;
-         Cap := Params.Caps (Rose.Invocation.Capability_Index (Index - First));
+         Cap :=
+           Rose.Invocation.Sent_Cap
+             (Params,
+              Rose.Invocation.Capability_Index (Index - First));
          Index := Index + 1;
       end loop;
       Item.Destroy := Caps (Destroy_Index + 1);

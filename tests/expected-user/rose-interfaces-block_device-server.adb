@@ -351,7 +351,7 @@ package body Rose.Interfaces.Block_Device.Server is
             Count  : constant Natural :=
               Natural (Rose.System_Calls.Get_Word_32 (Parameters, 2));
             Blocks : System.Storage_Elements.Storage_Array
-              (1 .. Parameters.Buffer_Length)
+              (1 .. Rose.Invocation.Sent_Buffer_Length (Parameters))
               with Import, Address => Parameters.Buffer_Address;
          begin
             if Object = null then
@@ -399,7 +399,7 @@ package body Rose.Interfaces.Block_Device.Server is
             Count  : constant Natural :=
               Natural (Rose.System_Calls.Get_Word_32 (Parameters, 2));
             Blocks : System.Storage_Elements.Storage_Array
-              (1 .. Parameters.Buffer_Length)
+              (1 .. Rose.Invocation.Sent_Buffer_Length (Parameters))
               with Import, Address => Parameters.Buffer_Address;
          begin
             if Object = null then

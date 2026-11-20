@@ -245,7 +245,7 @@ package body Rose.Interfaces.Timer.Server is
             Milliseconds : constant Rose.Words.Word :=
               Rose.System_Calls.Get_Word_32 (Parameters, 0);
             Cap          : constant Rose.Capabilities.Capability :=
-              Parameters.Caps (0);
+              Rose.Invocation.Sent_Cap (Parameters, 0);
          begin
             if Object = null then
                for Cap of Received (1 .. Received_Count) loop

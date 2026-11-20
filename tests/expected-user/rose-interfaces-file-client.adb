@@ -128,7 +128,10 @@ package body Rose.Interfaces.File.Client is
                raise Rose.Interfaces.Objects.Invocation_Error with "File.Open";
             end if;
          end if;
-         Cap := Params.Caps (Rose.Invocation.Capability_Index (Index - First));
+         Cap :=
+           Rose.Invocation.Sent_Cap
+             (Params,
+              Rose.Invocation.Capability_Index (Index - First));
          Index := Index + 1;
       end loop;
       Item.Size := Caps (Size_Index + 1);
@@ -187,7 +190,8 @@ package body Rose.Interfaces.File.Client is
          raise Rose.Interfaces.Objects.Invocation_Error
            with "File.Open_Reader";
       end if;
-      return Rose.Interfaces.File_Reader.Client.From_Cap (Params.Caps (0));
+      return Rose.Interfaces.File_Reader.Client.From_Cap
+        (Rose.Invocation.Sent_Cap (Params, 0));
    end Open_Reader;
 
    --------------------------
@@ -212,7 +216,7 @@ package body Rose.Interfaces.File.Client is
            with "File.Open_Seekable_Reader";
       end if;
       return Rose.Interfaces.Seekable_File_Reader.Client.From_Cap
-        (Params.Caps (0));
+        (Rose.Invocation.Sent_Cap (Params, 0));
    end Open_Seekable_Reader;
 
    ----------

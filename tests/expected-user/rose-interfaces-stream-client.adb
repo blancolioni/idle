@@ -118,7 +118,10 @@ package body Rose.Interfaces.Stream.Client is
                  with "Stream.Open";
             end if;
          end if;
-         Cap := Params.Caps (Rose.Invocation.Capability_Index (Index - First));
+         Cap :=
+           Rose.Invocation.Sent_Cap
+             (Params,
+              Rose.Invocation.Capability_Index (Index - First));
          Index := Index + 1;
       end loop;
       Item.Read := Caps (Read_Index + 1);
@@ -214,7 +217,8 @@ package body Rose.Interfaces.Stream.Client is
             raise Rose.Interfaces.Objects.Invocation_Error
               with "Stream.Stream_Reader_Cap";
          end if;
-         Item.Stream_Reader_Interface_Cap := Params.Caps (0);
+         Item.Stream_Reader_Interface_Cap :=
+           Rose.Invocation.Sent_Cap (Params, 0);
       end if;
       return Item.Stream_Reader_Interface_Cap;
    end Stream_Reader_Cap;
@@ -241,7 +245,8 @@ package body Rose.Interfaces.Stream.Client is
             raise Rose.Interfaces.Objects.Invocation_Error
               with "Stream.Stream_Writer_Cap";
          end if;
-         Item.Stream_Writer_Interface_Cap := Params.Caps (0);
+         Item.Stream_Writer_Interface_Cap :=
+           Rose.Invocation.Sent_Cap (Params, 0);
       end if;
       return Item.Stream_Writer_Interface_Cap;
    end Stream_Writer_Cap;

@@ -23,7 +23,7 @@ package body Rose.Interfaces.Measures.Counter.Client is
       if Params.Control.Flags (Rose.Invocation.Error) then
          Last_Error := Params.Control.Error;
       end if;
-      return Params.Caps (0);
+      return Rose.Invocation.Sent_Cap (Params, 0);
    end Badge;
 
    -----------
@@ -145,7 +145,9 @@ package body Rose.Interfaces.Measures.Counter.Client is
       declare
          Result : Rose.Interfaces.Common.Named.Client.Named_Client;
       begin
-         Rose.Interfaces.Common.Named.Client.Open (Result, Params.Caps (0));
+         Rose.Interfaces.Common.Named.Client.Open
+           (Result,
+            Rose.Invocation.Sent_Cap (Params, 0));
          return Result;
       end;
    end Label;
@@ -185,7 +187,10 @@ package body Rose.Interfaces.Measures.Counter.Client is
                   Subprogram_Count - First));
             Rose.System_Calls.Invoke_Capability (Params);
          end if;
-         Cap := Params.Caps (Rose.Invocation.Capability_Index (Index - First));
+         Cap :=
+           Rose.Invocation.Sent_Cap
+             (Params,
+              Rose.Invocation.Capability_Index (Index - First));
          Index := Index + 1;
       end loop;
       Client.Badge := Caps (Badge_Index + 1);
@@ -234,7 +239,7 @@ package body Rose.Interfaces.Measures.Counter.Client is
       declare
          Result : Counter_Client;
       begin
-         Open (Result, Params.Caps (0));
+         Open (Result, Rose.Invocation.Sent_Cap (Params, 0));
          return Result;
       end;
    end Twin;

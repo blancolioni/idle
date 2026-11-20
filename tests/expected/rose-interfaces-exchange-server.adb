@@ -296,7 +296,8 @@ package body Rose.Interfaces.Exchange.Server is
    is
       Other      : Rose.Capabilities.Capability :=
         Rose.Capabilities.Null_Capability;
-      Label      : String (1 .. Natural (Parameters.Buffer_Length))
+      Label      : String
+        (1 .. Natural (Rose.Invocation.Sent_Buffer_Length (Parameters)))
         with Import, Address => Parameters.Buffer_Address;
       Label_Last : Natural := 0;
    begin
@@ -313,8 +314,10 @@ package body Rose.Interfaces.Exchange.Server is
    procedure Handle_Rename
      (Parameters : in out Rose.Invocation.Invocation_Record)
    is
-      Cap       : Rose.Capabilities.Capability := Parameters.Caps (0);
-      Name      : String (1 .. Natural (Parameters.Buffer_Length))
+      Cap       : Rose.Capabilities.Capability :=
+        Rose.Invocation.Sent_Cap (Parameters, 0);
+      Name      : String
+        (1 .. Natural (Rose.Invocation.Sent_Buffer_Length (Parameters)))
         with Import, Address => Parameters.Buffer_Address;
       Name_Last : Natural := 0;
    begin
@@ -331,7 +334,8 @@ package body Rose.Interfaces.Exchange.Server is
    procedure Handle_Split
      (Parameters : in out Rose.Invocation.Invocation_Record)
    is
-      Whole  : constant Rose.Capabilities.Capability := Parameters.Caps (0);
+      Whole  : constant Rose.Capabilities.Capability :=
+        Rose.Invocation.Sent_Cap (Parameters, 0);
       Part   : Rose.Capabilities.Capability :=
         Rose.Capabilities.Null_Capability;
       Result : constant Rose.Capabilities.Capability :=

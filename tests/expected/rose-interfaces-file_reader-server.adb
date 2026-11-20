@@ -350,7 +350,7 @@ package body Rose.Interfaces.File_Reader.Server is
      (Parameters : in out Rose.Invocation.Invocation_Record)
    is
       Buffer : System.Storage_Elements.Storage_Array
-        (1 .. Parameters.Buffer_Length)
+        (1 .. Rose.Invocation.Sent_Buffer_Length (Parameters))
         with Import, Address => Parameters.Buffer_Address;
       Last   : System.Storage_Elements.Storage_Count;
    begin

@@ -236,7 +236,8 @@ package body Rose.Interfaces.Items.Server is
    procedure Handle_Single
      (Parameters : in out Rose.Invocation.Invocation_Record)
    is
-      Name : String (1 .. Natural (Parameters.Buffer_Length))
+      Name : String
+        (1 .. Natural (Rose.Invocation.Sent_Buffer_Length (Parameters)))
         with Import, Address => Parameters.Buffer_Address;
    begin
       Local_Single (Parameters.Identifier, Name);
@@ -260,7 +261,8 @@ package body Rose.Interfaces.Items.Server is
         Rose.System_Calls.Get_Buffer_Item (Parameters, 2);
       Data      : System.Storage_Elements.Storage_Array (1 .. Data_Item.Length)
         with Import, Address => Data_Item.Address;
-      Owner     : constant Rose.Capabilities.Capability := Parameters.Caps (0);
+      Owner     : constant Rose.Capabilities.Capability :=
+        Rose.Invocation.Sent_Cap (Parameters, 0);
    begin
       Local_Store (Parameters.Identifier, Index, Key, Data, Owner);
       Rose.System_Calls.Initialize_Reply (Parameters, Parameters.Reply_Cap);

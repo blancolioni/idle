@@ -108,7 +108,7 @@ package body Rose.Interfaces.Transactional_Writable_File.Client is
             raise Rose.Interfaces.Objects.Invocation_Error
               with "Transactional_Writable_File.File_Cap";
          end if;
-         Item.File_Interface_Cap := Params.Caps (0);
+         Item.File_Interface_Cap := Rose.Invocation.Sent_Cap (Params, 0);
       end if;
       return Item.File_Interface_Cap;
    end File_Cap;
@@ -353,7 +353,10 @@ package body Rose.Interfaces.Transactional_Writable_File.Client is
                  with "Transactional_Writable_File.Open";
             end if;
          end if;
-         Cap := Params.Caps (Rose.Invocation.Capability_Index (Index - First));
+         Cap :=
+           Rose.Invocation.Sent_Cap
+             (Params,
+              Rose.Invocation.Capability_Index (Index - First));
          Index := Index + 1;
       end loop;
       Item.Size := Caps (Size_Index + 1);
@@ -390,7 +393,7 @@ package body Rose.Interfaces.Transactional_Writable_File.Client is
          raise Rose.Interfaces.Objects.Invocation_Error
            with "Transactional_Writable_File.New_Version";
       end if;
-      return From_Cap (Params.Caps (0));
+      return From_Cap (Rose.Invocation.Sent_Cap (Params, 0));
    end New_Version;
 
    ----------
@@ -460,7 +463,8 @@ package body Rose.Interfaces.Transactional_Writable_File.Client is
          raise Rose.Interfaces.Objects.Invocation_Error
            with "Transactional_Writable_File.Open_Reader";
       end if;
-      return Rose.Interfaces.File_Reader.Client.From_Cap (Params.Caps (0));
+      return Rose.Interfaces.File_Reader.Client.From_Cap
+        (Rose.Invocation.Sent_Cap (Params, 0));
    end Open_Reader;
 
    --------------------------
@@ -485,7 +489,7 @@ package body Rose.Interfaces.Transactional_Writable_File.Client is
            with "Transactional_Writable_File.Open_Seekable_Reader";
       end if;
       return Rose.Interfaces.Seekable_File_Reader.Client.From_Cap
-        (Params.Caps (0));
+        (Rose.Invocation.Sent_Cap (Params, 0));
    end Open_Seekable_Reader;
 
    -------------
@@ -530,7 +534,7 @@ package body Rose.Interfaces.Transactional_Writable_File.Client is
             raise Rose.Interfaces.Objects.Invocation_Error
               with "Transactional_Writable_File.Resource_Cap";
          end if;
-         Item.Resource_Interface_Cap := Params.Caps (0);
+         Item.Resource_Interface_Cap := Rose.Invocation.Sent_Cap (Params, 0);
       end if;
       return Item.Resource_Interface_Cap;
    end Resource_Cap;
@@ -601,7 +605,8 @@ package body Rose.Interfaces.Transactional_Writable_File.Client is
             raise Rose.Interfaces.Objects.Invocation_Error
               with "Transactional_Writable_File.Stream_Writer_Cap";
          end if;
-         Item.Stream_Writer_Interface_Cap := Params.Caps (0);
+         Item.Stream_Writer_Interface_Cap :=
+           Rose.Invocation.Sent_Cap (Params, 0);
       end if;
       return Item.Stream_Writer_Interface_Cap;
    end Stream_Writer_Cap;
@@ -628,7 +633,8 @@ package body Rose.Interfaces.Transactional_Writable_File.Client is
             raise Rose.Interfaces.Objects.Invocation_Error
               with "Transactional_Writable_File.Transactional_Cap";
          end if;
-         Item.Transactional_Interface_Cap := Params.Caps (0);
+         Item.Transactional_Interface_Cap :=
+           Rose.Invocation.Sent_Cap (Params, 0);
       end if;
       return Item.Transactional_Interface_Cap;
    end Transactional_Cap;
@@ -686,7 +692,8 @@ package body Rose.Interfaces.Transactional_Writable_File.Client is
             raise Rose.Interfaces.Objects.Invocation_Error
               with "Transactional_Writable_File.Writable_File_Cap";
          end if;
-         Item.Writable_File_Interface_Cap := Params.Caps (0);
+         Item.Writable_File_Interface_Cap :=
+           Rose.Invocation.Sent_Cap (Params, 0);
       end if;
       return Item.Writable_File_Interface_Cap;
    end Writable_File_Cap;

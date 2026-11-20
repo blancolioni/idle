@@ -40,8 +40,8 @@ package body Rose.Interfaces.Exchange.Client is
       if Params.Control.Flags (Rose.Invocation.Error) then
          Last_Error := Params.Control.Error;
       end if;
-      Receive := Params.Caps (0);
-      Send := Params.Caps (1);
+      Receive := Rose.Invocation.Sent_Cap (Params, 0);
+      Send := Rose.Invocation.Sent_Cap (Params, 1);
    end Create_Endpoint;
 
    -----------------------------
@@ -138,7 +138,10 @@ package body Rose.Interfaces.Exchange.Client is
                   Subprogram_Count - First));
             Rose.System_Calls.Invoke_Capability (Params);
          end if;
-         Cap := Params.Caps (Rose.Invocation.Capability_Index (Index - First));
+         Cap :=
+           Rose.Invocation.Sent_Cap
+             (Params,
+              Rose.Invocation.Capability_Index (Index - First));
          Index := Index + 1;
       end loop;
       Client.Create_Endpoint := Caps (Create_Endpoint_Index + 1);
@@ -188,7 +191,7 @@ package body Rose.Interfaces.Exchange.Client is
       if Params.Control.Flags (Rose.Invocation.Error) then
          Last_Error := Params.Control.Error;
       end if;
-      Open (Other, Params.Caps (0));
+      Open (Other, Rose.Invocation.Sent_Cap (Params, 0));
       Rose.System_Calls.Copy_Text
         (Params,
          Natural (Rose.System_Calls.Get_Word_32 (Params, 0)),
@@ -219,7 +222,7 @@ package body Rose.Interfaces.Exchange.Client is
       if Params.Control.Flags (Rose.Invocation.Error) then
          Last_Error := Params.Control.Error;
       end if;
-      Cap := Params.Caps (0);
+      Cap := Rose.Invocation.Sent_Cap (Params, 0);
       Rose.System_Calls.Copy_Text
         (Params,
          Natural (Rose.System_Calls.Get_Word_32 (Params, 0)),
@@ -247,8 +250,8 @@ package body Rose.Interfaces.Exchange.Client is
       if Params.Control.Flags (Rose.Invocation.Error) then
          Last_Error := Params.Control.Error;
       end if;
-      Part := Params.Caps (0);
-      return Params.Caps (1);
+      Part := Rose.Invocation.Sent_Cap (Params, 0);
+      return Rose.Invocation.Sent_Cap (Params, 1);
    end Split;
 
 end Rose.Interfaces.Exchange.Client;

@@ -199,7 +199,7 @@ package body Rose.Interfaces.Directory.Client is
          raise Rose.Interfaces.Objects.Invocation_Error
            with "Directory.Get_Directory";
       end if;
-      return From_Cap (Params.Caps (0));
+      return From_Cap (Rose.Invocation.Sent_Cap (Params, 0));
    end Get_Directory;
 
    -----------------------------------
@@ -338,7 +338,8 @@ package body Rose.Interfaces.Directory.Client is
          raise Rose.Interfaces.Objects.Invocation_Error
            with "Directory.Get_Ordinary_File";
       end if;
-      return Rose.Interfaces.File.Client.From_Cap (Params.Caps (0));
+      return Rose.Interfaces.File.Client.From_Cap
+        (Rose.Invocation.Sent_Cap (Params, 0));
    end Get_Ordinary_File;
 
    ----------
@@ -375,7 +376,10 @@ package body Rose.Interfaces.Directory.Client is
                  with "Directory.Open";
             end if;
          end if;
-         Cap := Params.Caps (Rose.Invocation.Capability_Index (Index - First));
+         Cap :=
+           Rose.Invocation.Sent_Cap
+             (Params,
+              Rose.Invocation.Capability_Index (Index - First));
          Index := Index + 1;
       end loop;
       Item.Directory_Entry_Count := Caps (Directory_Entry_Count_Index + 1);

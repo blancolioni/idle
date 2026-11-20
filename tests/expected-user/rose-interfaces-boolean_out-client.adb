@@ -120,7 +120,10 @@ package body Rose.Interfaces.Boolean_Out.Client is
                  with "Boolean_Out.Open";
             end if;
          end if;
-         Cap := Params.Caps (Rose.Invocation.Capability_Index (Index - First));
+         Cap :=
+           Rose.Invocation.Sent_Cap
+             (Params,
+              Rose.Invocation.Capability_Index (Index - First));
          Index := Index + 1;
       end loop;
       Item.Get := Caps (Get_Index + 1);

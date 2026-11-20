@@ -104,7 +104,10 @@ package body Rose.Interfaces.Boolean_Result.Client is
                   Subprogram_Count - First));
             Rose.System_Calls.Invoke_Capability (Params);
          end if;
-         Cap := Params.Caps (Rose.Invocation.Capability_Index (Index - First));
+         Cap :=
+           Rose.Invocation.Sent_Cap
+             (Params,
+              Rose.Invocation.Capability_Index (Index - First));
          Index := Index + 1;
       end loop;
       Client.Is_Ready := Caps (Is_Ready_Index + 1);

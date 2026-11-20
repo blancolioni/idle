@@ -205,7 +205,7 @@ package body Rose.Interfaces.Cap_Set.Server is
             Object : constant Object_Access :=
               Find (Server_Context, Parameters.Identifier);
             Cap    : constant Rose.Capabilities.Capability :=
-              Parameters.Caps (0);
+              Rose.Invocation.Sent_Cap (Parameters, 0);
          begin
             if Object = null then
                for Cap of Received (1 .. Received_Count) loop

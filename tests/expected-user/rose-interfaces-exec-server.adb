@@ -520,11 +520,12 @@ package body Rose.Interfaces.Exec.Server is
             Executable   : Rose.Interfaces.Stream_Reader.Client
               .Stream_Reader_Client :=
               Rose.Interfaces.Stream_Reader.Client.From_Cap
-                (Parameters.Caps (0));
-            Name         : String (1 .. Natural (Parameters.Buffer_Length))
+                (Rose.Invocation.Sent_Cap (Parameters, 0));
+            Name         : String
+              (1 .. Natural (Rose.Invocation.Sent_Buffer_Length (Parameters)))
               with Import, Address => Parameters.Buffer_Address;
             Install_Caps : constant Rose.Capabilities.Capability :=
-              Parameters.Caps (1);
+              Rose.Invocation.Sent_Cap (Parameters, 1);
          begin
             if Object = null then
                for Cap of Received (1 .. Received_Count) loop
@@ -576,7 +577,7 @@ package body Rose.Interfaces.Exec.Server is
             Object      : constant Object_Access :=
               Find (Server_Context, Parameters.Identifier);
             Environment : System.Storage_Elements.Storage_Array
-              (1 .. Parameters.Buffer_Length)
+              (1 .. Rose.Invocation.Sent_Buffer_Length (Parameters))
               with Import, Address => Parameters.Buffer_Address;
          begin
             if Object = null then
@@ -663,7 +664,8 @@ package body Rose.Interfaces.Exec.Server is
             Object : constant Object_Access :=
               Find (Server_Context, Parameters.Identifier);
             Last   : Natural := 0;
-            Result : String (1 .. Natural (Parameters.Buffer_Length))
+            Result : String
+              (1 .. Natural (Rose.Invocation.Sent_Buffer_Length (Parameters)))
               with Import, Address => Parameters.Buffer_Address;
          begin
             if Object = null then
@@ -712,7 +714,7 @@ package body Rose.Interfaces.Exec.Server is
             Output : Rose.Interfaces.Stream_Writer.Client
               .Stream_Writer_Client :=
               Rose.Interfaces.Stream_Writer.Client.From_Cap
-                (Parameters.Caps (0));
+                (Rose.Invocation.Sent_Cap (Parameters, 0));
          begin
             if Object = null then
                for Cap of Received (1 .. Received_Count) loop

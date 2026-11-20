@@ -25,7 +25,7 @@ package body Rose.Interfaces.Named.Client is
       if Params.Control.Flags (Rose.Invocation.Error) then
          raise Rose.Interfaces.Objects.Invocation_Error with "Named.Badge";
       end if;
-      return Params.Caps (0);
+      return Rose.Invocation.Sent_Cap (Params, 0);
    end Badge;
 
    -----------
@@ -108,7 +108,10 @@ package body Rose.Interfaces.Named.Client is
                  with "Named.Open";
             end if;
          end if;
-         Cap := Params.Caps (Rose.Invocation.Capability_Index (Index - First));
+         Cap :=
+           Rose.Invocation.Sent_Cap
+             (Params,
+              Rose.Invocation.Capability_Index (Index - First));
          Index := Index + 1;
       end loop;
       Item.Badge := Caps (Badge_Index + 1);

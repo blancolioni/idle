@@ -102,7 +102,10 @@ package body Rose.Interfaces.Partner.Client is
                  with "Partner.Open";
             end if;
          end if;
-         Cap := Params.Caps (Rose.Invocation.Capability_Index (Index - First));
+         Cap :=
+           Rose.Invocation.Sent_Cap
+             (Params,
+              Rose.Invocation.Capability_Index (Index - First));
          Index := Index + 1;
       end loop;
       Item.Pair := Caps (Pair_Index + 1);
@@ -129,7 +132,7 @@ package body Rose.Interfaces.Partner.Client is
       if Params.Control.Flags (Rose.Invocation.Error) then
          raise Rose.Interfaces.Objects.Invocation_Error with "Partner.Next";
       end if;
-      return From_Cap (Params.Caps (0));
+      return From_Cap (Rose.Invocation.Sent_Cap (Params, 0));
    end Next;
 
    ----------
@@ -181,7 +184,7 @@ package body Rose.Interfaces.Partner.Client is
       if Params.Control.Flags (Rose.Invocation.Error) then
          raise Rose.Interfaces.Objects.Invocation_Error with "Partner.Pair";
       end if;
-      Open (Other, Params.Caps (0));
+      Open (Other, Rose.Invocation.Sent_Cap (Params, 0));
    end Pair;
 
    -----------------

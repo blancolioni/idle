@@ -312,7 +312,8 @@ package body Rose.Interfaces.Partner.Server is
               Find (Server_Context, Parameters.Identifier);
             Other  : Rose.Interfaces.Partner.Client.Partner_Client;
             Peer   : Rose.Interfaces.Partner.Client.Partner_Client :=
-              Rose.Interfaces.Partner.Client.From_Cap (Parameters.Caps (0));
+              Rose.Interfaces.Partner.Client.From_Cap
+                (Rose.Invocation.Sent_Cap (Parameters, 0));
          begin
             if Object = null then
                for Cap of Received (1 .. Received_Count) loop

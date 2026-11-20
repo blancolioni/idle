@@ -84,7 +84,10 @@ package body Rose.Interfaces.Timer.Client is
                   Subprogram_Count - First));
             Rose.System_Calls.Invoke_Capability (Params);
          end if;
-         Cap := Params.Caps (Rose.Invocation.Capability_Index (Index - First));
+         Cap :=
+           Rose.Invocation.Sent_Cap
+             (Params,
+              Rose.Invocation.Capability_Index (Index - First));
          Index := Index + 1;
       end loop;
       Client.Set_Timer := Caps (Set_Timer_Index + 1);
@@ -128,7 +131,9 @@ package body Rose.Interfaces.Timer.Client is
       declare
          Result : Rose.Interfaces.Cap.Client.Cap_Client;
       begin
-         Rose.Interfaces.Cap.Client.Open (Result, Params.Caps (0));
+         Rose.Interfaces.Cap.Client.Open
+           (Result,
+            Rose.Invocation.Sent_Cap (Params, 0));
          return Result;
       end;
    end Set_Timer;

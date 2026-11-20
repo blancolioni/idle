@@ -86,7 +86,10 @@ package body Rose.Interfaces.Stream_Reader.Client is
                  with "Stream_Reader.Open";
             end if;
          end if;
-         Cap := Params.Caps (Rose.Invocation.Capability_Index (Index - First));
+         Cap :=
+           Rose.Invocation.Sent_Cap
+             (Params,
+              Rose.Invocation.Capability_Index (Index - First));
          Index := Index + 1;
       end loop;
       Item.Read := Caps (Read_Index + 1);
