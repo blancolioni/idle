@@ -491,11 +491,12 @@ package body Rose.Interfaces.Exec.Server is
      (Parameters : in out Rose.Invocation.Invocation_Record)
    is
       Executable   : constant Rose.Capabilities.Capability :=
-        Parameters.Caps (0);
-      Name         : String (1 .. Natural (Parameters.Buffer_Length))
+        Rose.Invocation.Sent_Cap (Parameters, 0);
+      Name         : String
+        (1 .. Natural (Rose.Invocation.Sent_Buffer_Length (Parameters)))
         with Import, Address => Parameters.Buffer_Address;
       Install_Caps : constant Rose.Capabilities.Capability :=
-        Parameters.Caps (1);
+        Rose.Invocation.Sent_Cap (Parameters, 1);
       Result       : constant Rose.Capabilities.Capability :=
         Local_Install (Parameters.Identifier, Executable, Name, Install_Caps);
    begin
@@ -511,7 +512,7 @@ package body Rose.Interfaces.Exec.Server is
      (Parameters : in out Rose.Invocation.Invocation_Record)
    is
       Environment : System.Storage_Elements.Storage_Array
-        (1 .. Parameters.Buffer_Length)
+        (1 .. Rose.Invocation.Sent_Buffer_Length (Parameters))
         with Import, Address => Parameters.Buffer_Address;
       Result      : constant Rose.Capabilities.Capability :=
         Local_Launch (Parameters.Identifier, Environment);
@@ -542,7 +543,8 @@ package body Rose.Interfaces.Exec.Server is
      (Parameters : in out Rose.Invocation.Invocation_Record)
    is
       Last   : Natural := 0;
-      Result : String (1 .. Natural (Parameters.Buffer_Length))
+      Result : String
+        (1 .. Natural (Rose.Invocation.Sent_Buffer_Length (Parameters)))
         with Import, Address => Parameters.Buffer_Address;
    begin
       Local_Metadata (Parameters.Identifier, Result, Last);
@@ -557,7 +559,8 @@ package body Rose.Interfaces.Exec.Server is
    procedure Handle_Set_Standard_Output
      (Parameters : in out Rose.Invocation.Invocation_Record)
    is
-      Output : constant Rose.Capabilities.Capability := Parameters.Caps (0);
+      Output : constant Rose.Capabilities.Capability :=
+        Rose.Invocation.Sent_Cap (Parameters, 0);
    begin
       Local_Set_Standard_Output (Parameters.Identifier, Output);
       Rose.System_Calls.Initialize_Reply (Parameters, Parameters.Reply_Cap);

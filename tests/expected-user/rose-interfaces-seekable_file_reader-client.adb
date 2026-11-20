@@ -71,7 +71,8 @@ package body Rose.Interfaces.Seekable_File_Reader.Client is
             raise Rose.Interfaces.Objects.Invocation_Error
               with "Seekable_File_Reader.File_Reader_Cap";
          end if;
-         Item.File_Reader_Interface_Cap := Params.Caps (0);
+         Item.File_Reader_Interface_Cap :=
+           Rose.Invocation.Sent_Cap (Params, 0);
       end if;
       return Item.File_Reader_Interface_Cap;
    end File_Reader_Cap;
@@ -211,7 +212,10 @@ package body Rose.Interfaces.Seekable_File_Reader.Client is
                  with "Seekable_File_Reader.Open";
             end if;
          end if;
-         Cap := Params.Caps (Rose.Invocation.Capability_Index (Index - First));
+         Cap :=
+           Rose.Invocation.Sent_Cap
+             (Params,
+              Rose.Invocation.Capability_Index (Index - First));
          Index := Index + 1;
       end loop;
       Item.Read := Caps (Read_Index + 1);
@@ -322,7 +326,7 @@ package body Rose.Interfaces.Seekable_File_Reader.Client is
             raise Rose.Interfaces.Objects.Invocation_Error
               with "Seekable_File_Reader.Resource_Cap";
          end if;
-         Item.Resource_Interface_Cap := Params.Caps (0);
+         Item.Resource_Interface_Cap := Rose.Invocation.Sent_Cap (Params, 0);
       end if;
       return Item.Resource_Interface_Cap;
    end Resource_Cap;
@@ -371,7 +375,7 @@ package body Rose.Interfaces.Seekable_File_Reader.Client is
             raise Rose.Interfaces.Objects.Invocation_Error
               with "Seekable_File_Reader.Seekable_Cap";
          end if;
-         Item.Seekable_Interface_Cap := Params.Caps (0);
+         Item.Seekable_Interface_Cap := Rose.Invocation.Sent_Cap (Params, 0);
       end if;
       return Item.Seekable_Interface_Cap;
    end Seekable_Cap;
@@ -407,7 +411,8 @@ package body Rose.Interfaces.Seekable_File_Reader.Client is
             raise Rose.Interfaces.Objects.Invocation_Error
               with "Seekable_File_Reader.Stream_Reader_Cap";
          end if;
-         Item.Stream_Reader_Interface_Cap := Params.Caps (0);
+         Item.Stream_Reader_Interface_Cap :=
+           Rose.Invocation.Sent_Cap (Params, 0);
       end if;
       return Item.Stream_Reader_Interface_Cap;
    end Stream_Reader_Cap;

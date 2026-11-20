@@ -158,7 +158,8 @@ package body Rose.Interfaces.Exec.Client is
       if Params.Control.Flags (Rose.Invocation.Error) then
          raise Rose.Interfaces.Objects.Invocation_Error with "Exec.Install";
       end if;
-      return Rose.Interfaces.Launch.Client.From_Cap (Params.Caps (0));
+      return Rose.Interfaces.Launch.Client.From_Cap
+        (Rose.Invocation.Sent_Cap (Params, 0));
    end Install;
 
    ------------
@@ -182,7 +183,8 @@ package body Rose.Interfaces.Exec.Client is
       if Params.Control.Flags (Rose.Invocation.Error) then
          raise Rose.Interfaces.Objects.Invocation_Error with "Exec.Launch";
       end if;
-      return Rose.Interfaces.Process.Client.From_Cap (Params.Caps (0));
+      return Rose.Interfaces.Process.Client.From_Cap
+        (Rose.Invocation.Sent_Cap (Params, 0));
    end Launch;
 
    ----------------
@@ -207,7 +209,7 @@ package body Rose.Interfaces.Exec.Client is
             raise Rose.Interfaces.Objects.Invocation_Error
               with "Exec.Launch_Cap";
          end if;
-         Item.Launch_Interface_Cap := Params.Caps (0);
+         Item.Launch_Interface_Cap := Rose.Invocation.Sent_Cap (Params, 0);
       end if;
       return Item.Launch_Interface_Cap;
    end Launch_Cap;
@@ -232,7 +234,7 @@ package body Rose.Interfaces.Exec.Client is
          raise Rose.Interfaces.Objects.Invocation_Error
            with "Exec.Launch_Command";
       end if;
-      return Params.Caps (0);
+      return Rose.Invocation.Sent_Cap (Params, 0);
    end Launch_Command;
 
    ----------
@@ -268,7 +270,10 @@ package body Rose.Interfaces.Exec.Client is
                raise Rose.Interfaces.Objects.Invocation_Error with "Exec.Open";
             end if;
          end if;
-         Cap := Params.Caps (Rose.Invocation.Capability_Index (Index - First));
+         Cap :=
+           Rose.Invocation.Sent_Cap
+             (Params,
+              Rose.Invocation.Capability_Index (Index - First));
          Index := Index + 1;
       end loop;
       Item.Launch := Caps (Launch_Index + 1);

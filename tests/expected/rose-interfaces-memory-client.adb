@@ -132,7 +132,9 @@ package body Rose.Interfaces.Memory.Client is
       declare
          Result : Rose.Interfaces.Process.Client.Process_Client;
       begin
-         Rose.Interfaces.Process.Client.Open (Result, Params.Caps (0));
+         Rose.Interfaces.Process.Client.Open
+           (Result,
+            Rose.Invocation.Sent_Cap (Params, 0));
          return Result;
       end;
    end New_Process;
@@ -172,7 +174,10 @@ package body Rose.Interfaces.Memory.Client is
                   Subprogram_Count - First));
             Rose.System_Calls.Invoke_Capability (Params);
          end if;
-         Cap := Params.Caps (Rose.Invocation.Capability_Index (Index - First));
+         Cap :=
+           Rose.Invocation.Sent_Cap
+             (Params,
+              Rose.Invocation.Capability_Index (Index - First));
          Index := Index + 1;
       end loop;
       Client.New_Process := Caps (New_Process_Index + 1);

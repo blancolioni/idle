@@ -25,7 +25,7 @@ package body Rose.Interfaces.Gauge.Client is
       if Params.Control.Flags (Rose.Invocation.Error) then
          raise Rose.Interfaces.Objects.Invocation_Error with "Gauge.Badge";
       end if;
-      return Params.Caps (0);
+      return Rose.Invocation.Sent_Cap (Params, 0);
    end Badge;
 
    -----------
@@ -81,7 +81,7 @@ package body Rose.Interfaces.Gauge.Client is
             raise Rose.Interfaces.Objects.Invocation_Error
               with "Gauge.Counter_Cap";
          end if;
-         Item.Counter_Interface_Cap := Params.Caps (0);
+         Item.Counter_Interface_Cap := Rose.Invocation.Sent_Cap (Params, 0);
       end if;
       return Item.Counter_Interface_Cap;
    end Counter_Cap;
@@ -231,7 +231,7 @@ package body Rose.Interfaces.Gauge.Client is
             raise Rose.Interfaces.Objects.Invocation_Error
               with "Gauge.Labelled_Cap";
          end if;
-         Item.Labelled_Interface_Cap := Params.Caps (0);
+         Item.Labelled_Interface_Cap := Rose.Invocation.Sent_Cap (Params, 0);
       end if;
       return Item.Labelled_Interface_Cap;
    end Labelled_Cap;
@@ -270,7 +270,10 @@ package body Rose.Interfaces.Gauge.Client is
                  with "Gauge.Open";
             end if;
          end if;
-         Cap := Params.Caps (Rose.Invocation.Capability_Index (Index - First));
+         Cap :=
+           Rose.Invocation.Sent_Cap
+             (Params,
+              Rose.Invocation.Capability_Index (Index - First));
          Index := Index + 1;
       end loop;
       Item.Badge := Caps (Badge_Index + 1);
@@ -303,7 +306,7 @@ package body Rose.Interfaces.Gauge.Client is
             raise Rose.Interfaces.Objects.Invocation_Error
               with "Gauge.Named_Cap";
          end if;
-         Item.Named_Interface_Cap := Params.Caps (0);
+         Item.Named_Interface_Cap := Rose.Invocation.Sent_Cap (Params, 0);
       end if;
       return Item.Named_Interface_Cap;
    end Named_Cap;

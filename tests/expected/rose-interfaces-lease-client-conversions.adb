@@ -26,7 +26,9 @@ package body Rose.Interfaces.Lease.Client.Conversions is
          Rose.System_Calls.Send_Word (Params, Natural (2));
          Rose.System_Calls.Receive_Caps (Params, 1);
          Rose.System_Calls.Invoke_Capability (Params);
-         Rose.Interfaces.Counter.Client.Open (Result, Params.Caps (0));
+         Rose.Interfaces.Counter.Client.Open
+           (Result,
+            Rose.Invocation.Sent_Cap (Params, 0));
       end if;
       return Result;
    end To_Counter;
@@ -50,7 +52,9 @@ package body Rose.Interfaces.Lease.Client.Conversions is
          Rose.System_Calls.Send_Word (Params, Natural (1));
          Rose.System_Calls.Receive_Caps (Params, 1);
          Rose.System_Calls.Invoke_Capability (Params);
-         Rose.Interfaces.Named.Client.Open (Result, Params.Caps (0));
+         Rose.Interfaces.Named.Client.Open
+           (Result,
+            Rose.Invocation.Sent_Cap (Params, 0));
       end if;
       return Result;
    end To_Named;
@@ -74,7 +78,9 @@ package body Rose.Interfaces.Lease.Client.Conversions is
          Rose.System_Calls.Send_Word (Params, Natural (3));
          Rose.System_Calls.Receive_Caps (Params, 1);
          Rose.System_Calls.Invoke_Capability (Params);
-         Rose.Interfaces.Resource.Client.Open (Result, Params.Caps (0));
+         Rose.Interfaces.Resource.Client.Open
+           (Result,
+            Rose.Invocation.Sent_Cap (Params, 0));
       end if;
       return Result;
    end To_Resource;

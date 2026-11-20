@@ -124,7 +124,7 @@ package body Rose.Interfaces.Writable_File.Client is
       begin
          Rose.Interfaces.Transactional_Writable_File.Client.Open
            (Result,
-            Params.Caps (0));
+            Rose.Invocation.Sent_Cap (Params, 0));
          return Result;
       end;
    end New_Version;
@@ -164,7 +164,10 @@ package body Rose.Interfaces.Writable_File.Client is
                   Subprogram_Count - First));
             Rose.System_Calls.Invoke_Capability (Params);
          end if;
-         Cap := Params.Caps (Rose.Invocation.Capability_Index (Index - First));
+         Cap :=
+           Rose.Invocation.Sent_Cap
+             (Params,
+              Rose.Invocation.Capability_Index (Index - First));
          Index := Index + 1;
       end loop;
       Client.Size := Caps (Size_Index + 1);
@@ -219,7 +222,9 @@ package body Rose.Interfaces.Writable_File.Client is
       declare
          Result : Rose.Interfaces.File_Reader.Client.File_Reader_Client;
       begin
-         Rose.Interfaces.File_Reader.Client.Open (Result, Params.Caps (0));
+         Rose.Interfaces.File_Reader.Client.Open
+           (Result,
+            Rose.Invocation.Sent_Cap (Params, 0));
          return Result;
       end;
    end Open_Reader;
@@ -248,7 +253,7 @@ package body Rose.Interfaces.Writable_File.Client is
       begin
          Rose.Interfaces.Seekable_File_Reader.Client.Open
            (Result,
-            Params.Caps (0));
+            Rose.Invocation.Sent_Cap (Params, 0));
          return Result;
       end;
    end Open_Seekable_Reader;

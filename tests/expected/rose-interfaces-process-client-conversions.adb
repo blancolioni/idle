@@ -25,7 +25,9 @@ package body Rose.Interfaces.Process.Client.Conversions is
          Rose.System_Calls.Send_Word (Params, Natural (3));
          Rose.System_Calls.Receive_Caps (Params, 1);
          Rose.System_Calls.Invoke_Capability (Params);
-         Rose.Interfaces.Cap.Client.Open (Result, Params.Caps (0));
+         Rose.Interfaces.Cap.Client.Open
+           (Result,
+            Rose.Invocation.Sent_Cap (Params, 0));
       end if;
       return Result;
    end To_Cap;
@@ -52,7 +54,9 @@ package body Rose.Interfaces.Process.Client.Conversions is
          Rose.System_Calls.Send_Word (Params, Natural (1));
          Rose.System_Calls.Receive_Caps (Params, 1);
          Rose.System_Calls.Invoke_Capability (Params);
-         Rose.Interfaces.Segment.Client.Open (Result, Params.Caps (0));
+         Rose.Interfaces.Segment.Client.Open
+           (Result,
+            Rose.Invocation.Sent_Cap (Params, 0));
       end if;
       return Result;
    end To_Segment;
@@ -78,7 +82,9 @@ package body Rose.Interfaces.Process.Client.Conversions is
          Rose.System_Calls.Send_Word (Params, Natural (2));
          Rose.System_Calls.Receive_Caps (Params, 1);
          Rose.System_Calls.Invoke_Capability (Params);
-         Rose.Interfaces.Server.Client.Open (Result, Params.Caps (0));
+         Rose.Interfaces.Server.Client.Open
+           (Result,
+            Rose.Invocation.Sent_Cap (Params, 0));
       end if;
       return Result;
    end To_Server;

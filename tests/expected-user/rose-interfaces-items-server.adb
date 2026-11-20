@@ -338,7 +338,8 @@ package body Rose.Interfaces.Items.Server is
          declare
             Object : constant Object_Access :=
               Find (Server_Context, Parameters.Identifier);
-            Name   : String (1 .. Natural (Parameters.Buffer_Length))
+            Name   : String
+              (1 .. Natural (Rose.Invocation.Sent_Buffer_Length (Parameters)))
               with Import, Address => Parameters.Buffer_Address;
          begin
             if Object = null then
@@ -395,7 +396,7 @@ package body Rose.Interfaces.Items.Server is
               (1 .. Data_Item.Length)
               with Import, Address => Data_Item.Address;
             Owner     : constant Rose.Capabilities.Capability :=
-              Parameters.Caps (0);
+              Rose.Invocation.Sent_Cap (Parameters, 0);
          begin
             if Object = null then
                for Cap of Received (1 .. Received_Count) loop

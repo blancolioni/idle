@@ -455,7 +455,7 @@ package body Rose.Interfaces.Stream.Server is
             Object : constant Object_Access :=
               Find (Server_Context, Parameters.Identifier);
             Buffer : System.Storage_Elements.Storage_Array
-              (1 .. Parameters.Buffer_Length)
+              (1 .. Rose.Invocation.Sent_Buffer_Length (Parameters))
               with Import, Address => Parameters.Buffer_Address;
             Last   : System.Storage_Elements.Storage_Count;
          begin
@@ -500,7 +500,7 @@ package body Rose.Interfaces.Stream.Server is
               Find (Server_Context, Parameters.Identifier);
             Buffer : Ada.Streams.Stream_Element_Array
               (1 .. Ada.Streams.Stream_Element_Offset
-                 (Parameters.Buffer_Length))
+                 (Rose.Invocation.Sent_Buffer_Length (Parameters)))
               with Import, Address => Parameters.Buffer_Address;
          begin
             if Object = null then

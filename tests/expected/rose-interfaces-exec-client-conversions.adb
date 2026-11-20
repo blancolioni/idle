@@ -26,7 +26,9 @@ package body Rose.Interfaces.Exec.Client.Conversions is
          Rose.System_Calls.Send_Word (Params, Natural (1));
          Rose.System_Calls.Receive_Caps (Params, 1);
          Rose.System_Calls.Invoke_Capability (Params);
-         Rose.Interfaces.Launch.Client.Open (Result, Params.Caps (0));
+         Rose.Interfaces.Launch.Client.Open
+           (Result,
+            Rose.Invocation.Sent_Cap (Params, 0));
       end if;
       return Result;
    end To_Launch;

@@ -117,7 +117,9 @@ package body Rose.Interfaces.Exec.Client is
       declare
          Result : Rose.Interfaces.Launch.Client.Launch_Client;
       begin
-         Rose.Interfaces.Launch.Client.Open (Result, Params.Caps (0));
+         Rose.Interfaces.Launch.Client.Open
+           (Result,
+            Rose.Invocation.Sent_Cap (Params, 0));
          return Result;
       end;
    end Install;
@@ -144,7 +146,9 @@ package body Rose.Interfaces.Exec.Client is
       declare
          Result : Rose.Interfaces.Process.Client.Process_Client;
       begin
-         Rose.Interfaces.Process.Client.Open (Result, Params.Caps (0));
+         Rose.Interfaces.Process.Client.Open
+           (Result,
+            Rose.Invocation.Sent_Cap (Params, 0));
          return Result;
       end;
    end Launch;
@@ -166,7 +170,7 @@ package body Rose.Interfaces.Exec.Client is
       if Params.Control.Flags (Rose.Invocation.Error) then
          Last_Error := Params.Control.Error;
       end if;
-      return Params.Caps (0);
+      return Rose.Invocation.Sent_Cap (Params, 0);
    end Launch_Command;
 
    --------------
@@ -230,7 +234,10 @@ package body Rose.Interfaces.Exec.Client is
                   Subprogram_Count - First));
             Rose.System_Calls.Invoke_Capability (Params);
          end if;
-         Cap := Params.Caps (Rose.Invocation.Capability_Index (Index - First));
+         Cap :=
+           Rose.Invocation.Sent_Cap
+             (Params,
+              Rose.Invocation.Capability_Index (Index - First));
          Index := Index + 1;
       end loop;
       Client.Launch := Caps (Launch_Index + 1);

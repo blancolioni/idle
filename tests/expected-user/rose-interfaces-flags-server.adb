@@ -290,7 +290,8 @@ package body Rose.Interfaces.Flags.Server is
          declare
             Object  : constant Object_Access :=
               Find (Server_Context, Parameters.Identifier);
-            Name    : String (1 .. Natural (Parameters.Buffer_Length))
+            Name    : String
+              (1 .. Natural (Rose.Invocation.Sent_Buffer_Length (Parameters)))
               with Import, Address => Parameters.Buffer_Address;
             Default : constant Boolean :=
               Rose.System_Calls.Get_Word_32 (Parameters, 0) /= 0;

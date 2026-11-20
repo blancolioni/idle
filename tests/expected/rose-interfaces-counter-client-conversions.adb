@@ -22,7 +22,9 @@ package body Rose.Interfaces.Counter.Client.Conversions is
          Rose.System_Calls.Send_Word (Params, Natural (1));
          Rose.System_Calls.Receive_Caps (Params, 1);
          Rose.System_Calls.Invoke_Capability (Params);
-         Rose.Interfaces.Named.Client.Open (Result, Params.Caps (0));
+         Rose.Interfaces.Named.Client.Open
+           (Result,
+            Rose.Invocation.Sent_Cap (Params, 0));
       end if;
       return Result;
    end To_Named;

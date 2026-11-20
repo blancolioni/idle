@@ -27,7 +27,7 @@ package body Rose.Interfaces.Measures.Counter.Client is
          raise Rose.Interfaces.Objects.Invocation_Error
            with "Measures.Counter.Badge";
       end if;
-      return Params.Caps (0);
+      return Rose.Invocation.Sent_Cap (Params, 0);
    end Badge;
 
    -----------
@@ -196,7 +196,8 @@ package body Rose.Interfaces.Measures.Counter.Client is
          raise Rose.Interfaces.Objects.Invocation_Error
            with "Measures.Counter.Label";
       end if;
-      return Rose.Interfaces.Common.Named.Client.From_Cap (Params.Caps (0));
+      return Rose.Interfaces.Common.Named.Client.From_Cap
+        (Rose.Invocation.Sent_Cap (Params, 0));
    end Label;
 
    ----------
@@ -233,7 +234,10 @@ package body Rose.Interfaces.Measures.Counter.Client is
                  with "Measures.Counter.Open";
             end if;
          end if;
-         Cap := Params.Caps (Rose.Invocation.Capability_Index (Index - First));
+         Cap :=
+           Rose.Invocation.Sent_Cap
+             (Params,
+              Rose.Invocation.Capability_Index (Index - First));
          Index := Index + 1;
       end loop;
       Item.Badge := Caps (Badge_Index + 1);
@@ -266,7 +270,7 @@ package body Rose.Interfaces.Measures.Counter.Client is
             raise Rose.Interfaces.Objects.Invocation_Error
               with "Measures.Counter.Named_Cap";
          end if;
-         Item.Named_Interface_Cap := Params.Caps (0);
+         Item.Named_Interface_Cap := Rose.Invocation.Sent_Cap (Params, 0);
       end if;
       return Item.Named_Interface_Cap;
    end Named_Cap;
@@ -326,7 +330,7 @@ package body Rose.Interfaces.Measures.Counter.Client is
          raise Rose.Interfaces.Objects.Invocation_Error
            with "Measures.Counter.Twin";
       end if;
-      return From_Cap (Params.Caps (0));
+      return From_Cap (Rose.Invocation.Sent_Cap (Params, 0));
    end Twin;
 
    -----------

@@ -235,7 +235,7 @@ package body Rose.Interfaces.Reader.Server is
               Find (Server_Context, Parameters.Identifier);
             Buffer : Ada.Streams.Stream_Element_Array
               (1 .. Ada.Streams.Stream_Element_Offset
-                 (Parameters.Buffer_Length))
+                 (Rose.Invocation.Sent_Buffer_Length (Parameters)))
               with Import, Address => Parameters.Buffer_Address;
             Last   : Ada.Streams.Stream_Element_Offset;
          begin

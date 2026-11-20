@@ -124,7 +124,10 @@ package body Rose.Interfaces.Toggle.Client is
                  with "Toggle.Open";
             end if;
          end if;
-         Cap := Params.Caps (Rose.Invocation.Capability_Index (Index - First));
+         Cap :=
+           Rose.Invocation.Sent_Cap
+             (Params,
+              Rose.Invocation.Capability_Index (Index - First));
          Index := Index + 1;
       end loop;
       Item.Is_On := Caps (Is_On_Index + 1);

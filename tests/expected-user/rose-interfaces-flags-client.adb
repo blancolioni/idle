@@ -155,7 +155,10 @@ package body Rose.Interfaces.Flags.Client is
                  with "Flags.Open";
             end if;
          end if;
-         Cap := Params.Caps (Rose.Invocation.Capability_Index (Index - First));
+         Cap :=
+           Rose.Invocation.Sent_Cap
+             (Params,
+              Rose.Invocation.Capability_Index (Index - First));
          Index := Index + 1;
       end loop;
       Item.Is_Set := Caps (Is_Set_Index + 1);

@@ -86,7 +86,10 @@ package body Rose.Interfaces.Seekable.Client is
                  with "Seekable.Open";
             end if;
          end if;
-         Cap := Params.Caps (Rose.Invocation.Capability_Index (Index - First));
+         Cap :=
+           Rose.Invocation.Sent_Cap
+             (Params,
+              Rose.Invocation.Capability_Index (Index - First));
          Index := Index + 1;
       end loop;
       Item.Seek := Caps (Seek_Index + 1);

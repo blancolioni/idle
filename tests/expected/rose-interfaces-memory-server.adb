@@ -180,7 +180,7 @@ package body Rose.Interfaces.Memory.Server is
      (Parameters : in out Rose.Invocation.Invocation_Record)
    is
       Append_Page : constant Rose.Capabilities.Capability :=
-        Parameters.Caps (0);
+        Rose.Invocation.Sent_Cap (Parameters, 0);
    begin
       Local_Checkpoint (Parameters.Identifier, Append_Page);
       Rose.System_Calls.Initialize_Reply (Parameters, Parameters.Reply_Cap);
@@ -354,7 +354,8 @@ package body Rose.Interfaces.Memory.Server is
    procedure Handle_New_Process
      (Parameters : in out Rose.Invocation.Invocation_Record)
    is
-      Process : constant Rose.Capabilities.Capability := Parameters.Caps (0);
+      Process : constant Rose.Capabilities.Capability :=
+        Rose.Invocation.Sent_Cap (Parameters, 0);
       Result  : constant Rose.Capabilities.Capability :=
         Local_New_Process (Parameters.Identifier, Process);
    begin
@@ -396,7 +397,7 @@ package body Rose.Interfaces.Memory.Server is
      (Parameters : in out Rose.Invocation.Invocation_Record)
    is
       Process     : constant Rose.Capabilities.Capability :=
-        Parameters.Caps (0);
+        Rose.Invocation.Sent_Cap (Parameters, 0);
       Exec_Base   : constant Rose.Words.Word :=
         Rose.System_Calls.Get_Word_32 (Parameters, 0);
       Exec_Bound  : constant Rose.Words.Word :=
@@ -414,7 +415,7 @@ package body Rose.Interfaces.Memory.Server is
       Stack_Bound : constant Rose.Words.Word :=
         Rose.System_Calls.Get_Word_32 (Parameters, 7);
       Environment : System.Storage_Elements.Storage_Array
-        (1 .. Parameters.Buffer_Length)
+        (1 .. Rose.Invocation.Sent_Buffer_Length (Parameters))
         with Import, Address => Parameters.Buffer_Address;
    begin
       Local_Register_Process

@@ -55,6 +55,16 @@ package body Idle.Targets.Kernel.Client is
       --  For the user target, the specs of the body's own subprograms.
       Bodies       : Body_List;
 
+      function Sent_Cap
+        (Index : not null Syn.Node_Access)
+         return not null Syn.Node_Access
+      is (F.New_Call
+            ("Rose.Invocation.Sent_Cap",
+             [F.New_Name ("Params"), Index]));
+      --  Params.Caps (Index), or the null cap if it wasn't
+      --  sent, so that a missing cap is null rather than whatever
+      --  was in the slot (rose#892).
+
       function Call
         (Name      : String;
          Arguments : Syn.Node_Array := Syn.No_Nodes)
@@ -241,9 +251,7 @@ package body Idle.Targets.Kernel.Client is
                               Raise_On_Error (Cap_Function (Ancestor_Name)),
                               F.New_Assignment
                                 (Component,
-                                 F.New_Call
-                                   ("Params.Caps",
-                                    [F.New_Integer_Literal (0)]))]),
+                                 Sent_Cap (F.New_Integer_Literal (0)))]),
                         F.New_Return (Component)]));
             end;
          end loop;
@@ -963,10 +971,8 @@ package body Idle.Targets.Kernel.Client is
                      Statements.Append
                        (F.New_Assignment
                           (Value,
-                           F.New_Call
-                             ("Params.Caps",
-                              [F.New_Integer_Literal
-                                 (Long_Long_Long_Integer (Cap_Index))])));
+                           Sent_Cap (F.New_Integer_Literal
+                                 (Long_Long_Long_Integer (Cap_Index)))));
                      Cap_Index := Cap_Index + 1;
                   elsif Parameter_Info.Category = Interface_Value
                     and then User
@@ -981,10 +987,8 @@ package body Idle.Targets.Kernel.Client is
                        (Call (Qualified (Client_Package (Parameter_Info),
                                          "Open"),
                               [Value,
-                               F.New_Call
-                                 ("Params.Caps",
-                                  [F.New_Integer_Literal
-                                     (Long_Long_Long_Integer (Cap_Index))])]));
+                               Sent_Cap (F.New_Integer_Literal
+                                     (Long_Long_Long_Integer (Cap_Index)))]));
                      Cap_Index := Cap_Index + 1;
                   else
                      Statements.Append
@@ -1005,10 +1009,8 @@ package body Idle.Targets.Kernel.Client is
                when Capability_Value =>
                   Statements.Append
                     (F.New_Return
-                       (F.New_Call
-                          ("Params.Caps",
-                           [F.New_Integer_Literal
-                              (Long_Long_Long_Integer (Cap_Index))])));
+                       (Sent_Cap (F.New_Integer_Literal
+                              (Long_Long_Long_Integer (Cap_Index)))));
                when Interface_Value =>
                   Statements.Append
                     (if User
@@ -1016,11 +1018,9 @@ package body Idle.Targets.Kernel.Client is
                             (F.New_Call
                                (Qualified (Client_Package (Result),
                                            "From_Cap"),
-                                [F.New_Call
-                                   ("Params.Caps",
-                                    [F.New_Integer_Literal
+                                [Sent_Cap (F.New_Integer_Literal
                                        (Long_Long_Long_Integer
-                                          (Cap_Index))])]))
+                                          (Cap_Index)))]))
                      else F.New_Block
                        (Declarations =>
                           [F.New_Object
@@ -1029,11 +1029,9 @@ package body Idle.Targets.Kernel.Client is
                         Statements   =>
                           [Call (Qualified (Client_Package (Result), "Open"),
                                  [F.New_Name ("Result"),
-                                  F.New_Call
-                                    ("Params.Caps",
-                                     [F.New_Integer_Literal
+                                  Sent_Cap (F.New_Integer_Literal
                                         (Long_Long_Long_Integer
-                                           (Cap_Index))])]),
+                                           (Cap_Index)))]),
                            F.New_Return (F.New_Name ("Result"))]));
                when String_Value =>
                   if User then
@@ -1265,11 +1263,9 @@ package body Idle.Targets.Kernel.Client is
                    Then_Part => Get_Page),
                 F.New_Assignment
                   (F.New_Name ("Cap"),
-                   F.New_Call
-                     ("Params.Caps",
-                      [F.New_Call
+                   Sent_Cap (F.New_Call
                          ("Rose.Invocation.Capability_Index",
-                          [F.New_Binary (Index, "-", First)])])),
+                          [F.New_Binary (Index, "-", First)]))),
                 F.New_Assignment
                   (Index,
                    F.New_Binary (Index, "+", F.New_Integer_Literal (1)))])]
@@ -1421,9 +1417,7 @@ package body Idle.Targets.Kernel.Client is
                                     [Params]),
                               Call (Ancestor_Package & ".Open",
                                     [F.New_Name ("Result"),
-                                     F.New_Call
-                                       ("Params.Caps",
-                                        [F.New_Integer_Literal (0)])])]),
+                                     Sent_Cap (F.New_Integer_Literal (0))])]),
                         F.New_Return (F.New_Name ("Result"))]));
             end;
          end loop;

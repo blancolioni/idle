@@ -335,7 +335,8 @@ package body Rose.Interfaces.Directory.Server is
             Index  : constant Positive :=
               Positive (Rose.System_Calls.Get_Word_32 (Parameters, 0));
             Last   : Natural := 0;
-            Result : String (1 .. Natural (Parameters.Buffer_Length))
+            Result : String
+              (1 .. Natural (Rose.Invocation.Sent_Buffer_Length (Parameters)))
               with Import, Address => Parameters.Buffer_Address;
          begin
             if Object = null then
@@ -423,7 +424,8 @@ package body Rose.Interfaces.Directory.Server is
          declare
             Object : constant Object_Access :=
               Find (Server_Context, Parameters.Identifier);
-            Name   : String (1 .. Natural (Parameters.Buffer_Length))
+            Name   : String
+              (1 .. Natural (Rose.Invocation.Sent_Buffer_Length (Parameters)))
               with Import, Address => Parameters.Buffer_Address;
             Result : Natural;
          begin

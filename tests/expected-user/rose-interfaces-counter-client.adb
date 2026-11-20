@@ -25,7 +25,7 @@ package body Rose.Interfaces.Counter.Client is
       if Params.Control.Flags (Rose.Invocation.Error) then
          raise Rose.Interfaces.Objects.Invocation_Error with "Counter.Badge";
       end if;
-      return Params.Caps (0);
+      return Rose.Invocation.Sent_Cap (Params, 0);
    end Badge;
 
    -----------
@@ -176,7 +176,10 @@ package body Rose.Interfaces.Counter.Client is
                  with "Counter.Open";
             end if;
          end if;
-         Cap := Params.Caps (Rose.Invocation.Capability_Index (Index - First));
+         Cap :=
+           Rose.Invocation.Sent_Cap
+             (Params,
+              Rose.Invocation.Capability_Index (Index - First));
          Index := Index + 1;
       end loop;
       Item.Badge := Caps (Badge_Index + 1);
@@ -207,7 +210,7 @@ package body Rose.Interfaces.Counter.Client is
             raise Rose.Interfaces.Objects.Invocation_Error
               with "Counter.Named_Cap";
          end if;
-         Item.Named_Interface_Cap := Params.Caps (0);
+         Item.Named_Interface_Cap := Rose.Invocation.Sent_Cap (Params, 0);
       end if;
       return Item.Named_Interface_Cap;
    end Named_Cap;

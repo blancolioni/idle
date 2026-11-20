@@ -368,7 +368,8 @@ package body Rose.Interfaces.Exchange.Server is
             Object       : constant Object_Access :=
               Find (Server_Context, Parameters.Identifier);
             Other        : Rose.Interfaces.Exchange.Client.Exchange_Client;
-            Label_Buffer : String (1 .. Natural (Parameters.Buffer_Length))
+            Label_Buffer : String
+              (1 .. Natural (Rose.Invocation.Sent_Buffer_Length (Parameters)))
               with Import, Address => Parameters.Buffer_Address;
             Label        : Rose.Texts.Text;
             Label_Last   : Natural := 0;
@@ -418,8 +419,10 @@ package body Rose.Interfaces.Exchange.Server is
          declare
             Object      : constant Object_Access :=
               Find (Server_Context, Parameters.Identifier);
-            Cap         : Rose.Capabilities.Capability := Parameters.Caps (0);
-            Name_Buffer : String (1 .. Natural (Parameters.Buffer_Length))
+            Cap         : Rose.Capabilities.Capability :=
+              Rose.Invocation.Sent_Cap (Parameters, 0);
+            Name_Buffer : String
+              (1 .. Natural (Rose.Invocation.Sent_Buffer_Length (Parameters)))
               with Import, Address => Parameters.Buffer_Address;
             Name        : Rose.Texts.Text := Rose.Texts.To_Text (Name_Buffer);
             Name_Last   : Natural := 0;
@@ -476,7 +479,7 @@ package body Rose.Interfaces.Exchange.Server is
             Object : constant Object_Access :=
               Find (Server_Context, Parameters.Identifier);
             Whole  : constant Rose.Capabilities.Capability :=
-              Parameters.Caps (0);
+              Rose.Invocation.Sent_Cap (Parameters, 0);
             Part   : Rose.Capabilities.Capability :=
               Rose.Capabilities.Null_Capability;
             Result : Rose.Capabilities.Capability;

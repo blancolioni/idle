@@ -268,7 +268,8 @@ package body Rose.Interfaces.Directory.Server is
       Index  : constant Positive :=
         Positive (Rose.System_Calls.Get_Word_32 (Parameters, 0));
       Last   : Natural := 0;
-      Result : String (1 .. Natural (Parameters.Buffer_Length))
+      Result : String
+        (1 .. Natural (Rose.Invocation.Sent_Buffer_Length (Parameters)))
         with Import, Address => Parameters.Buffer_Address;
    begin
       Local_Directory_Entry_Name (Parameters.Identifier, Index, Result, Last);
@@ -299,7 +300,8 @@ package body Rose.Interfaces.Directory.Server is
    procedure Handle_Find_Entry
      (Parameters : in out Rose.Invocation.Invocation_Record)
    is
-      Name   : String (1 .. Natural (Parameters.Buffer_Length))
+      Name   : String
+        (1 .. Natural (Rose.Invocation.Sent_Buffer_Length (Parameters)))
         with Import, Address => Parameters.Buffer_Address;
       Result : constant Natural :=
         Local_Find_Entry (Parameters.Identifier, Name);

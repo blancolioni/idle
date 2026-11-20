@@ -244,7 +244,9 @@ package body Rose.Interfaces.Process.Client is
       declare
          Result : Rose.Interfaces.Heap.Client.Heap_Client;
       begin
-         Rose.Interfaces.Heap.Client.Open (Result, Params.Caps (0));
+         Rose.Interfaces.Heap.Client.Open
+           (Result,
+            Rose.Invocation.Sent_Cap (Params, 0));
          return Result;
       end;
    end Heap_Interface;
@@ -284,7 +286,10 @@ package body Rose.Interfaces.Process.Client is
                   Subprogram_Count - First));
             Rose.System_Calls.Invoke_Capability (Params);
          end if;
-         Cap := Params.Caps (Rose.Invocation.Capability_Index (Index - First));
+         Cap :=
+           Rose.Invocation.Sent_Cap
+             (Params,
+              Rose.Invocation.Capability_Index (Index - First));
          Index := Index + 1;
       end loop;
       Client.Add_Segment := Caps (Add_Segment_Index + 1);
@@ -362,7 +367,7 @@ package body Rose.Interfaces.Process.Client is
       if Params.Control.Flags (Rose.Invocation.Error) then
          Last_Error := Params.Control.Error;
       end if;
-      return Params.Caps (0);
+      return Rose.Invocation.Sent_Cap (Params, 0);
    end Published_Interface;
 
 end Rose.Interfaces.Process.Client;

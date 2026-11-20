@@ -158,7 +158,7 @@ package body Rose.Interfaces.Directory.Client is
       declare
          Result : Directory_Client;
       begin
-         Open (Result, Params.Caps (0));
+         Open (Result, Rose.Invocation.Sent_Cap (Params, 0));
          return Result;
       end;
    end Get_Directory;
@@ -265,7 +265,9 @@ package body Rose.Interfaces.Directory.Client is
       declare
          Result : Rose.Interfaces.File.Client.File_Client;
       begin
-         Rose.Interfaces.File.Client.Open (Result, Params.Caps (0));
+         Rose.Interfaces.File.Client.Open
+           (Result,
+            Rose.Invocation.Sent_Cap (Params, 0));
          return Result;
       end;
    end Get_Ordinary_File;
@@ -311,7 +313,10 @@ package body Rose.Interfaces.Directory.Client is
                   Subprogram_Count - First));
             Rose.System_Calls.Invoke_Capability (Params);
          end if;
-         Cap := Params.Caps (Rose.Invocation.Capability_Index (Index - First));
+         Cap :=
+           Rose.Invocation.Sent_Cap
+             (Params,
+              Rose.Invocation.Capability_Index (Index - First));
          Index := Index + 1;
       end loop;
       Client.Directory_Entry_Count := Caps (Directory_Entry_Count_Index + 1);

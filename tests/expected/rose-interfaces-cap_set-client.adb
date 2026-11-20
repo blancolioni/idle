@@ -66,7 +66,7 @@ package body Rose.Interfaces.Cap_Set.Client is
       if Params.Control.Flags (Rose.Invocation.Error) then
          Last_Error := Params.Control.Error;
       end if;
-      return Params.Caps (0);
+      return Rose.Invocation.Sent_Cap (Params, 0);
    end Get_Cap;
 
    ---------------------
@@ -162,7 +162,10 @@ package body Rose.Interfaces.Cap_Set.Client is
                   Subprogram_Count - First));
             Rose.System_Calls.Invoke_Capability (Params);
          end if;
-         Cap := Params.Caps (Rose.Invocation.Capability_Index (Index - First));
+         Cap :=
+           Rose.Invocation.Sent_Cap
+             (Params,
+              Rose.Invocation.Capability_Index (Index - First));
          Index := Index + 1;
       end loop;
       Client.Append := Caps (Append_Index + 1);

@@ -26,7 +26,9 @@ package body Rose.Interfaces.Journal.Client.Conversions is
          Rose.System_Calls.Send_Word (Params, Natural (1));
          Rose.System_Calls.Receive_Caps (Params, 1);
          Rose.System_Calls.Invoke_Capability (Params);
-         Rose.Interfaces.File.Client.Open (Result, Params.Caps (0));
+         Rose.Interfaces.File.Client.Open
+           (Result,
+            Rose.Invocation.Sent_Cap (Params, 0));
       end if;
       return Result;
    end To_File;
@@ -50,7 +52,9 @@ package body Rose.Interfaces.Journal.Client.Conversions is
          Rose.System_Calls.Send_Word (Params, Natural (5));
          Rose.System_Calls.Receive_Caps (Params, 1);
          Rose.System_Calls.Invoke_Capability (Params);
-         Rose.Interfaces.Resource.Client.Open (Result, Params.Caps (0));
+         Rose.Interfaces.Resource.Client.Open
+           (Result,
+            Rose.Invocation.Sent_Cap (Params, 0));
       end if;
       return Result;
    end To_Resource;
@@ -76,7 +80,9 @@ package body Rose.Interfaces.Journal.Client.Conversions is
          Rose.System_Calls.Send_Word (Params, Natural (2));
          Rose.System_Calls.Receive_Caps (Params, 1);
          Rose.System_Calls.Invoke_Capability (Params);
-         Rose.Interfaces.Stream_Writer.Client.Open (Result, Params.Caps (0));
+         Rose.Interfaces.Stream_Writer.Client.Open
+           (Result,
+            Rose.Invocation.Sent_Cap (Params, 0));
       end if;
       return Result;
    end To_Stream_Writer;
@@ -103,7 +109,9 @@ package body Rose.Interfaces.Journal.Client.Conversions is
          Rose.System_Calls.Send_Word (Params, Natural (4));
          Rose.System_Calls.Receive_Caps (Params, 1);
          Rose.System_Calls.Invoke_Capability (Params);
-         Rose.Interfaces.Transactional.Client.Open (Result, Params.Caps (0));
+         Rose.Interfaces.Transactional.Client.Open
+           (Result,
+            Rose.Invocation.Sent_Cap (Params, 0));
       end if;
       return Result;
    end To_Transactional;
@@ -142,7 +150,7 @@ package body Rose.Interfaces.Journal.Client.Conversions is
          Rose.System_Calls.Invoke_Capability (Params);
          Rose.Interfaces.Transactional_Writable_File.Client.Open
            (Result,
-            Params.Caps (0));
+            Rose.Invocation.Sent_Cap (Params, 0));
       end if;
       return Result;
    end To_Transactional_Writable_File;
@@ -173,7 +181,9 @@ package body Rose.Interfaces.Journal.Client.Conversions is
          Rose.System_Calls.Send_Word (Params, Natural (3));
          Rose.System_Calls.Receive_Caps (Params, 1);
          Rose.System_Calls.Invoke_Capability (Params);
-         Rose.Interfaces.Writable_File.Client.Open (Result, Params.Caps (0));
+         Rose.Interfaces.Writable_File.Client.Open
+           (Result,
+            Rose.Invocation.Sent_Cap (Params, 0));
       end if;
       return Result;
    end To_Writable_File;

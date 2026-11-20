@@ -309,7 +309,7 @@ package body Rose.Interfaces.Process.Server is
       Virtual_Bound : constant Rose.Words.Word :=
         Rose.System_Calls.Get_Word_32 (Parameters, 1);
       Region        : constant Rose.Capabilities.Capability :=
-        Parameters.Caps (0);
+        Rose.Invocation.Sent_Cap (Parameters, 0);
       Region_Offset : constant Rose.Words.Word :=
         Rose.System_Calls.Get_Word_32 (Parameters, 2);
       Flags         : constant Rose.Words.Word :=
@@ -937,7 +937,7 @@ package body Rose.Interfaces.Process.Server is
      (Parameters : in out Rose.Invocation.Invocation_Record)
    is
       Interface_Cap : constant Rose.Capabilities.Capability :=
-        Parameters.Caps (0);
+        Rose.Invocation.Sent_Cap (Parameters, 0);
    begin
       Local_Publish_Interface (Parameters.Identifier, Interface_Cap);
       Rose.System_Calls.Initialize_Reply (Parameters, Parameters.Reply_Cap);

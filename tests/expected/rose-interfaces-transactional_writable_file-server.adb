@@ -1357,7 +1357,7 @@ package body Rose.Interfaces.Transactional_Writable_File.Server is
      (Parameters : in out Rose.Invocation.Invocation_Record)
    is
       Buffer : System.Storage_Elements.Storage_Array
-        (1 .. Parameters.Buffer_Length)
+        (1 .. Rose.Invocation.Sent_Buffer_Length (Parameters))
         with Import, Address => Parameters.Buffer_Address;
    begin
       Local_Write (Parameters.Identifier, Buffer);

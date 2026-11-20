@@ -26,7 +26,9 @@ package body Rose.Interfaces.Writable_File.Client.Conversions is
          Rose.System_Calls.Send_Word (Params, Natural (1));
          Rose.System_Calls.Receive_Caps (Params, 1);
          Rose.System_Calls.Invoke_Capability (Params);
-         Rose.Interfaces.File.Client.Open (Result, Params.Caps (0));
+         Rose.Interfaces.File.Client.Open
+           (Result,
+            Rose.Invocation.Sent_Cap (Params, 0));
       end if;
       return Result;
    end To_File;
@@ -52,7 +54,9 @@ package body Rose.Interfaces.Writable_File.Client.Conversions is
          Rose.System_Calls.Send_Word (Params, Natural (2));
          Rose.System_Calls.Receive_Caps (Params, 1);
          Rose.System_Calls.Invoke_Capability (Params);
-         Rose.Interfaces.Stream_Writer.Client.Open (Result, Params.Caps (0));
+         Rose.Interfaces.Stream_Writer.Client.Open
+           (Result,
+            Rose.Invocation.Sent_Cap (Params, 0));
       end if;
       return Result;
    end To_Stream_Writer;
