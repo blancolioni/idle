@@ -23,6 +23,8 @@ package body Rose.Interfaces.Seekable_File_Reader.Server is
    Published_Cap   : Rose.Capabilities.Capability :=
      Rose.Capabilities.Null_Capability;
 
+   Local_Owns      : Owns_Function := null;
+
    procedure Handle_Get_Stream_Reader_Interface
      (Parameters : in out Rose.Invocation.Invocation_Record);
 
@@ -167,109 +169,115 @@ package body Rose.Interfaces.Seekable_File_Reader.Server is
          Page := Natural'Min (Page, Natural (Parameters.Data (2)));
       end if;
       Rose.System_Calls.Initialize_Reply (Parameters, Parameters.Reply_Cap);
-      if Ancestor = 0 then
-         if First >= 2 then
-            Rose.System_Calls.Send_Error
-              (Parameters,
-               Rose.Invocation.Invalid_Operation);
-         else
-            if 0 in First .. (First + Page - 1) then
-               if Read_Cap = Rose.Capabilities.Null_Capability then
-                  if not Rose.Server.Has_Instance
-                    (Server_Instance,
-                     Read_Endpoint,
-                     Identifier)
-                  then
-                     Rose.Server.Set_Instance_Cap
+      if Local_Owns /= null and then not Local_Owns (Identifier) then
+         Rose.System_Calls.Send_Error
+           (Parameters,
+            Rose.Invocation.Invalid_Object);
+      else
+         if Ancestor = 0 then
+            if First >= 2 then
+               Rose.System_Calls.Send_Error
+                 (Parameters,
+                  Rose.Invocation.Invalid_Operation);
+            else
+               if 0 in First .. (First + Page - 1) then
+                  if Read_Cap = Rose.Capabilities.Null_Capability then
+                     if not Rose.Server.Has_Instance
                        (Server_Instance,
                         Read_Endpoint,
-                        Identifier,
-                        Rose.Server.Create_Endpoint
-                          (Read_Endpoint,
-                           Identifier));
+                        Identifier)
+                     then
+                        Rose.Server.Set_Instance_Cap
+                          (Server_Instance,
+                           Read_Endpoint,
+                           Identifier,
+                           Rose.Server.Create_Endpoint
+                             (Read_Endpoint,
+                              Identifier));
+                     end if;
+                     Cap :=
+                       Rose.Server.Get_Instance_Cap
+                         (Server_Instance,
+                          Read_Endpoint,
+                          Identifier);
+                  else
+                     Cap := Read_Cap;
                   end if;
-                  Cap :=
-                    Rose.Server.Get_Instance_Cap
-                      (Server_Instance,
-                       Read_Endpoint,
-                       Identifier);
-               else
-                  Cap := Read_Cap;
+                  Rose.System_Calls.Send_Cap (Parameters, Cap);
                end if;
-               Rose.System_Calls.Send_Cap (Parameters, Cap);
-            end if;
-            if 1 in First .. (First + Page - 1) then
-               if Release_Cap = Rose.Capabilities.Null_Capability then
-                  if not Rose.Server.Has_Instance
-                    (Server_Instance,
-                     Release_Endpoint,
-                     Identifier)
-                  then
-                     Rose.Server.Set_Instance_Cap
+               if 1 in First .. (First + Page - 1) then
+                  if Release_Cap = Rose.Capabilities.Null_Capability then
+                     if not Rose.Server.Has_Instance
                        (Server_Instance,
                         Release_Endpoint,
-                        Identifier,
-                        Rose.Server.Create_Endpoint
-                          (Release_Endpoint,
-                           Identifier));
+                        Identifier)
+                     then
+                        Rose.Server.Set_Instance_Cap
+                          (Server_Instance,
+                           Release_Endpoint,
+                           Identifier,
+                           Rose.Server.Create_Endpoint
+                             (Release_Endpoint,
+                              Identifier));
+                     end if;
+                     Cap :=
+                       Rose.Server.Get_Instance_Cap
+                         (Server_Instance,
+                          Release_Endpoint,
+                          Identifier);
+                  else
+                     Cap := Release_Cap;
                   end if;
-                  Cap :=
-                    Rose.Server.Get_Instance_Cap
-                      (Server_Instance,
-                       Release_Endpoint,
-                       Identifier);
-               else
-                  Cap := Release_Cap;
+                  Rose.System_Calls.Send_Cap (Parameters, Cap);
                end if;
-               Rose.System_Calls.Send_Cap (Parameters, Cap);
             end if;
-         end if;
-      else
-         if Ancestor = 1 then
-            if not Rose.Server.Has_Instance
-              (Server_Instance,
-               Stream_Reader_Interface,
-               Identifier)
-            then
-               Rose.Server.Set_Instance_Cap
-                 (Server_Instance,
-                  Stream_Reader_Interface,
-                  Identifier,
-                  Rose.Server.Create_Endpoint
-                    (Stream_Reader_Interface,
-                     Identifier));
-            end if;
-            Rose.System_Calls.Send_Cap
-              (Parameters,
-               Rose.Server.Get_Instance_Cap
-                 (Server_Instance,
-                  Stream_Reader_Interface,
-                  Identifier));
          else
-            if Ancestor = 2 then
+            if Ancestor = 1 then
                if not Rose.Server.Has_Instance
                  (Server_Instance,
-                  Resource_Interface,
+                  Stream_Reader_Interface,
                   Identifier)
                then
                   Rose.Server.Set_Instance_Cap
                     (Server_Instance,
-                     Resource_Interface,
+                     Stream_Reader_Interface,
                      Identifier,
                      Rose.Server.Create_Endpoint
-                       (Resource_Interface,
+                       (Stream_Reader_Interface,
                         Identifier));
                end if;
                Rose.System_Calls.Send_Cap
                  (Parameters,
                   Rose.Server.Get_Instance_Cap
                     (Server_Instance,
-                     Resource_Interface,
+                     Stream_Reader_Interface,
                      Identifier));
             else
-               Rose.System_Calls.Send_Error
-                 (Parameters,
-                  Rose.Invocation.Invalid_Operation);
+               if Ancestor = 2 then
+                  if not Rose.Server.Has_Instance
+                    (Server_Instance,
+                     Resource_Interface,
+                     Identifier)
+                  then
+                     Rose.Server.Set_Instance_Cap
+                       (Server_Instance,
+                        Resource_Interface,
+                        Identifier,
+                        Rose.Server.Create_Endpoint
+                          (Resource_Interface,
+                           Identifier));
+                  end if;
+                  Rose.System_Calls.Send_Cap
+                    (Parameters,
+                     Rose.Server.Get_Instance_Cap
+                       (Server_Instance,
+                        Resource_Interface,
+                        Identifier));
+               else
+                  Rose.System_Calls.Send_Error
+                    (Parameters,
+                     Rose.Invocation.Invalid_Operation);
+               end if;
             end if;
          end if;
       end if;
@@ -296,35 +304,41 @@ package body Rose.Interfaces.Seekable_File_Reader.Server is
          Page := Natural'Min (Page, Natural (Parameters.Data (2)));
       end if;
       Rose.System_Calls.Initialize_Reply (Parameters, Parameters.Reply_Cap);
-      if First >= 1 then
+      if Local_Owns /= null and then not Local_Owns (Identifier) then
          Rose.System_Calls.Send_Error
            (Parameters,
-            Rose.Invocation.Invalid_Operation);
+            Rose.Invocation.Invalid_Object);
       else
-         if 0 in First .. (First + Page - 1) then
-            if Release_Cap = Rose.Capabilities.Null_Capability then
-               if not Rose.Server.Has_Instance
-                 (Server_Instance,
-                  Release_Endpoint,
-                  Identifier)
-               then
-                  Rose.Server.Set_Instance_Cap
+         if First >= 1 then
+            Rose.System_Calls.Send_Error
+              (Parameters,
+               Rose.Invocation.Invalid_Operation);
+         else
+            if 0 in First .. (First + Page - 1) then
+               if Release_Cap = Rose.Capabilities.Null_Capability then
+                  if not Rose.Server.Has_Instance
                     (Server_Instance,
                      Release_Endpoint,
-                     Identifier,
-                     Rose.Server.Create_Endpoint
-                       (Release_Endpoint,
-                        Identifier));
+                     Identifier)
+                  then
+                     Rose.Server.Set_Instance_Cap
+                       (Server_Instance,
+                        Release_Endpoint,
+                        Identifier,
+                        Rose.Server.Create_Endpoint
+                          (Release_Endpoint,
+                           Identifier));
+                  end if;
+                  Cap :=
+                    Rose.Server.Get_Instance_Cap
+                      (Server_Instance,
+                       Release_Endpoint,
+                       Identifier);
+               else
+                  Cap := Release_Cap;
                end if;
-               Cap :=
-                 Rose.Server.Get_Instance_Cap
-                   (Server_Instance,
-                    Release_Endpoint,
-                    Identifier);
-            else
-               Cap := Release_Cap;
+               Rose.System_Calls.Send_Cap (Parameters, Cap);
             end if;
-            Rose.System_Calls.Send_Cap (Parameters, Cap);
          end if;
       end if;
    end Handle_Get_Resource_Interface;
@@ -354,8 +368,276 @@ package body Rose.Interfaces.Seekable_File_Reader.Server is
          Page := Natural'Min (Page, Natural (Parameters.Data (2)));
       end if;
       Rose.System_Calls.Initialize_Reply (Parameters, Parameters.Reply_Cap);
-      if Ancestor = 0 then
-         if First >= 3 then
+      if Local_Owns /= null and then not Local_Owns (Identifier) then
+         Rose.System_Calls.Send_Error
+           (Parameters,
+            Rose.Invocation.Invalid_Object);
+      else
+         if Ancestor = 0 then
+            if First >= 3 then
+               Rose.System_Calls.Send_Error
+                 (Parameters,
+                  Rose.Invocation.Invalid_Operation);
+            else
+               if 0 in First .. (First + Page - 1) then
+                  if Read_Cap = Rose.Capabilities.Null_Capability then
+                     if not Rose.Server.Has_Instance
+                       (Server_Instance,
+                        Read_Endpoint,
+                        Identifier)
+                     then
+                        Rose.Server.Set_Instance_Cap
+                          (Server_Instance,
+                           Read_Endpoint,
+                           Identifier,
+                           Rose.Server.Create_Endpoint
+                             (Read_Endpoint,
+                              Identifier));
+                     end if;
+                     Cap :=
+                       Rose.Server.Get_Instance_Cap
+                         (Server_Instance,
+                          Read_Endpoint,
+                          Identifier);
+                  else
+                     Cap := Read_Cap;
+                  end if;
+                  Rose.System_Calls.Send_Cap (Parameters, Cap);
+               end if;
+               if 1 in First .. (First + Page - 1) then
+                  if Release_Cap = Rose.Capabilities.Null_Capability then
+                     if not Rose.Server.Has_Instance
+                       (Server_Instance,
+                        Release_Endpoint,
+                        Identifier)
+                     then
+                        Rose.Server.Set_Instance_Cap
+                          (Server_Instance,
+                           Release_Endpoint,
+                           Identifier,
+                           Rose.Server.Create_Endpoint
+                             (Release_Endpoint,
+                              Identifier));
+                     end if;
+                     Cap :=
+                       Rose.Server.Get_Instance_Cap
+                         (Server_Instance,
+                          Release_Endpoint,
+                          Identifier);
+                  else
+                     Cap := Release_Cap;
+                  end if;
+                  Rose.System_Calls.Send_Cap (Parameters, Cap);
+               end if;
+               if 2 in First .. (First + Page - 1) then
+                  if Seek_Cap = Rose.Capabilities.Null_Capability then
+                     if not Rose.Server.Has_Instance
+                       (Server_Instance,
+                        Seek_Endpoint,
+                        Identifier)
+                     then
+                        Rose.Server.Set_Instance_Cap
+                          (Server_Instance,
+                           Seek_Endpoint,
+                           Identifier,
+                           Rose.Server.Create_Endpoint
+                             (Seek_Endpoint,
+                              Identifier));
+                     end if;
+                     Cap :=
+                       Rose.Server.Get_Instance_Cap
+                         (Server_Instance,
+                          Seek_Endpoint,
+                          Identifier);
+                  else
+                     Cap := Seek_Cap;
+                  end if;
+                  Rose.System_Calls.Send_Cap (Parameters, Cap);
+               end if;
+            end if;
+         else
+            if Ancestor = 1 then
+               if not Rose.Server.Has_Instance
+                 (Server_Instance,
+                  Stream_Reader_Interface,
+                  Identifier)
+               then
+                  Rose.Server.Set_Instance_Cap
+                    (Server_Instance,
+                     Stream_Reader_Interface,
+                     Identifier,
+                     Rose.Server.Create_Endpoint
+                       (Stream_Reader_Interface,
+                        Identifier));
+               end if;
+               Rose.System_Calls.Send_Cap
+                 (Parameters,
+                  Rose.Server.Get_Instance_Cap
+                    (Server_Instance,
+                     Stream_Reader_Interface,
+                     Identifier));
+            else
+               if Ancestor = 2 then
+                  if not Rose.Server.Has_Instance
+                    (Server_Instance,
+                     Resource_Interface,
+                     Identifier)
+                  then
+                     Rose.Server.Set_Instance_Cap
+                       (Server_Instance,
+                        Resource_Interface,
+                        Identifier,
+                        Rose.Server.Create_Endpoint
+                          (Resource_Interface,
+                           Identifier));
+                  end if;
+                  Rose.System_Calls.Send_Cap
+                    (Parameters,
+                     Rose.Server.Get_Instance_Cap
+                       (Server_Instance,
+                        Resource_Interface,
+                        Identifier));
+               else
+                  if Ancestor = 3 then
+                     if not Rose.Server.Has_Instance
+                       (Server_Instance,
+                        File_Reader_Interface,
+                        Identifier)
+                     then
+                        Rose.Server.Set_Instance_Cap
+                          (Server_Instance,
+                           File_Reader_Interface,
+                           Identifier,
+                           Rose.Server.Create_Endpoint
+                             (File_Reader_Interface,
+                              Identifier));
+                     end if;
+                     Rose.System_Calls.Send_Cap
+                       (Parameters,
+                        Rose.Server.Get_Instance_Cap
+                          (Server_Instance,
+                           File_Reader_Interface,
+                           Identifier));
+                  else
+                     if Ancestor = 4 then
+                        if not Rose.Server.Has_Instance
+                          (Server_Instance,
+                           Seekable_Interface,
+                           Identifier)
+                        then
+                           Rose.Server.Set_Instance_Cap
+                             (Server_Instance,
+                              Seekable_Interface,
+                              Identifier,
+                              Rose.Server.Create_Endpoint
+                                (Seekable_Interface,
+                                 Identifier));
+                        end if;
+                        Rose.System_Calls.Send_Cap
+                          (Parameters,
+                           Rose.Server.Get_Instance_Cap
+                             (Server_Instance,
+                              Seekable_Interface,
+                              Identifier));
+                     else
+                        Rose.System_Calls.Send_Error
+                          (Parameters,
+                           Rose.Invocation.Invalid_Operation);
+                     end if;
+                  end if;
+               end if;
+            end if;
+         end if;
+      end if;
+   end Handle_Get_Seekable_File_Reader_Interface;
+
+   -----------------------------------
+   -- Handle_Get_Seekable_Interface --
+   -----------------------------------
+
+   procedure Handle_Get_Seekable_Interface
+     (Parameters : in out Rose.Invocation.Invocation_Record)
+   is
+      use type Rose.Capabilities.Capability;
+      Cap        : Rose.Capabilities.Capability;
+      Identifier : constant Rose.Objects.Capability_Identifier :=
+        Parameters.Identifier;
+      First      : Natural := 0;
+      Page       : Natural := Rose.Invocation.Max_Capabilities;
+   begin
+      if Rose.Invocation.Sent_Word_Count (Parameters) >= 2 then
+         First := Natural (Parameters.Data (1));
+      end if;
+      if Rose.Invocation.Sent_Word_Count (Parameters) >= 3 then
+         Page := Natural'Min (Page, Natural (Parameters.Data (2)));
+      end if;
+      Rose.System_Calls.Initialize_Reply (Parameters, Parameters.Reply_Cap);
+      if Local_Owns /= null and then not Local_Owns (Identifier) then
+         Rose.System_Calls.Send_Error
+           (Parameters,
+            Rose.Invocation.Invalid_Object);
+      else
+         if First >= 1 then
+            Rose.System_Calls.Send_Error
+              (Parameters,
+               Rose.Invocation.Invalid_Operation);
+         else
+            if 0 in First .. (First + Page - 1) then
+               if Seek_Cap = Rose.Capabilities.Null_Capability then
+                  if not Rose.Server.Has_Instance
+                    (Server_Instance,
+                     Seek_Endpoint,
+                     Identifier)
+                  then
+                     Rose.Server.Set_Instance_Cap
+                       (Server_Instance,
+                        Seek_Endpoint,
+                        Identifier,
+                        Rose.Server.Create_Endpoint
+                          (Seek_Endpoint,
+                           Identifier));
+                  end if;
+                  Cap :=
+                    Rose.Server.Get_Instance_Cap
+                      (Server_Instance,
+                       Seek_Endpoint,
+                       Identifier);
+               else
+                  Cap := Seek_Cap;
+               end if;
+               Rose.System_Calls.Send_Cap (Parameters, Cap);
+            end if;
+         end if;
+      end if;
+   end Handle_Get_Seekable_Interface;
+
+   ----------------------------------------
+   -- Handle_Get_Stream_Reader_Interface --
+   ----------------------------------------
+
+   procedure Handle_Get_Stream_Reader_Interface
+     (Parameters : in out Rose.Invocation.Invocation_Record)
+   is
+      use type Rose.Capabilities.Capability;
+      Cap        : Rose.Capabilities.Capability;
+      Identifier : constant Rose.Objects.Capability_Identifier :=
+        Parameters.Identifier;
+      First      : Natural := 0;
+      Page       : Natural := Rose.Invocation.Max_Capabilities;
+   begin
+      if Rose.Invocation.Sent_Word_Count (Parameters) >= 2 then
+         First := Natural (Parameters.Data (1));
+      end if;
+      if Rose.Invocation.Sent_Word_Count (Parameters) >= 3 then
+         Page := Natural'Min (Page, Natural (Parameters.Data (2)));
+      end if;
+      Rose.System_Calls.Initialize_Reply (Parameters, Parameters.Reply_Cap);
+      if Local_Owns /= null and then not Local_Owns (Identifier) then
+         Rose.System_Calls.Send_Error
+           (Parameters,
+            Rose.Invocation.Invalid_Object);
+      else
+         if First >= 1 then
             Rose.System_Calls.Send_Error
               (Parameters,
                Rose.Invocation.Invalid_Operation);
@@ -385,252 +667,6 @@ package body Rose.Interfaces.Seekable_File_Reader.Server is
                end if;
                Rose.System_Calls.Send_Cap (Parameters, Cap);
             end if;
-            if 1 in First .. (First + Page - 1) then
-               if Release_Cap = Rose.Capabilities.Null_Capability then
-                  if not Rose.Server.Has_Instance
-                    (Server_Instance,
-                     Release_Endpoint,
-                     Identifier)
-                  then
-                     Rose.Server.Set_Instance_Cap
-                       (Server_Instance,
-                        Release_Endpoint,
-                        Identifier,
-                        Rose.Server.Create_Endpoint
-                          (Release_Endpoint,
-                           Identifier));
-                  end if;
-                  Cap :=
-                    Rose.Server.Get_Instance_Cap
-                      (Server_Instance,
-                       Release_Endpoint,
-                       Identifier);
-               else
-                  Cap := Release_Cap;
-               end if;
-               Rose.System_Calls.Send_Cap (Parameters, Cap);
-            end if;
-            if 2 in First .. (First + Page - 1) then
-               if Seek_Cap = Rose.Capabilities.Null_Capability then
-                  if not Rose.Server.Has_Instance
-                    (Server_Instance,
-                     Seek_Endpoint,
-                     Identifier)
-                  then
-                     Rose.Server.Set_Instance_Cap
-                       (Server_Instance,
-                        Seek_Endpoint,
-                        Identifier,
-                        Rose.Server.Create_Endpoint
-                          (Seek_Endpoint,
-                           Identifier));
-                  end if;
-                  Cap :=
-                    Rose.Server.Get_Instance_Cap
-                      (Server_Instance,
-                       Seek_Endpoint,
-                       Identifier);
-               else
-                  Cap := Seek_Cap;
-               end if;
-               Rose.System_Calls.Send_Cap (Parameters, Cap);
-            end if;
-         end if;
-      else
-         if Ancestor = 1 then
-            if not Rose.Server.Has_Instance
-              (Server_Instance,
-               Stream_Reader_Interface,
-               Identifier)
-            then
-               Rose.Server.Set_Instance_Cap
-                 (Server_Instance,
-                  Stream_Reader_Interface,
-                  Identifier,
-                  Rose.Server.Create_Endpoint
-                    (Stream_Reader_Interface,
-                     Identifier));
-            end if;
-            Rose.System_Calls.Send_Cap
-              (Parameters,
-               Rose.Server.Get_Instance_Cap
-                 (Server_Instance,
-                  Stream_Reader_Interface,
-                  Identifier));
-         else
-            if Ancestor = 2 then
-               if not Rose.Server.Has_Instance
-                 (Server_Instance,
-                  Resource_Interface,
-                  Identifier)
-               then
-                  Rose.Server.Set_Instance_Cap
-                    (Server_Instance,
-                     Resource_Interface,
-                     Identifier,
-                     Rose.Server.Create_Endpoint
-                       (Resource_Interface,
-                        Identifier));
-               end if;
-               Rose.System_Calls.Send_Cap
-                 (Parameters,
-                  Rose.Server.Get_Instance_Cap
-                    (Server_Instance,
-                     Resource_Interface,
-                     Identifier));
-            else
-               if Ancestor = 3 then
-                  if not Rose.Server.Has_Instance
-                    (Server_Instance,
-                     File_Reader_Interface,
-                     Identifier)
-                  then
-                     Rose.Server.Set_Instance_Cap
-                       (Server_Instance,
-                        File_Reader_Interface,
-                        Identifier,
-                        Rose.Server.Create_Endpoint
-                          (File_Reader_Interface,
-                           Identifier));
-                  end if;
-                  Rose.System_Calls.Send_Cap
-                    (Parameters,
-                     Rose.Server.Get_Instance_Cap
-                       (Server_Instance,
-                        File_Reader_Interface,
-                        Identifier));
-               else
-                  if Ancestor = 4 then
-                     if not Rose.Server.Has_Instance
-                       (Server_Instance,
-                        Seekable_Interface,
-                        Identifier)
-                     then
-                        Rose.Server.Set_Instance_Cap
-                          (Server_Instance,
-                           Seekable_Interface,
-                           Identifier,
-                           Rose.Server.Create_Endpoint
-                             (Seekable_Interface,
-                              Identifier));
-                     end if;
-                     Rose.System_Calls.Send_Cap
-                       (Parameters,
-                        Rose.Server.Get_Instance_Cap
-                          (Server_Instance,
-                           Seekable_Interface,
-                           Identifier));
-                  else
-                     Rose.System_Calls.Send_Error
-                       (Parameters,
-                        Rose.Invocation.Invalid_Operation);
-                  end if;
-               end if;
-            end if;
-         end if;
-      end if;
-   end Handle_Get_Seekable_File_Reader_Interface;
-
-   -----------------------------------
-   -- Handle_Get_Seekable_Interface --
-   -----------------------------------
-
-   procedure Handle_Get_Seekable_Interface
-     (Parameters : in out Rose.Invocation.Invocation_Record)
-   is
-      use type Rose.Capabilities.Capability;
-      Cap        : Rose.Capabilities.Capability;
-      Identifier : constant Rose.Objects.Capability_Identifier :=
-        Parameters.Identifier;
-      First      : Natural := 0;
-      Page       : Natural := Rose.Invocation.Max_Capabilities;
-   begin
-      if Rose.Invocation.Sent_Word_Count (Parameters) >= 2 then
-         First := Natural (Parameters.Data (1));
-      end if;
-      if Rose.Invocation.Sent_Word_Count (Parameters) >= 3 then
-         Page := Natural'Min (Page, Natural (Parameters.Data (2)));
-      end if;
-      Rose.System_Calls.Initialize_Reply (Parameters, Parameters.Reply_Cap);
-      if First >= 1 then
-         Rose.System_Calls.Send_Error
-           (Parameters,
-            Rose.Invocation.Invalid_Operation);
-      else
-         if 0 in First .. (First + Page - 1) then
-            if Seek_Cap = Rose.Capabilities.Null_Capability then
-               if not Rose.Server.Has_Instance
-                 (Server_Instance,
-                  Seek_Endpoint,
-                  Identifier)
-               then
-                  Rose.Server.Set_Instance_Cap
-                    (Server_Instance,
-                     Seek_Endpoint,
-                     Identifier,
-                     Rose.Server.Create_Endpoint (Seek_Endpoint, Identifier));
-               end if;
-               Cap :=
-                 Rose.Server.Get_Instance_Cap
-                   (Server_Instance,
-                    Seek_Endpoint,
-                    Identifier);
-            else
-               Cap := Seek_Cap;
-            end if;
-            Rose.System_Calls.Send_Cap (Parameters, Cap);
-         end if;
-      end if;
-   end Handle_Get_Seekable_Interface;
-
-   ----------------------------------------
-   -- Handle_Get_Stream_Reader_Interface --
-   ----------------------------------------
-
-   procedure Handle_Get_Stream_Reader_Interface
-     (Parameters : in out Rose.Invocation.Invocation_Record)
-   is
-      use type Rose.Capabilities.Capability;
-      Cap        : Rose.Capabilities.Capability;
-      Identifier : constant Rose.Objects.Capability_Identifier :=
-        Parameters.Identifier;
-      First      : Natural := 0;
-      Page       : Natural := Rose.Invocation.Max_Capabilities;
-   begin
-      if Rose.Invocation.Sent_Word_Count (Parameters) >= 2 then
-         First := Natural (Parameters.Data (1));
-      end if;
-      if Rose.Invocation.Sent_Word_Count (Parameters) >= 3 then
-         Page := Natural'Min (Page, Natural (Parameters.Data (2)));
-      end if;
-      Rose.System_Calls.Initialize_Reply (Parameters, Parameters.Reply_Cap);
-      if First >= 1 then
-         Rose.System_Calls.Send_Error
-           (Parameters,
-            Rose.Invocation.Invalid_Operation);
-      else
-         if 0 in First .. (First + Page - 1) then
-            if Read_Cap = Rose.Capabilities.Null_Capability then
-               if not Rose.Server.Has_Instance
-                 (Server_Instance,
-                  Read_Endpoint,
-                  Identifier)
-               then
-                  Rose.Server.Set_Instance_Cap
-                    (Server_Instance,
-                     Read_Endpoint,
-                     Identifier,
-                     Rose.Server.Create_Endpoint (Read_Endpoint, Identifier));
-               end if;
-               Cap :=
-                 Rose.Server.Get_Instance_Cap
-                   (Server_Instance,
-                    Read_Endpoint,
-                    Identifier);
-            else
-               Cap := Read_Cap;
-            end if;
-            Rose.System_Calls.Send_Cap (Parameters, Cap);
          end if;
       end if;
    end Handle_Get_Stream_Reader_Interface;
@@ -743,5 +779,14 @@ package body Rose.Interfaces.Seekable_File_Reader.Server is
    begin
       Rose.Server.Remove_Instance (Server_Instance, Identifier);
    end Remove_Instance;
+
+   --------------
+   -- Set_Owns --
+   --------------
+
+   procedure Set_Owns (Owns : Owns_Function) is
+   begin
+      Local_Owns := Owns;
+   end Set_Owns;
 
 end Rose.Interfaces.Seekable_File_Reader.Server;
