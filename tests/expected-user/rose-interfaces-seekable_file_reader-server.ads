@@ -33,4 +33,8 @@ package Rose.Interfaces.Seekable_File_Reader.Server is
         Rose.Interfaces.Seekable_File_Reader.Seekable_File_Reader_Interface)
       return Rose.Capabilities.Capability;
 
+   procedure Detach
+     (Server_Context : Rose.Server.Server_Context;
+      Object         : not null access Seekable_File_Reader_Interface'Class);
+
 end Rose.Interfaces.Seekable_File_Reader.Server;

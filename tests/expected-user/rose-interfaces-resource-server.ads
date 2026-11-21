@@ -33,4 +33,8 @@ package Rose.Interfaces.Resource.Server is
         Rose.Interfaces.Resource.Resource_Interface)
       return Rose.Capabilities.Capability;
 
+   procedure Detach
+     (Server_Context : Rose.Server.Server_Context;
+      Object         : not null access Resource_Interface'Class);
+
 end Rose.Interfaces.Resource.Server;

@@ -535,6 +535,24 @@ package body Rose.Interfaces.Transactional_Writable_File.Server is
       Table.Attached (Slot).Cap := Rose.Capabilities.Null_Capability;
    end Detach;
 
+   ------------
+   -- Detach --
+   ------------
+
+   procedure Detach
+     (Server_Context : Rose.Server.Server_Context;
+      Object         :
+        not null access Transactional_Writable_File_Interface'Class)
+   is
+      use type Rose.Objects.Capability_Identifier;
+      Identifier : constant Rose.Objects.Capability_Identifier :=
+        Identifier_Of (Server_Context, Object);
+   begin
+      if Identifier /= 0 then
+         Detach (Server_Context, Identifier);
+      end if;
+   end Detach;
+
    ----------
    -- Find --
    ----------

@@ -1854,6 +1854,12 @@ package body Idle.Targets.Kernel.Server is
       --  released through identifier 0, which leaves caps for its own
       --  identifier that it can't find (idle#84). Slot_Of finds the slot
       --  of an identifier. Both return the length of the table for none.
+      --
+      --  A public Detach takes an object, for a server that removes one
+      --  itself, rather than when its client releases it: an object
+      --  that it keeps for a bank's holder, when the bank is destroyed
+      --  (Rose ADR 0014, rose#849). It does nothing to an object that is
+      --  not attached.
 
       procedure Add_Release_Support is
          Identifier_Parameter : constant not null Syn.Node_Access :=
@@ -1878,6 +1884,18 @@ package body Idle.Targets.Kernel.Server is
                Identifier_Parameter]);
          --  Detach is called once the handler has found the object, so
          --  the context has a table.
+         Detach_Object : constant not null Syn.Node_Access :=
+           F.New_Procedure
+             ("Detach",
+              [F.New_Parameter
+                 (Context_Parameter_Name,
+                  F.New_Name ("Rose.Server.Server_Context")),
+               F.New_Parameter
+                 ("Object",
+                  F.New_Name
+                    ("not null access " & Interface_Type & "'Class"))]);
+         --  Public: Identifier_Of finds the object's identifier, which is
+         --  0 if it is not attached, or the context has no table.
          Slot     : constant String := "Table.Attached (Slot)";
          Count    : constant not null Syn.Node_Access :=
            F.New_Call ("Natural", [F.New_Name ("Table.Attached.Length")]);
@@ -1928,6 +1946,7 @@ package body Idle.Targets.Kernel.Server is
          Handler_Specs.Append (Free_Slot);
          Handler_Specs.Append (Slot_Of);
          Handler_Specs.Append (Detach);
+         Public_Part.Append (Detach_Object);
 
          Bodies.Add
            ("Slot_Of",
@@ -1983,6 +2002,34 @@ package body Idle.Targets.Kernel.Server is
                            (F.New_Name ("Index"), "+",
                             F.New_Integer_Literal (1)))]),
                   F.New_Return (Count)]));
+
+         --  Its key sorts it after the private Detach, which it calls.
+
+         Bodies.Add
+           ("Detach (Object)",
+            F.New_Subprogram_Body
+              (Specification => Detach_Object,
+               Declarations  =>
+                 [F.New_Use ("Rose.Objects.Capability_Identifier",
+                             Use_Type => True),
+                  F.New_Object
+                    ("Identifier",
+                     F.New_Name ("Rose.Objects.Capability_Identifier"),
+                     F.New_Call
+                       ("Identifier_Of",
+                        [F.New_Name (Context_Parameter_Name),
+                         F.New_Name ("Object")]),
+                     Is_Constant => True)],
+               Statements    =>
+                 [F.New_If
+                    (Condition =>
+                       F.New_Binary
+                         (F.New_Name ("Identifier"), "/=",
+                          F.New_Integer_Literal (0)),
+                     Then_Part =>
+                       [Call ("Detach",
+                              [F.New_Name (Context_Parameter_Name),
+                               F.New_Name ("Identifier")])])]));
 
          --  The maps forget the object before its slot is cleared.
 

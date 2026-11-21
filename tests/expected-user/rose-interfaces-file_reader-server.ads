@@ -33,4 +33,8 @@ package Rose.Interfaces.File_Reader.Server is
         Rose.Interfaces.File_Reader.File_Reader_Interface)
       return Rose.Capabilities.Capability;
 
+   procedure Detach
+     (Server_Context : Rose.Server.Server_Context;
+      Object         : not null access File_Reader_Interface'Class);
+
 end Rose.Interfaces.File_Reader.Server;
