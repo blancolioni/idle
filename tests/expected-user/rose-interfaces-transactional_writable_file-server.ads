@@ -39,4 +39,9 @@ package Rose.Interfaces.Transactional_Writable_File.Server is
           .Transactional_Writable_File_Interface)
       return Rose.Capabilities.Capability;
 
+   procedure Detach
+     (Server_Context : Rose.Server.Server_Context;
+      Object         :
+        not null access Transactional_Writable_File_Interface'Class);
+
 end Rose.Interfaces.Transactional_Writable_File.Server;

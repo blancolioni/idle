@@ -33,4 +33,8 @@ package Rose.Interfaces.Lease.Server is
         Rose.Interfaces.Lease.Lease_Interface)
       return Rose.Capabilities.Capability;
 
+   procedure Detach
+     (Server_Context : Rose.Server.Server_Context;
+      Object         : not null access Lease_Interface'Class);
+
 end Rose.Interfaces.Lease.Server;
