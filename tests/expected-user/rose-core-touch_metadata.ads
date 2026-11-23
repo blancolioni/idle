@@ -27,6 +27,8 @@ package Rose.Core.Touch_Metadata is
      & ASCII.LF
      & "live true"
      & ASCII.LF
+     & "transient true"
+     & ASCII.LF
      & "argument Name"
      & ASCII.LF
      & "type String"

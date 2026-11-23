@@ -537,7 +537,7 @@ package body Idle.Commands is
             Check_Aspects
               (Item.Aspects,
                "Summary Description Name Authors Version Copyright",
-               "Server Replaceable", "Live", "a command");
+               "Server Replaceable", "Live Transient", "a command");
             Check_Arguments;
             Check_Replaceable;
          when Package_Unit =>
@@ -630,6 +630,15 @@ package body Idle.Commands is
 
    function Is_Live (Item : Idle.Syntax.Interface_Declaration) return Boolean
    is (Same (Aspect (Item.Aspects, "Live", "False"), "True"));
+
+   ------------------
+   -- Is_Transient --
+   ------------------
+
+   function Is_Transient
+     (Item : Idle.Syntax.Interface_Declaration)
+      return Boolean
+   is (Same (Aspect (Item.Aspects, "Transient", "False"), "True"));
 
    ---------------
    -- Is_One_Of --
