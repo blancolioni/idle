@@ -8,7 +8,8 @@
 #     small hierarchy. Also list the endpoint ids of some interfaces,
 #     and generate the units for the commands and packages in commands/.
 #     Then the same for the user target, with generated-user.txt and
-#     expected-user/.
+#     expected-user/. Running idle again over the same output leaves the
+#     files it would write unchanged alone, timestamps and all (#129).
 #  3. Run idle on each file in errors/ and compare its diagnostics with
 #     the .txt file of the same name; and the same for the kernel target
 #     with the cases in kernel-errors/, and for --check with Rose's build
@@ -276,6 +277,39 @@ if $idle --check groups/common-named.idl groups/measures-counter.idl \
 else
   fail "check of interfaces in groups"
 fi
+
+# Running idle again over its own output leaves files whose text is
+# unchanged alone, timestamps and all, so that a build does not recompile
+# them; a file whose text differs is rewritten (#129). Both targets, and
+# a command, since they all write through Syn.
+
+for target in kernel user; do
+  dir=output/again-$target
+  rm -rf "$dir" && mkdir "$dir"
+  run () {
+    $idle --target "$target" -I commands -I rose -o "$dir"       rose/timer.idl commands/rose-core-echo.idl
+  }
+  if ! run; then
+    fail "$target target, run once"
+    continue
+  fi
+  ls -l --full-time "$dir" > "$dir.before"
+  # Timestamps may only have a resolution of a second.
+  sleep 2
+  if run && ls -l --full-time "$dir" > "$dir.after"      && diff -u "$dir.before" "$dir.after"; then
+    pass "$target target, run again: unchanged files keep their timestamps"
+  else
+    fail "$target target, run again: unchanged files keep their timestamps"
+  fi
+  file=$dir/rose-interfaces-timer.ads
+  cp "$file" "$dir.timer"
+  echo "--  stale" >> "$file"
+  if run && cmp -s "$dir.timer" "$file"; then
+    pass "$target target, run again: a changed file is rewritten"
+  else
+    fail "$target target, run again: a changed file is rewritten"
+  fi
+done
 
 # 3. Diagnostics
 
