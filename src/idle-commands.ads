@@ -88,6 +88,14 @@ package Idle.Commands is
    --  command's changes take effect as it makes them (Rose ADR 0012,
    --  section 3).
 
+   function Is_Transient
+     (Item : Idle.Syntax.Interface_Declaration)
+      return Boolean;
+   --  True if the command Item has the Transient aspect: its processes are
+   --  never saved in a checkpoint, so nothing they hold reaches the disk
+   --  (rose#524, idle#127). The metadata says "transient true", and Rose's
+   --  exec launches the program as transient.
+
    type Stream is (No_Stream, Input_Stream, Output_Stream, Error_Stream);
 
    type System_Cap is

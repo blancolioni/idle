@@ -639,6 +639,9 @@ package body Idle.Targets.Kernel.Commands is
       if Idle.Commands.Is_Live (Item) then
          Line ("live", "true");
       end if;
+      if Idle.Commands.Is_Transient (Item) then
+         Line ("transient", "true");
+      end if;
       for Parent of Item.Parents loop
          Line ("role", Parent);
       end loop;

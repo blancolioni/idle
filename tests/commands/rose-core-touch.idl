@@ -1,9 +1,11 @@
 --  A live command, which changes its directory as it runs (Rose ADR 0012,
---  section 3).
+--  section 3), and a transient one, whose processes are never saved in a
+--  checkpoint (idle#127).
 
 command Rose.Core.Touch
   with Summary => "Create an empty file.",
-       Live
+       Live,
+       Transient
 is
    Name : String
      with Help => "the name of the new file";
