@@ -669,6 +669,24 @@ package body Idle.Targets.Kernel is
          when Idle.Syntax.Command_Unit =>
             if not Idle.Commands.Check (Item) then
                null;
+            elsif Target = Kernel_Target
+              and then (for some Argument of Item.Arguments =>
+                          not Argument.Accepts.Is_Empty)
+            then
+
+               --  The command finds out which interface it was given with
+               --  a membership test, which needs the user target's tagged
+               --  objects (Rose ADR 0012, section 6).
+
+               for Argument of Item.Arguments loop
+                  if not Argument.Accepts.Is_Empty then
+                     Idle.Diagnostics.Error
+                       (To_String (Item.File_Name),
+                        Argument.Position.Line, Argument.Position.Column,
+                        "a list of interfaces needs the user target, whose"
+                        & " clients are tagged types");
+                  end if;
+               end loop;
             elsif Command_Clients then
                Commands.Generate_Client (Item, Output_Directory);
             else

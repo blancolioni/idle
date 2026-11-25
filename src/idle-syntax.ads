@@ -112,6 +112,11 @@ package Idle.Syntax is
       Name        : Unbounded_String;
       Mode        : Parameter_Mode := In_Mode;
       Of_Type     : Type_Reference;
+      Accepts     : String_Vectors.Vector;
+      --  The interfaces after the first, for a type that is a list joined
+      --  by "or", as written: Files.Transactional_Writable_File in
+      --  "in Files.File or Files.Transactional_Writable_File" (Rose ADR
+      --  0012, section 6). Empty for a single type.
       Has_Default : Boolean := False;
       Default     : Aspect_Value;
       Aspects     : Aspect_Vectors.Vector;

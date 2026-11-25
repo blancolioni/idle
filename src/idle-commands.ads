@@ -59,6 +59,13 @@ package Idle.Commands is
      (Near : Idle.Syntax.Interface_Declaration;
       Item : Idle.Syntax.Argument)
       return Boolean;
+
+   function Is_Versioned
+     (Near      : Idle.Syntax.Interface_Declaration;
+      Type_Name : String)
+      return Boolean;
+   --  The same, for the interface Type_Name, named beside Near: one of
+   --  the later interfaces in an argument's list.
    --  True if Item, an argument declared by Near, is an interface whose
    --  objects the shell can version and commit: the interface has the
    --  Versioned aspect, or inherits from one that has.
@@ -67,6 +74,12 @@ package Idle.Commands is
      (Near : Idle.Syntax.Interface_Declaration;
       Item : Idle.Syntax.Argument)
       return Boolean;
+
+   function Is_Transactional
+     (Near      : Idle.Syntax.Interface_Declaration;
+      Type_Name : String)
+      return Boolean;
+   --  The same, for the interface Type_Name, named beside Near.
    --  True if Item, an argument declared by Near, is an interface that is
    --  Transactional or inherits from it: the shell gives the command a
    --  version, which the command commits itself (Rose ADR 0026).
@@ -115,6 +128,11 @@ package Idle.Commands is
       Kind      : Argument_Type := Other_Argument;
       Where     : Place;
       Result    : Place := (Kind => No_Place, others => <>);
+      Selector  : Place := (Kind => No_Place, others => <>);
+      --  For an argument whose type is a list of interfaces, the data
+      --  word that says which of them its cap is for: 0 for the first, N
+      --  for the Nth after it (Rose ADR 0012, section 6). It is the
+      --  argument's own data word, in declaration order with the others.
    end record;
 
    package Placed_Vectors is

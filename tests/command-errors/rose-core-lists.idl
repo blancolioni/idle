@@ -1,0 +1,18 @@
+--  Lists of interfaces that break the rules (Rose ADR 0012, section 6;
+--  idle#94).
+
+command Rose.Core.Lists
+is
+   Count : in Natural or Positive
+     with Help => "a list of types that are not interfaces";
+   Back : out File or Writable_File
+     with Help => "an out argument";
+   Twice : in File or Writable_File or Writable_File
+     with Help => "an interface given twice";
+   Again : in File or File
+     with Help => "the first interface given again";
+   Upward : in Writable_File or File
+     with Help => "an ancestor after a descendant";
+   Nowhere : in File or No_Such_Thing
+     with Help => "an interface that does not exist";
+end Rose.Core.Lists;

@@ -1,0 +1,15 @@
+--  Arguments whose type is a list of interfaces (Rose ADR 0012, section
+--  6; idle#94). Doc is a file to view, a writable file, or a version of a
+--  transactional file. Lines is a word after Doc's selector. Input is
+--  standard input or a named reader, or a reader that can seek.
+
+command Rose.Core.Edit : Standard_Error
+  with Summary => "Edit or view a file."
+is
+   Doc : in File or Writable_File or Transactional_Writable_File
+     with Help => "the file";
+   Lines : Natural := 0
+     with Help => "the number of lines to show";
+   Input : in Stream_Reader or Seekable_File_Reader := Standard_Input
+     with Help => "where the commands come from";
+end Rose.Core.Edit;

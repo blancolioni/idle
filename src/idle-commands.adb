@@ -141,6 +141,62 @@ package body Idle.Commands is
                          "an out argument has no default");
                end if;
 
+               --  A list of interfaces (Rose ADR 0012, section 6): an in
+               --  argument, whose later interfaces are each a descendant
+               --  of the first, once.
+
+               if Argument.Accepts.Is_Empty then
+                  null;
+               elsif Kind /= Interface_Argument then
+                  Error (Argument.Position,
+                         "only an interface argument can have a list of"
+                         & " interfaces");
+               elsif Argument.Mode /= In_Mode then
+                  Error (Argument.Position,
+                         "only an in argument can have a list of"
+                         & " interfaces: an out argument returns the one"
+                         & " cap that the command chose");
+               else
+                  declare
+                     First_Name : constant String :=
+                       To_String (Argument.Of_Type.Name);
+                     First      : Idle.Syntax.Interface_Declaration;
+                     Has_First  : constant Boolean :=
+                       Idle.Hierarchy.Find (Item, First_Name, First);
+                     Seen       : Idle.Syntax.String_Vectors.Vector;
+                  begin
+                     Seen.Append (Idle.Names.Key (First_Name));
+                     for Other of Argument.Accepts loop
+                        declare
+                           Found : Idle.Syntax.Interface_Declaration;
+                        begin
+                           if Seen.Contains (Idle.Names.Key (Other)) then
+                              Error (Argument.Position,
+                                     Other & " is in the list of " & Name
+                                     & " more than once");
+                           elsif not Idle.Hierarchy.Find (Item, Other, Found)
+                             or else Found.Kind /= Interface_Unit
+                           then
+                              Error (Argument.Position,
+                                     "unknown interface " & Other);
+                           elsif Has_First
+                             and then not
+                               (for some Ancestor
+                                  of Idle.Hierarchy.Ancestors (Found) =>
+                                  Same (To_String (Ancestor.Name),
+                                        To_String (First.Name)))
+                           then
+                              Error (Argument.Position,
+                                     Other & " is not a descendant of "
+                                     & First_Name & ", the first interface"
+                                     & " of " & Name);
+                           end if;
+                           Seen.Append (Idle.Names.Key (Other));
+                        end;
+                     end loop;
+                  end;
+               end if;
+
                case Kind is
                   when Other_Argument =>
                      Error (Argument.Position,
@@ -672,11 +728,17 @@ package body Idle.Commands is
      (Near : Idle.Syntax.Interface_Declaration;
       Item : Idle.Syntax.Argument)
       return Boolean
+   is (Is_Transactional (Near, To_String (Item.Of_Type.Name)));
+
+   function Is_Transactional
+     (Near      : Idle.Syntax.Interface_Declaration;
+      Type_Name : String)
+      return Boolean
    is
       use all type Idle.Syntax.Unit_Kind;
       Found : Idle.Syntax.Interface_Declaration;
    begin
-      if not Idle.Hierarchy.Find (Near, To_String (Item.Of_Type.Name), Found)
+      if not Idle.Hierarchy.Find (Near, Type_Name, Found)
         or else Found.Kind /= Interface_Unit
       then
          return False;
@@ -696,11 +758,17 @@ package body Idle.Commands is
      (Near : Idle.Syntax.Interface_Declaration;
       Item : Idle.Syntax.Argument)
       return Boolean
+   is (Is_Versioned (Near, To_String (Item.Of_Type.Name)));
+
+   function Is_Versioned
+     (Near      : Idle.Syntax.Interface_Declaration;
+      Type_Name : String)
+      return Boolean
    is
       use all type Idle.Syntax.Unit_Kind;
       Found : Idle.Syntax.Interface_Declaration;
    begin
-      if not Idle.Hierarchy.Find (Near, To_String (Item.Of_Type.Name), Found)
+      if not Idle.Hierarchy.Find (Near, Type_Name, Found)
         or else Found.Kind /= Interface_Unit
       then
          return False;
@@ -770,7 +838,8 @@ package body Idle.Commands is
                         else No_System_Cap),
                      Kind     => Interface_Argument,
                      Where    => (Cap_Place, Next_Cap, 0),
-                     Result   => <>));
+                     Result   => <>,
+                     Selector => <>));
                Next_Cap := Next_Cap + 1;
             end;
          end loop;
@@ -786,9 +855,10 @@ package body Idle.Commands is
 
       for Argument of Item.Arguments loop
          declare
-            Kind   : constant Argument_Type := Type_Of (Item, Argument);
-            Where  : Place := (Kind => No_Place, others => <>);
-            Answer : Place := (Kind => No_Place, others => <>);
+            Kind     : constant Argument_Type := Type_Of (Item, Argument);
+            Where    : Place := (Kind => No_Place, others => <>);
+            Answer   : Place := (Kind => No_Place, others => <>);
+            Selector : Place := (Kind => No_Place, others => <>);
          begin
             if Argument.Mode /= Out_Mode then
                case Kind is
@@ -806,6 +876,10 @@ package body Idle.Commands is
                   when Interface_Argument =>
                      Where := (Cap_Place, Next_Cap, 0);
                      Next_Cap := Next_Cap + 1;
+                     if not Argument.Accepts.Is_Empty then
+                        Selector := (Word_Place, Next_Word, 0);
+                        Next_Word := Next_Word + 1;
+                     end if;
                end case;
             end if;
 
@@ -836,7 +910,8 @@ package body Idle.Commands is
                   System   => No_System_Cap,
                   Kind     => Kind,
                   Where    => Where,
-                  Result   => Answer));
+                  Result   => Answer,
+                  Selector => Selector));
          end;
       end loop;
 
