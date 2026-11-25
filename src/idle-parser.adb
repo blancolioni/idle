@@ -106,6 +106,14 @@ package body Idle.Parser is
 
       Result.Of_Type := Parse_Type_Reference;
 
+      --  A list of interfaces (Rose ADR 0012, section 6), which
+      --  Idle.Commands.Check checks.
+
+      while Tok = Tok_Or loop
+         Scan;
+         Result.Accepts.Append (To_String (Parse_Type_Reference.Name));
+      end loop;
+
       if Tok = Tok_Becomes then
          Scan;
          Result.Has_Default := True;

@@ -39,5 +39,11 @@ command-errors/rose-core-unserved.idl:1:1: error: a Replaceable command is a ser
 command-errors/rose-core-unserved.idl:1:1: error: a Replaceable command needs the Cap_Set_Service role, to make the cap set that its Caps returns
 command-errors/rose-core-unserved.idl:5:4: error: Previous is reserved: it is the version that a Replaceable command replaces
 command-errors/rose-core-unserved.idl:7:4: error: Saved is reserved: it is a state that a Replaceable command restores
+command-errors/rose-core-lists.idl:6:4: error: only an interface argument can have a list of interfaces
+command-errors/rose-core-lists.idl:8:4: error: only an in argument can have a list of interfaces: an out argument returns the one cap that the command chose
+command-errors/rose-core-lists.idl:10:4: error: Writable_File is in the list of Twice more than once
+command-errors/rose-core-lists.idl:12:4: error: File is in the list of Again more than once
+command-errors/rose-core-lists.idl:14:4: error: File is not a descendant of Writable_File, the first interface of Upward
+command-errors/rose-core-lists.idl:16:4: error: unknown interface No_Such_Thing
 command-errors/rose-core.idl:2:19: error: the value of Version is a string
 command-errors/rose-core.idl:3:8: error: unknown aspect Colour of a package

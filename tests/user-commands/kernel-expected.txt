@@ -1,0 +1,2 @@
+user-commands/rose-core-edit.idl:9:4: error: a list of interfaces needs the user target, whose clients are tagged types
+user-commands/rose-core-edit.idl:13:4: error: a list of interfaces needs the user target, whose clients are tagged types

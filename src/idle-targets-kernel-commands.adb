@@ -167,6 +167,17 @@ package body Idle.Targets.Kernel.Commands is
                                (To_String (Argument.Default.Text))
                         else F.New_Name
                                (To_String (Argument.Default.Text)))));
+
+               --  Which interface of a list the cap is for, 0 for the
+               --  first (Rose ADR 0012, section 6).
+
+               if Placed.Selector.Kind = Word_Place then
+                  List.Append
+                    (F.New_Parameter
+                       (To_String (Argument.Name) & "_Selector",
+                        F.New_Name ("Natural"),
+                        Default => Literal (0)));
+               end if;
             end;
          end loop;
          if Replaceable then
@@ -241,6 +252,13 @@ package body Idle.Targets.Kernel.Commands is
                when Item_Place | List_Place =>
                   Last_Item := Natural'Max (Last_Item, Where.Index);
             end case;
+
+            if Placed.Selector.Kind = Word_Place then
+               Statement
+                 (Arguments, "Natural_Argument",
+                  [Call_Node, Literal (Placed.Selector.Index),
+                   F.New_Name (Argument_Name & "_Selector")]);
+            end if;
 
             case Answer.Kind is
                when No_Place | List_Place =>
@@ -705,6 +723,15 @@ package body Idle.Targets.Kernel.Commands is
             --  is passed the cap of its stream's subprogram, as the role
             --  is, so the client is opened from that (idle#52).
 
+            procedure Use_Client_List;
+            --  For the user target, pass the cap of an argument whose type
+            --  is a list of interfaces as a client of the one its selector
+            --  names, through an access to the first one's Object'Class
+            --  (Rose ADR 0012, section 6). There is an aliased client of
+            --  each interface, and the selector chooses which is opened.
+            --  A selector out of range raises Constraint_Error, which fails
+            --  the launch.
+
             ----------------
             -- Return_Cap --
             ----------------
@@ -778,6 +805,120 @@ package body Idle.Targets.Kernel.Commands is
                end if;
             end Use_Client;
 
+            ---------------------
+            -- Use_Client_List --
+            ---------------------
+
+            procedure Use_Client_List is
+               Access_Name : constant String := Argument_Name & "_Access";
+               Names       : Idle.Syntax.String_Vectors.Vector;
+               Choice      : Syn.Node_Access :=
+                 F.New_Raise
+                   (F.New_Name ("Constraint_Error"),
+                    F.New_String_Literal
+                      (Argument_Name & ": no such interface in its list"));
+
+               function Selector return not null Syn.Node_Access
+               is (F.New_Call
+                     (Launch & "Natural_Argument",
+                      [Call_Node, Literal (Placed.Selector.Index)]));
+
+            begin
+               Names.Append (Type_Name);
+               for Other of Argument.Accepts loop
+                  Names.Append (Other);
+               end loop;
+
+               Spec_Context.Add (Object_Unit);
+               Declarations.Append
+                 (F.New_Access_Type
+                    (Access_Name, Object_Class, Is_All => True));
+
+               for Index in Names.First_Index .. Names.Last_Index loop
+                  declare
+                     Each_Name : constant String := Names (Index);
+                     Unit      : constant String :=
+                       "Rose.Interfaces." & Idle.Names.Ada_Name (Each_Name)
+                       & ".Client";
+                     Local     : constant String :=
+                       Argument_Name & "_"
+                       & Idle.Names.Simple_Name (Each_Name);
+                  begin
+                     Main_Context.Add (Unit);
+                     Declarations.Append
+                       (F.New_Object
+                          (Local,
+                           F.New_Name
+                             (Unit & "."
+                              & Idle.Names.Simple_Name (Each_Name)
+                              & "_Client"),
+                           Is_Aliased => True));
+                  end;
+               end loop;
+
+               Declarations.Append
+                 (F.New_Object (Argument_Name, F.New_Name (Access_Name)));
+
+               --  The choice is built from the last interface back, so
+               --  that the first is tested first.
+
+               for Index in reverse Names.First_Index .. Names.Last_Index loop
+                  declare
+                     Each_Name : constant String := Names (Index);
+                     Unit      : constant String :=
+                       "Rose.Interfaces." & Idle.Names.Ada_Name (Each_Name)
+                       & ".Client";
+                     Local     : constant String :=
+                       Argument_Name & "_"
+                       & Idle.Names.Simple_Name (Each_Name);
+                     From_Set  : constant Boolean :=
+                       Index = Names.First_Index
+                       and then Idle.Commands.Defaults_To_Standard_Input
+                                  (Argument);
+                     --  Standard_Input, as the first interface, is passed
+                     --  the cap of its stream's subprogram (idle#52).
+                  begin
+                     Choice :=
+                       F.New_If
+                         (Condition =>
+                            F.New_Binary
+                              (Selector, "=",
+                               Literal (Index - Names.First_Index)),
+                          Then_Part =>
+                            [F.New_Call_Statement
+                               (F.New_Call
+                                  (Unit
+                                   & (if From_Set then ".Open_Cap_Set"
+                                      else ".Open"),
+                                   [F.New_Name (Local),
+                                    (if From_Set then Cap_Argument
+                                     else Named_Cap (Argument_Name))])),
+                             F.New_Assignment
+                               (F.New_Name (Argument_Name),
+                                F.New_Attribute
+                                  (F.New_Name (Local), "Access"))],
+                          Else_Part => [Choice]);
+                  end;
+               end loop;
+
+               Statements.Append (Choice);
+               Arguments.Append
+                 (F.New_Named
+                    (Argument_Name, F.New_Name (Argument_Name & ".all")));
+               if not Idle.Commands.Defaults_To_Standard_Input (Argument)
+               then
+                  Named_Adds.Append
+                    (F.New_Call_Statement
+                       (F.New_Call
+                          ("Given.Add",
+                           [F.New_String_Literal (Argument_Name),
+                            Cap_Argument])));
+               end if;
+               Parameters.Append
+                 (F.New_Parameter
+                    (Argument_Name, Object_Class, Syn.In_Out_Mode));
+            end Use_Client_List;
+
          begin
             if Placed.Stream /= No_Stream then
                Line ("stream",
@@ -848,6 +989,19 @@ package body Idle.Targets.Kernel.Commands is
                      --  commits (Rose ADR 0026).
                      Line ("transactional", "true");
                   end if;
+
+                  --  The later interfaces of a list, each with its own
+                  --  flags (Rose ADR 0012, section 6).
+
+                  for Other of Argument.Accepts loop
+                     Line ("accepts", Other);
+                     if Idle.Commands.Is_Versioned (Item, Other) then
+                        Line ("versioned", "true");
+                     end if;
+                     if Idle.Commands.Is_Transactional (Item, Other) then
+                        Line ("transactional", "true");
+                     end if;
+                  end loop;
                end if;
                if Where.Kind /= No_Place then
                   Line ("place",
@@ -861,6 +1015,10 @@ package body Idle.Targets.Kernel.Commands is
                         & (if Where.Kind = List_Place
                            then " word" & Natural'Image (Where.Count)
                            else ""));
+               end if;
+               if Placed.Selector.Kind = Word_Place then
+                  Line ("selector",
+                        "word" & Natural'Image (Placed.Selector.Index));
                end if;
                if Answer.Kind /= No_Place then
                   Line ("result",
@@ -893,6 +1051,12 @@ package body Idle.Targets.Kernel.Commands is
                  and then Answer.Kind = Cap_Place
                then
                   Return_Cap;
+               elsif Placed.Kind = Interface_Argument
+                 and then not Argument.Accepts.Is_Empty
+               then
+                  --  An in interface with a list: the command takes a
+                  --  client of the one the shell chose.
+                  Use_Client_List;
                elsif Placed.Kind = Interface_Argument then
                   --  An in interface: the command takes a client, and
                   --  what it can do is the client's interface.

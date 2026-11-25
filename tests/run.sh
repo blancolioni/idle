@@ -8,14 +8,16 @@
 #     small hierarchy. Also list the endpoint ids of some interfaces,
 #     and generate the units for the commands and packages in commands/.
 #     Then the same for the user target, with generated-user.txt and
-#     expected-user/. Running idle again over the same output leaves the
+#     expected-user/, and the commands in user-commands/ too, whose
+#     arguments the kernel target cannot have. Running idle again over the same output leaves the
 #     files it would write unchanged alone, timestamps and all (#129).
 #  3. Run idle on each file in errors/ and compare its diagnostics with
 #     the .txt file of the same name; and the same for the kernel target
 #     with the cases in kernel-errors/, and for --check with Rose's build
 #     list (rose-build.txt) and the cases in check-errors/, for commands
 #     with the cases in command-errors/, and for what the user target
-#     does not support yet with user-errors/.
+#     does not support yet with user-errors/. A command in user-commands/
+#     is an error for the kernel target.
 #     Then interfaces in groups (Rose ADR 0034), from groups/, for both
 #     targets, with expected-groups/.
 #  4. Compile every expected Ada file, of both targets, with GNAT's style
@@ -170,12 +172,15 @@ rose-core-copy_client.ads rose-core-copy_client.adb
 rose-core-serve_client.ads rose-core-serve_client.adb
 rose-core-show_client.ads rose-core-show_client.adb
 rose-core-touch_client.ads rose-core-touch_client.adb
-rose-core-replace_client.ads rose-core-replace_client.adb"
+rose-core-replace_client.ads rose-core-replace_client.adb
+rose-core-edit.ads rose-core-edit_main.adb rose-core-edit_metadata.ads
+rose-core-edit_client.ads rose-core-edit_client.adb"
 if $idle --target user -I commands -I rose -o output/user \
      commands/rose-core.idl commands/rose-core-echo.idl \
      commands/rose-core-head.idl commands/rose-core-copy.idl \
      commands/rose-core-serve.idl commands/rose-core-show.idl \
-     commands/rose-core-touch.idl commands/rose-core-replace.idl; then
+     commands/rose-core-touch.idl commands/rose-core-replace.idl \
+     user-commands/rose-core-edit.idl; then
   for file in $user_commands; do
     if diff -u "expected-user/$file" "output/user/$file"; then
       pass "user $file"
@@ -376,12 +381,24 @@ fi
 # Commands, packages and roles that break the rules. Each command finds
 # its package beside it, in command-errors/, and its roles in commands/.
 
-if $idle --target kernel -I commands -I rose -o output      command-errors/rose-core-bad.idl command-errors/nowhere-thing.idl      command-errors/bad_role.idl command-errors/bad_category.idl command-errors/rose-core-modes.idl      command-errors/rose-core-unserved.idl      command-errors/rose-core.idl 2> output/diagnostics.txt; then
+if $idle --target kernel -I commands -I rose -o output      command-errors/rose-core-bad.idl command-errors/nowhere-thing.idl      command-errors/bad_role.idl command-errors/bad_category.idl command-errors/rose-core-modes.idl      command-errors/rose-core-unserved.idl      command-errors/rose-core-lists.idl      command-errors/rose-core.idl 2> output/diagnostics.txt; then
   fail "command errors (expected errors)"
 elif diff -u command-errors/expected.txt output/diagnostics.txt; then
   pass "command errors"
 else
   fail "command errors"
+fi
+
+# A list of interfaces needs the user target (Rose ADR 0012, section 6),
+# since the command tests which one it was given.
+
+if $idle --target kernel -I commands -I rose -o output \
+     user-commands/rose-core-edit.idl 2> output/diagnostics.txt; then
+  fail "a list of interfaces on the kernel target (expected errors)"
+elif diff -u user-commands/kernel-expected.txt output/diagnostics.txt; then
+  pass "a list of interfaces on the kernel target"
+else
+  fail "a list of interfaces on the kernel target"
 fi
 
 # What the user target cannot generate: a type with the name of the

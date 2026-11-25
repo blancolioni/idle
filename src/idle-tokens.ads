@@ -9,8 +9,9 @@ package Idle.Tokens is
       --  Keywords
 
       Tok_Command, Tok_Constant, Tok_End, Tok_Function, Tok_In,
-      Tok_Interface, Tok_Is, Tok_New, Tok_Out, Tok_Package, Tok_Procedure,
-      Tok_Range, Tok_Record, Tok_Return, Tok_Role, Tok_Type, Tok_With,
+      Tok_Interface, Tok_Is, Tok_New, Tok_Or, Tok_Out, Tok_Package,
+      Tok_Procedure, Tok_Range, Tok_Record, Tok_Return, Tok_Role, Tok_Type,
+      Tok_With,
 
       --  Symbols
 
