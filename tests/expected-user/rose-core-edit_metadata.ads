@@ -35,11 +35,7 @@ package Rose.Core.Edit_Metadata is
      & ASCII.LF
      & "accepts Writable_File"
      & ASCII.LF
-     & "versioned true"
-     & ASCII.LF
      & "accepts Transactional_Writable_File"
-     & ASCII.LF
-     & "versioned true"
      & ASCII.LF
      & "transactional true"
      & ASCII.LF

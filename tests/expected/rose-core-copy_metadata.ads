@@ -53,8 +53,6 @@ package Rose.Core.Copy_Metadata is
      & ASCII.LF
      & "type interface Writable_File"
      & ASCII.LF
-     & "versioned true"
-     & ASCII.LF
      & "place cap 5"
      & ASCII.LF
      & "help the new file"
@@ -62,8 +60,6 @@ package Rose.Core.Copy_Metadata is
      & "argument Root"
      & ASCII.LF
      & "type interface Writable_Directory"
-     & ASCII.LF
-     & "versioned true"
      & ASCII.LF
      & "place cap 6"
      & ASCII.LF
@@ -83,8 +79,6 @@ package Rose.Core.Copy_Metadata is
      & ASCII.LF
      & "type interface Transactional_Writable_File"
      & ASCII.LF
-     & "versioned true"
-     & ASCII.LF
      & "transactional true"
      & ASCII.LF
      & "place cap 8"
@@ -94,8 +88,6 @@ package Rose.Core.Copy_Metadata is
      & "argument Ledger"
      & ASCII.LF
      & "type interface Journal"
-     & ASCII.LF
-     & "versioned true"
      & ASCII.LF
      & "transactional true"
      & ASCII.LF

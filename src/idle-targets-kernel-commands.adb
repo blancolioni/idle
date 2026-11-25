@@ -654,9 +654,6 @@ package body Idle.Targets.Kernel.Commands is
             Idle.Commands.Aspect
               (Item.Aspects, "Summary", Name & " (no summary)"));
       Line ("description", Idle.Commands.Aspect (Item.Aspects, "Description"));
-      if Idle.Commands.Is_Live (Item) then
-         Line ("live", "true");
-      end if;
       if Idle.Commands.Is_Transient (Item) then
          Line ("transient", "true");
       end if;
@@ -980,10 +977,6 @@ package body Idle.Targets.Kernel.Commands is
                if Argument.Mode = Out_Mode then
                   Line ("mode", "out");
                elsif Placed.Kind = Interface_Argument then
-                  if Idle.Commands.Is_Versioned (Item, Argument) then
-                     --  The shell versions it, unless the command is live.
-                     Line ("versioned", "true");
-                  end if;
                   if Idle.Commands.Is_Transactional (Item, Argument) then
                      --  The shell gives it a version, which the command
                      --  commits (Rose ADR 0026).
@@ -995,9 +988,6 @@ package body Idle.Targets.Kernel.Commands is
 
                   for Other of Argument.Accepts loop
                      Line ("accepts", Other);
-                     if Idle.Commands.Is_Versioned (Item, Other) then
-                        Line ("versioned", "true");
-                     end if;
                      if Idle.Commands.Is_Transactional (Item, Other) then
                         Line ("transactional", "true");
                      end if;

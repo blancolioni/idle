@@ -52,23 +52,8 @@ package Idle.Commands is
    --
    --  An argument is in or out (Rose ADR 0012, section 1): the mode is
    --  only the direction. What a command can do with an interface is its
-   --  type, and whether the shell commits its changes is the command's
-   --  (Is_Live).
-
-   function Is_Versioned
-     (Near : Idle.Syntax.Interface_Declaration;
-      Item : Idle.Syntax.Argument)
-      return Boolean;
-
-   function Is_Versioned
-     (Near      : Idle.Syntax.Interface_Declaration;
-      Type_Name : String)
-      return Boolean;
-   --  The same, for the interface Type_Name, named beside Near: one of
-   --  the later interfaces in an argument's list.
-   --  True if Item, an argument declared by Near, is an interface whose
-   --  objects the shell can version and commit: the interface has the
-   --  Versioned aspect, or inherits from one that has.
+   --  type, and whether the shell gives it a version is its type too
+   --  (Is_Transactional, Rose ADR 0026).
 
    function Is_Transactional
      (Near : Idle.Syntax.Interface_Declaration;
@@ -94,12 +79,6 @@ package Idle.Commands is
    --  stream that the shell opens. Either way the command is passed the
    --  cap of the stream's one subprogram, as for the role, and not an
    --  interface cap.
-
-   function Is_Live (Item : Idle.Syntax.Interface_Declaration) return Boolean;
-   --  True if the command Item has the Live aspect: the shell passes it
-   --  its own caps, not versions of its Versioned arguments, and the
-   --  command's changes take effect as it makes them (Rose ADR 0012,
-   --  section 3).
 
    function Is_Transient
      (Item : Idle.Syntax.Interface_Declaration)
