@@ -1,5 +1,4 @@
 interface Writable_Directory : Directory
-  with Versioned
 is
 
    function Get_Writable_File

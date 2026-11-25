@@ -361,7 +361,16 @@ package body Idle.Commands is
                end if;
                Seen.Append (Idle.Names.Key (Name));
 
-               if Is_One_Of (Name, Flags) then
+               if Same (Name, "Live") then
+
+                  --  The type of each argument chooses between the object
+                  --  and a version of it.
+
+                  Error (Aspect.Position,
+                         "the Live aspect was removed by Rose ADR 0026: an"
+                         & " argument's type chooses between the object and"
+                         & " a version of it");
+               elsif Is_One_Of (Name, Flags) then
                   if Aspect.Value.Kind /= Idle.Syntax.Name_Value
                     or else not Is_One_Of
                                   (To_String (Aspect.Value.Text),
@@ -593,7 +602,7 @@ package body Idle.Commands is
             Check_Aspects
               (Item.Aspects,
                "Summary Description Name Authors Version Copyright",
-               "Server Replaceable", "Live Transient", "a command");
+               "Server Replaceable", "Transient", "a command");
             Check_Arguments;
             Check_Replaceable;
          when Package_Unit =>
@@ -680,13 +689,6 @@ package body Idle.Commands is
       return Boolean
    is (for some Item of Aspects => Same (To_String (Item.Name), Name));
 
-   -------------
-   -- Is_Live --
-   -------------
-
-   function Is_Live (Item : Idle.Syntax.Interface_Declaration) return Boolean
-   is (Same (Aspect (Item.Aspects, "Live", "False"), "True"));
-
    ------------------
    -- Is_Transient --
    ------------------
@@ -749,35 +751,6 @@ package body Idle.Commands is
                    Same (Simple_Name (To_String (Ancestor.Name)),
                          "Transactional"));
    end Is_Transactional;
-
-   ------------------
-   -- Is_Versioned --
-   ------------------
-
-   function Is_Versioned
-     (Near : Idle.Syntax.Interface_Declaration;
-      Item : Idle.Syntax.Argument)
-      return Boolean
-   is (Is_Versioned (Near, To_String (Item.Of_Type.Name)));
-
-   function Is_Versioned
-     (Near      : Idle.Syntax.Interface_Declaration;
-      Type_Name : String)
-      return Boolean
-   is
-      use all type Idle.Syntax.Unit_Kind;
-      Found : Idle.Syntax.Interface_Declaration;
-   begin
-      if not Idle.Hierarchy.Find (Near, Type_Name, Found)
-        or else Found.Kind /= Interface_Unit
-      then
-         return False;
-      end if;
-
-      return Found.Versioned
-        or else (for some Ancestor of Idle.Hierarchy.Ancestors (Found) =>
-                   Ancestor.Versioned);
-   end Is_Versioned;
 
    ------------------
    -- Package_Name --

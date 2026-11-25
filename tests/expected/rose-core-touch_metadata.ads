@@ -25,8 +25,6 @@ package Rose.Core.Touch_Metadata is
      & ASCII.LF
      & "summary Create an empty file."
      & ASCII.LF
-     & "live true"
-     & ASCII.LF
      & "transient true"
      & ASCII.LF
      & "argument Name"
@@ -40,8 +38,6 @@ package Rose.Core.Touch_Metadata is
      & "argument Directory"
      & ASCII.LF
      & "type interface Writable_Directory"
-     & ASCII.LF
-     & "versioned true"
      & ASCII.LF
      & "place cap 0"
      & ASCII.LF

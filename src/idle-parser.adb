@@ -34,12 +34,11 @@ package body Idle.Parser is
    procedure Parse_Parameters (Into : in out Subprogram);
    procedure Parse_Aspects
      (Pinned_Id    : in out Long_Long_Long_Integer;
-      Versioned    : in out Boolean;
       On_Interface : Boolean);
    --  An aspect specification of an interface or a subprogram, if there
    --  is one: "with" and a list of aspects. Endpoint_Id, an integer
-   --  literal, sets Pinned_Id. Versioned, which has no value and is
-   --  allowed only On_Interface, sets Versioned (Rose ADR 0012).
+   --  literal, sets Pinned_Id. Versioned, which Rose ADR 0026 removed, is
+   --  reported as such.
 
    procedure Parse_Subprogram (Item : in out Interface_Declaration);
 
@@ -48,7 +47,7 @@ package body Idle.Parser is
 
    procedure Parse_Aspect_List (Into : in out Aspect_Vectors.Vector);
    --  "with" and a list of aspects, if there is one. An aspect given
-   --  without a value, such as Live, has the value True.
+   --  without a value, such as Transient, has the value True.
 
    procedure Parse_Command (Item : in out Interface_Declaration);
    procedure Parse_Interface (Item : in out Interface_Declaration);
@@ -146,7 +145,8 @@ package body Idle.Parser is
                Scan;
                Result.Value := Parse_Value;
             else
-               --  An aspect without a value, such as Live, is True.
+               --  An aspect without a value, such as Transient, is
+               --  True.
                Result.Has_Value := False;
                Result.Value :=
                  (Kind     => Name_Value,
@@ -166,7 +166,6 @@ package body Idle.Parser is
 
    procedure Parse_Aspects
      (Pinned_Id    : in out Long_Long_Long_Integer;
-      Versioned    : in out Boolean;
       On_Interface : Boolean)
    is
    begin
@@ -181,16 +180,14 @@ package body Idle.Parser is
             Value : Long_Long_Long_Integer;
          begin
             if Same_Name (Name, "Versioned") then
-               if On_Interface then
-                  Versioned := True;
-               else
-                  Error ("Versioned is an aspect of an interface, not of a"
-                         & " subprogram");
-               end if;
+
+               --  The shell versions an argument whose interface inherits
+               --  Transactional, so nothing needs to be marked.
+
+               Error ("the Versioned aspect was removed by Rose ADR 0026:"
+                      & " the shell versions an argument whose interface"
+                      & " inherits Transactional");
                if Tok = Tok_Arrow then
-                  if On_Interface then
-                     Error ("Versioned has no value");
-                  end if;
                   Scan;
                   if Tok in Tok_Integer_Literal | Tok_Identifier then
                      Scan;
@@ -201,8 +198,8 @@ package body Idle.Parser is
                if not Same_Name (Name, "Endpoint_Id") then
                   Error ("unknown aspect " & Name
                          & (if On_Interface
-                            then "; the aspects of an interface are"
-                                 & " Endpoint_Id and Versioned"
+                            then "; the only aspect of an interface is"
+                                 & " Endpoint_Id"
                             else "; the only aspect of a subprogram is"
                                  & " Endpoint_Id"));
                   if Tok in Tok_Integer_Literal | Tok_Identifier then
@@ -377,7 +374,7 @@ package body Idle.Parser is
       Expect (Tok_Interface, [Tok_Identifier]);
       Item.Name := Parse_Qualified_Name ("interface name");
       Parse_Parents (Item);
-      Parse_Aspects (Item.Pinned_Id, Item.Versioned, On_Interface => True);
+      Parse_Aspects (Item.Pinned_Id, On_Interface => True);
       Expect (Tok_Is, Declaration_Start);
       Parse_Declarations (Item);
       Expect (Tok_End, [Tok_Semicolon]);
@@ -589,12 +586,7 @@ package body Idle.Parser is
          Error ("missing 'return' and result type");
       end if;
 
-      declare
-         Versioned : Boolean := False;
-         --  Not an aspect of a subprogram, so never set.
-      begin
-         Parse_Aspects (Result.Pinned_Id, Versioned, On_Interface => False);
-      end;
+      Parse_Aspects (Result.Pinned_Id, On_Interface => False);
       Expect (Tok_Semicolon, Declaration_Start);
       Item.Subprograms.Append (Result);
    end Parse_Subprogram;

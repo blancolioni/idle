@@ -1,5 +1,6 @@
 command Rose.Core.Modes
   with Live => Sometimes,
+       Transient => Sometimes,
        Server
 is
    Total : out Natural := 3;
