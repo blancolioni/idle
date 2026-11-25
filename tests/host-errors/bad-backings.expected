@@ -1,0 +1,4 @@
+host-errors/bad-backings.txt:2: error: a backing needs an interface and a type
+host-errors/bad-backings.txt:3: error: a backing needs an interface and a type
+host-errors/bad-backings.txt:4: error: the type Reader needs its package
+host-errors/bad-backings.txt:6: error: interface file already has a backing

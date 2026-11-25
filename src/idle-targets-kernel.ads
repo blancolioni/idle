@@ -64,5 +64,10 @@ package Idle.Targets.Kernel is
    --  target, but that the command takes each interface argument, and
    --  each role member that is an interface, as an in out object of the
    --  interface, and an out or in out string as a Rose.Command_Line.Text.
+   --
+   --  The host target (idle#133) writes an interface's package as the
+   --  user target does, and no client or server. Its units for a command
+   --  are those of the user target, but for the main and the client: see
+   --  Idle.Targets.Kernel.Commands.
 
 end Idle.Targets.Kernel;

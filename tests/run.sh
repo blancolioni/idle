@@ -19,7 +19,10 @@
 #     does not support yet with user-errors/. A command in user-commands/
 #     is an error for the kernel target.
 #     Then interfaces in groups (Rose ADR 0034), from groups/, for both
-#     targets, with expected-groups/.
+#     targets, with expected-groups/. Then the host target (#133), with
+#     host-backings.txt, the commands in commands/ that it can build and
+#     those in host-commands/, and expected-host/; and what it refuses,
+#     in host-errors/.
 #  4. Compile every expected Ada file, of both targets, with GNAT's style
 #     checks, as strict as Rose's build.
 
@@ -86,7 +89,7 @@ fi
 if $idle --target nonesuch -o output rose/timer.idl \
      2> output/target.txt; then
   fail "unknown target (expected failure)"
-elif grep -q "unknown target nonesuch; the targets are kernel, user" \
+elif grep -q "unknown target nonesuch; the targets are kernel, user, host" \
        output/target.txt; then
   pass "unknown target"
 else
@@ -231,6 +234,112 @@ then
   fail "--command-client without --target user"
 else
   pass "--command-client without --target user"
+fi
+
+# The host target (#133), for a command built for the host's own Ada
+# run-time, to test it without Rose. An interface has only its package,
+# the same as the user target's, with no client or server, since a host
+# program has no caps.
+
+rm -rf output/host && mkdir output/host
+if $idle --target host -o output/host rose/stream_reader.idl rose/timer.idl
+then
+  for file in rose-interfaces-stream_reader.ads rose-interfaces-timer.ads; do
+    if diff -u "expected-user/$file" "output/host/$file"; then
+      pass "host $file"
+    else
+      fail "host $file"
+    fi
+  done
+  generated=$(ls output/host | LC_ALL=C sort | tr '\n' ' ')
+  if [ "$generated" = \
+       "rose-interfaces-stream_reader.ads rose-interfaces-timer.ads " ]
+  then
+    pass "host target writes no client or server"
+  else
+    fail "host target writes no client or server: $generated"
+  fi
+else
+  fail "host target for interfaces"
+fi
+
+# A command's spec is the user target's, its metadata has no linker
+# section, and its main is built on Rose.Command_Line.Host, opening the
+# host backing of each interface argument and role member.
+
+host_commands="rose-core.ads rose-core-echo.ads rose-core-echo_main.adb
+rose-core-echo_metadata.ads rose-core-head.ads rose-core-head_main.adb
+rose-core-head_metadata.ads rose-core-touch.ads rose-core-touch_main.adb
+rose-core-touch_metadata.ads rose-core-scan.ads rose-core-scan_main.adb
+rose-core-scan_metadata.ads"
+mkdir output/host/commands
+if $idle --target host --host-backings host-backings.txt -I commands -I rose \
+     -o output/host/commands commands/rose-core.idl \
+     commands/rose-core-echo.idl commands/rose-core-head.idl \
+     commands/rose-core-touch.idl host-commands/rose-core-scan.idl; then
+  for file in $host_commands; do
+    if diff -u "expected-host/$file" "output/host/commands/$file"; then
+      pass "host $file"
+    else
+      fail "host $file"
+    fi
+  done
+  if [ "$(ls output/host/commands)" = "$(ls expected-host)" ]; then
+    pass "files generated for the host target"
+  else
+    fail "files generated for the host target"
+  fi
+else
+  fail "host target for commands"
+fi
+
+# What the host target refuses: servers, replaceable commands, system
+# caps, out arguments, and interfaces with no backing. Nothing is
+# written for a command it refuses.
+
+mkdir output/host/errors
+if $idle --target host --host-backings host-backings.txt -I commands \
+     -I rose -o output/host/errors commands/rose-core-show.idl \
+     commands/rose-core-copy.idl commands/rose-core-serve.idl \
+     commands/rose-core-replace.idl 2> output/diagnostics.txt; then
+  fail "host target errors (expected errors)"
+elif diff -u host-errors/expected.txt output/diagnostics.txt \
+     && [ -z "$(ls output/host/errors)" ]; then
+  pass "host target errors"
+else
+  fail "host target errors"
+fi
+
+# Without a backings file, no interface has a backing; the file's own
+# errors; and --host-backings needs --target host.
+
+if $idle --target host -I commands -I rose -o output/host/errors \
+     commands/rose-core-touch.idl 2> output/diagnostics.txt; then
+  fail "host target without backings (expected errors)"
+elif diff -u host-errors/no-backings.txt output/diagnostics.txt; then
+  pass "host target without backings"
+else
+  fail "host target without backings"
+fi
+
+if $idle --target host --host-backings host-errors/bad-backings.txt \
+     -I commands -I rose -o output/host/errors commands/rose-core-echo.idl \
+     2> output/diagnostics.txt; then
+  fail "host backings errors (expected errors)"
+elif diff -u host-errors/bad-backings.expected output/diagnostics.txt; then
+  pass "host backings errors"
+else
+  fail "host backings errors"
+fi
+
+if $idle --target user --host-backings host-backings.txt -o output/host \
+     rose/timer.idl 2> output/diagnostics.txt; then
+  fail "--host-backings without --target host"
+elif grep -q "idle: --host-backings needs --target host" \
+       output/diagnostics.txt; then
+  pass "--host-backings without --target host"
+else
+  fail "--host-backings without --target host (message)"
 fi
 
 # Interfaces in groups (Rose ADR 0034): an interface whose parent is in
@@ -418,7 +527,7 @@ fi
 
 work=$(mktemp -d) || exit 1
 trap 'rm -rf "$work"' EXIT
-for file in expected/*.ad[sb] expected-user/*.ad[sb] \
+for file in expected/*.ad[sb] expected-user/*.ad[sb] expected-host/*.ad[sb] \
             expected-groups/*/*.ad[sb]; do
   if (cd "$work" && gcc -c -gnats -gnat2022 -gnatyabcefhiklmnoprst -gnaty3 \
         -gnatwe "$OLDPWD/$file"); then

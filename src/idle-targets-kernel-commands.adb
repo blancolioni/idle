@@ -7,7 +7,9 @@ with Syn.Factory;
 with Syn.Units;
 
 with Idle.Commands;
+with Idle.Diagnostics;
 with Idle.Hierarchy;
+with Idle.Host_Backings;
 with Idle.Names;
 with Idle.Targets.Kernel.Support;
 
@@ -17,11 +19,19 @@ package body Idle.Targets.Kernel.Commands is
    use Idle.Targets.Kernel.Support;
    use type Syn.Node_Array;
 
-   Launch : constant String := "Rose.Command_Line.Launch.";
-
    Chunk_Length : constant := 60;
    --  The longest string literal written in one piece; longer strings
    --  are joined from several, so that lines stay short.
+
+   function Check_Host
+     (Item      : Idle.Syntax.Interface_Declaration;
+      Signature : Idle.Commands.Placed_Vectors.Vector)
+      return Boolean;
+   --  Report what the host target can't build of the command Item
+   --  (idle#133): a server, a replaceable command, a system cap, an out
+   --  or in out argument, a list of interfaces, and an interface argument
+   --  or role member whose interface has no host backing. True if there
+   --  is none.
 
    function Escape (Text : String) return String;
    --  Text, with each "\" written "\\" and each line break "\n", for a
@@ -34,6 +44,90 @@ package body Idle.Targets.Kernel.Commands is
    --  An expression for the string Text: literals of at most Chunk_Length
    --  characters, broken after a space where there is one, joined by "&",
    --  with ASCII.LF for each line break.
+
+   ----------------
+   -- Check_Host --
+   ----------------
+
+   function Check_Host
+     (Item      : Idle.Syntax.Interface_Declaration;
+      Signature : Idle.Commands.Placed_Vectors.Vector)
+      return Boolean
+   is
+      use all type Idle.Commands.Argument_Type;
+      use all type Idle.Commands.Stream;
+      use all type Idle.Commands.System_Cap;
+      use all type Idle.Syntax.Parameter_Mode;
+      Errors_Before : constant Natural := Idle.Diagnostics.Error_Count;
+
+      procedure Error
+        (Position : Idle.Syntax.Source_Position;
+         Message  : String);
+
+      -----------
+      -- Error --
+      -----------
+
+      procedure Error
+        (Position : Idle.Syntax.Source_Position;
+         Message  : String)
+      is
+      begin
+         Idle.Diagnostics.Error
+           (To_String (Item.File_Name), Position.Line, Position.Column,
+            Message);
+      end Error;
+
+   begin
+      if Idle.Commands.Has_Aspect (Item.Aspects, "Server") then
+         Error (Item.Position,
+                "a server can't be built for the host target");
+      end if;
+
+      if Idle.Commands.Has_Aspect (Item.Aspects, "Replaceable") then
+         Error (Item.Position,
+                "a replaceable command can't be built for the host target");
+      end if;
+
+      for Placed of Signature loop
+         declare
+            Argument  : Idle.Syntax.Argument renames Placed.Argument;
+            Declared  : constant Boolean :=
+              Placed.Role = Null_Unbounded_String;
+            Position  : constant Idle.Syntax.Source_Position :=
+              (if Declared then Argument.Position else Item.Position);
+            Subject   : constant String :=
+              (if Declared then "argument " & To_String (Argument.Name)
+               else "role " & To_String (Placed.Role));
+            Type_Name : constant String := To_String (Argument.Of_Type.Name);
+         begin
+            if Placed.Stream /= No_Stream then
+               null;
+            elsif Placed.System /= No_System_Cap then
+               Error (Position,
+                      Subject & ": the host target has no system caps");
+            elsif Argument.Mode /= In_Mode then
+               Error (Position,
+                      Subject & ": the host target has no out or in out"
+                      & " arguments yet");
+            elsif not Argument.Accepts.Is_Empty then
+               Error (Position,
+                      Subject & ": the host target has no lists of"
+                      & " interfaces yet");
+            elsif (Placed.Kind = Interface_Argument or else not Declared)
+              and then Idle.Host_Backings.Find (Type_Name) = ""
+            then
+               Error (Position,
+                      Subject & ": interface " & Type_Name
+                      & " has no host backing"
+                      & (if Idle.Host_Backings.Is_Loaded then ""
+                         else " (there is no --host-backings file)"));
+            end if;
+         end;
+      end loop;
+
+      return Idle.Diagnostics.Error_Count = Errors_Before;
+   end Check_Host;
 
    ------------
    -- Escape --
@@ -390,6 +484,11 @@ package body Idle.Targets.Kernel.Commands is
       use all type Idle.Commands.Stream;
       use all type Idle.Commands.System_Cap;
 
+      Host          : constant Boolean := Target = Host_Target;
+      Launch        : constant String :=
+        (if Host then "Rose.Command_Line.Host."
+         else "Rose.Command_Line.Launch.");
+      --  The package that the main receives its arguments from.
       F             : Syn.Factory.Factory;
       Name          : constant String := To_String (Item.Name);
       Main_Name     : constant String := Name & "_Main";
@@ -458,6 +557,13 @@ package body Idle.Targets.Kernel.Commands is
       procedure Line (Key, Value : String);
       --  Add a line to the metadata, unless Value is empty.
 
+      procedure Write_Host_Main;
+      --  Write the main for the host target: Receive binds the command
+      --  line by the metadata, the arguments are opened, and the command
+      --  is called; Fail reports Command_Failed, and Stopped, which
+      --  Receive raises once it has said why the command shouldn't run,
+      --  ends the main quietly.
+
       ---------------
       -- Add_Value --
       ---------------
@@ -476,7 +582,7 @@ package body Idle.Targets.Kernel.Commands is
                when Natural_Argument     => "Natural",
                when Positive_Argument    => "Positive",
                when String_Argument      =>
-                 (if Target = User_Target and then Argument.Mode /= In_Mode
+                 (if Has_Objects (Target) and then Argument.Mode /= In_Mode
                   then "Rose.Command_Line.Text"
                   else "String"),
                when String_List_Argument => "Rose.Command_Line.String_List",
@@ -545,7 +651,7 @@ package body Idle.Targets.Kernel.Commands is
          --  An out value is a local of the main, passed to the command and
          --  then sent back in the reply.
 
-         if Kind = String_Argument and then Target = User_Target then
+         if Kind = String_Argument and then Has_Objects (Target) then
             --  A text, sent back as a string.
             Main_Context.Add ("Rose.Texts");
             Spec_Context.Add ("Rose.Command_Line");
@@ -631,7 +737,58 @@ package body Idle.Targets.Kernel.Commands is
          end if;
       end Line;
 
+      ---------------------
+      -- Write_Host_Main --
+      ---------------------
+
+      procedure Write_Host_Main is
+      begin
+         Syn.Units.Write
+           (F.New_Compilation_Unit
+              (Context => Main_Context.To_Array (F),
+               Item    =>
+                 F.New_Subprogram_Body
+                   (Specification => F.New_Procedure (Main_Name),
+                    Declarations  =>
+                      [F.New_Object
+                         ("Call", F.New_Name (Launch & "Launch_Call"))]
+                      & Declarations.To_Array,
+                    Statements    =>
+                      [F.New_Call_Statement
+                         (F.New_Call
+                            (Launch & "Receive",
+                             [Call_Node,
+                              F.New_Name (Metadata_Name & ".Text")]))]
+                      & Statements.To_Array
+                      & [F.New_Call_Statement
+                           (if Arguments.To_Array'Length = 0
+                            then F.New_Name (Name)
+                            else F.New_Call (Name, Arguments.To_Array))]
+                      & [F.New_Call_Statement
+                           (F.New_Call (Launch & "Complete", [Call_Node]))],
+                    Handlers      =>
+                      [F.New_Handler
+                         (Statements =>
+                            [F.New_Call_Statement
+                               (F.New_Call
+                                  (Launch & "Fail",
+                                   [Call_Node, F.New_Name ("E")]))],
+                          Exceptions =>
+                            [F.New_Name
+                               ("Rose.Command_Line.Command_Failed")],
+                          Choice     => "E"),
+                       F.New_Handler
+                         (Statements => [F.New_Null_Statement],
+                          Exceptions =>
+                            [F.New_Name (Launch & "Stopped")])])),
+            Output_Directory);
+      end Write_Host_Main;
+
    begin
+      if Host and then not Check_Host (Item, Signature) then
+         return;
+      end if;
+
       --  The metadata, which the shell's registry reads at install time.
 
       Line ("rose-command", "1");
@@ -720,6 +877,11 @@ package body Idle.Targets.Kernel.Commands is
             --  is passed the cap of its stream's subprogram, as the role
             --  is, so the client is opened from that (idle#52).
 
+            procedure Use_Backing;
+            --  For the host target, pass the argument or role member to
+            --  the command as an object of its interface's host backing,
+            --  opened with the text the user gave for it, or "".
+
             procedure Use_Client_List;
             --  For the user target, pass the cap of an argument whose type
             --  is a list of interfaces as a client of the one its selector
@@ -753,13 +915,45 @@ package body Idle.Targets.Kernel.Commands is
                          F.New_Name (Argument_Name)])));
             end Return_Cap;
 
+            -----------------
+            -- Use_Backing --
+            -----------------
+
+            procedure Use_Backing is
+               Backing : constant String :=
+                 Idle.Host_Backings.Find (Type_Name);
+               Unit    : constant String :=
+                 Idle.Host_Backings.Unit_Of (Backing);
+            begin
+               Spec_Context.Add (Object_Unit);
+               Main_Context.Add (Unit);
+               Declarations.Append
+                 (F.New_Object (Argument_Name, F.New_Name (Backing)));
+               Statements.Append
+                 (F.New_Call_Statement
+                    (F.New_Call
+                       (Unit & ".Open",
+                        [F.New_Name (Argument_Name),
+                         F.New_Call
+                           (Launch & "Interface_Argument",
+                            [Call_Node, Literal (Where.Index)])])));
+               Arguments.Append
+                 (F.New_Named (Argument_Name, F.New_Name (Argument_Name)));
+               Parameters.Append
+                 (F.New_Parameter
+                    (Argument_Name, Object_Class, Syn.In_Out_Mode));
+            end Use_Backing;
+
             ----------------
             -- Use_Client --
             ----------------
 
             procedure Use_Client is
             begin
-               if Target = User_Target then
+               if Host then
+                  Use_Backing;
+                  return;
+               elsif Target = User_Target then
                   Spec_Context.Add (Object_Unit);
                else
                   Spec_Context.Add (Client_Unit);
@@ -790,7 +984,7 @@ package body Idle.Targets.Kernel.Commands is
                            [F.New_String_Literal (Argument_Name),
                             Cap_Argument])));
                end if;
-               if Target = User_Target then
+               if Has_Objects (Target) then
                   Parameters.Append
                     (F.New_Parameter
                        (Argument_Name, Object_Class,
@@ -925,16 +1119,21 @@ package body Idle.Targets.Kernel.Commands is
                          when Error_Stream  => "error",
                          when No_Stream     => "")
                      & Natural'Image (Where.Index));
-               Statements.Append
-                 (F.New_Call_Statement
-                    (F.New_Call
-                       (Launch & "Use_"
-                        & (case Placed.Stream is
-                              when Input_Stream  => "Standard_Input",
-                              when Output_Stream => "Standard_Output",
-                              when Error_Stream  => "Standard_Error",
-                              when No_Stream     => ""),
-                        [Call_Node, Literal (Where.Index)])));
+
+               --  A host program's standard streams are its process's.
+
+               if not Host then
+                  Statements.Append
+                    (F.New_Call_Statement
+                       (F.New_Call
+                          (Launch & "Use_"
+                           & (case Placed.Stream is
+                                 when Input_Stream  => "Standard_Input",
+                                 when Output_Stream => "Standard_Output",
+                                 when Error_Stream  => "Standard_Error",
+                                 when No_Stream     => ""),
+                           [Call_Node, Literal (Where.Index)])));
+               end if;
 
             elsif Placed.System /= No_System_Cap then
                Line ("system",
@@ -1184,9 +1383,12 @@ package body Idle.Targets.Kernel.Commands is
                        ("Text", F.New_Name ("String"), Text,
                         Is_Constant => True,
                         Aspects     =>
-                          [F.New_Aspect
-                             ("Linker_Section",
-                              F.New_String_Literal (".rose_command"))])])),
+                          (if Host then Syn.No_Nodes
+                           else
+                             [F.New_Aspect
+                                ("Linker_Section",
+                                 F.New_String_Literal
+                                   (".rose_command"))]))])),
             Output_Directory);
       end;
 
@@ -1197,9 +1399,15 @@ package body Idle.Targets.Kernel.Commands is
       --  aspect names, which serves and does not return. The main withs
       --  the metadata only to link it into the executable.
 
-      Main_Context.Add ("Rose.Command_Line.Launch");
+      Main_Context.Add
+        (Launch (Launch'First .. Launch'Last - 1));
       Main_Context.Add (Name);
       Main_Context.Add (Metadata_Name);
+
+      if Host then
+         Write_Host_Main;
+         return;
+      end if;
 
       --  Ada.Command_Line reports the command's full name and its list
       --  argument, if it has one, which is the only one it can have.

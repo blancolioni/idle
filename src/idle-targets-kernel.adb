@@ -662,8 +662,15 @@ package body Idle.Targets.Kernel is
                Warn_Unreleased (Item);
                if Target = Kernel_Target or else Check_User (Item) then
                   Generate_Interface_Package (Item, Output_Directory, Target);
-                  Client.Generate (Item, Output_Directory, Target);
-                  Server.Generate (Item, Output_Directory, Target);
+
+                  --  A host program has no caps, so there is nothing to
+                  --  call through or serve: its objects are the host
+                  --  backings (idle#133).
+
+                  if Target /= Host_Target then
+                     Client.Generate (Item, Output_Directory, Target);
+                     Server.Generate (Item, Output_Directory, Target);
+                  end if;
                end if;
             end if;
          when Idle.Syntax.Command_Unit =>
@@ -848,7 +855,7 @@ package body Idle.Targets.Kernel is
                         Info : constant Types.Type_Info :=
                           Types.Resolve
                             (Member.Owner, Parameter.Of_Type,
-                             User => Target = User_Target);
+                             User => Has_Objects (Target));
                      begin
                         if Info.Category = Types.Interface_Value then
                            Parameters.Append
@@ -893,7 +900,7 @@ package body Idle.Targets.Kernel is
                         Info : constant Types.Type_Info :=
                           Types.Resolve
                             (Member.Owner, Subprogram.Result,
-                             User => Target = User_Target);
+                             User => Has_Objects (Target));
                      begin
                         Result.Append
                           (F.New_Function
@@ -1075,7 +1082,7 @@ package body Idle.Targets.Kernel is
               Is_Constant   => True)];
 
       User_Declarations : constant Syn.Node_Array :=
-        (if Target = User_Target
+        (if Has_Objects (Target)
          then Object_Declarations
          else Syn.No_Nodes);
 

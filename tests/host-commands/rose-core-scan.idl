@@ -1,0 +1,17 @@
+--  A command for the host target (idle#133): a declared interface
+--  argument, one that defaults to standard input, and a role whose member
+--  is an interface, each opened as an object of its host backing; and
+--  standard streams, which a host program has already.
+command Rose.Core.Scan : Standard_Output, Logging
+  with Summary => "Scan a file."
+is
+   Source : in File
+     with Help => "the file to scan";
+   Input : in Stream_Reader := Standard_Input
+     with Help => "what to scan after the file";
+   Root : in Writable_Directory
+     with Help => "where to look";
+   Verbose : Boolean := False
+     with Short_Name => 'v',
+          Help       => "report progress";
+end Rose.Core.Scan;

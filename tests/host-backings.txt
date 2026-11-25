@@ -1,0 +1,8 @@
+# The host backings for the host target tests (idle#133), as in Rose
+# interfaces/host-backings.txt: an interface, then the type that
+# implements its object type on the host.
+
+File                Rose.Host.Files.File
+Writable_Directory  Rose.Host.Files.Directory
+Stream_Reader       Rose.Host.Streams.Reader   # a comment
+Stream_Writer       Rose.Host.Streams.Writer
