@@ -21,6 +21,19 @@ private package Idle.Targets.Kernel.Commands is
    --  as an in out object of the interface; the main passes it a client.
    --  The user target also writes Pkg.Name_Client (Generate_Client).
    --
+   --  For the host target (idle#133), the spec is the user target's,
+   --  the metadata has no linker section, and the main is built on
+   --  Rose.Command_Line.Host: Receive binds the process's command line
+   --  to the arguments by the metadata, each interface argument and role
+   --  member is an object of its interface's host backing
+   --  (Idle.Host_Backings), opened with the text the user gave for it,
+   --  and Fail reports Rose.Command_Line.Command_Failed. Receive raises
+   --  Rose.Command_Line.Host.Stopped when the command shouldn't run, once
+   --  it has said why, and the main ends quietly. A server, a replaceable
+   --  command, a system cap, an out or in out argument, a list of
+   --  interfaces, and an interface with no backing are reported as
+   --  errors, and nothing is written.
+   --
    --  Item must have been checked by Idle.Commands.Check.
 
    procedure Generate_Client

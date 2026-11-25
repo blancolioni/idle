@@ -7,6 +7,7 @@ with Idle.Check;
 with Idle.Diagnostics;
 with Idle.Endpoints;
 with Idle.Hierarchy;
+with Idle.Host_Backings;
 with Idle.Parser;
 with Idle.Syntax;
 with Idle.Targets.Kernel;
@@ -14,10 +15,16 @@ with Idle.Targets.Kernel;
 procedure Idle.Main is
 
    --  idle [--syntax-only | --check | --list-endpoints] [--target TARGET]
-   --       [--command-client] [-I DIRECTORY]... [-o DIRECTORY] FILE.idl...
+   --       [--command-client] [--host-backings FILE]
+   --       [-I DIRECTORY]... [-o DIRECTORY] FILE.idl...
    --
    --  --command-client writes only the client of each command, for a
    --  program that launches it (idle#103), and needs --target user.
+   --
+   --  --host-backings names the file of the host implementations of
+   --  interfaces (Idle.Host_Backings), which a command built for the host
+   --  target opens for its interface arguments and role members
+   --  (idle#133). It needs --target host.
    --
    --  -I adds a directory to search for the declarations that a file
    --  names, after the file's own directory.
@@ -45,6 +52,7 @@ procedure Idle.Main is
    Check_Only       : Boolean := False;
    List_Only        : Boolean := False;
    Command_Clients  : Boolean := False;
+   Host_Backings    : Unbounded_String;
    Arguments_OK     : Boolean := True;
    Index            : Positive := 1;
 
@@ -57,7 +65,7 @@ procedure Idle.Main is
       Ada.Text_IO.Put_Line
         (Ada.Text_IO.Standard_Error,
          "usage: idle [--syntax-only | --check | --list-endpoints]"
-         & " [--target TARGET] [--command-client]"
+         & " [--target TARGET] [--command-client] [--host-backings FILE]"
          & " [-I DIRECTORY]... [-o DIRECTORY]"
          & " FILE.idl...");
       Ada.Text_IO.Put_Line
@@ -82,6 +90,7 @@ begin
             Command_Clients := True;
          elsif Argument = "--endpoints" or else Argument = "-o"
            or else Argument = "--target" or else Argument = "-I"
+           or else Argument = "--host-backings"
          then
             if Index = Ada.Command_Line.Argument_Count then
                Ada.Text_IO.Put_Line
@@ -97,6 +106,8 @@ begin
                      Output_Directory := To_Unbounded_String (Value);
                   elsif Argument = "-I" then
                      Idle.Hierarchy.Add_Search_Directory (Value);
+                  elsif Argument = "--host-backings" then
+                     Host_Backings := To_Unbounded_String (Value);
                   elsif Argument = "--target" then
                      if not Idle.Targets.Find (Value, Target) then
                         Ada.Text_IO.Put_Line
@@ -142,10 +153,23 @@ begin
       Arguments_OK := False;
    end if;
 
+   if Host_Backings /= Null_Unbounded_String
+     and then Idle.Targets."/=" (Target, Idle.Targets.Host_Target)
+   then
+      Ada.Text_IO.Put_Line
+        (Ada.Text_IO.Standard_Error,
+         "idle: --host-backings needs --target host");
+      Arguments_OK := False;
+   end if;
+
    if not Arguments_OK then
       Usage;
       Ada.Command_Line.Set_Exit_Status (Ada.Command_Line.Failure);
       return;
+   end if;
+
+   if Host_Backings /= Null_Unbounded_String then
+      Idle.Host_Backings.Load (To_String (Host_Backings));
    end if;
 
    declare

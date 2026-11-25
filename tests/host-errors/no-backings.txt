@@ -1,0 +1,1 @@
+commands/rose-core-touch.idl:10:4: error: argument Directory: interface Writable_Directory has no host backing (there is no --host-backings file)

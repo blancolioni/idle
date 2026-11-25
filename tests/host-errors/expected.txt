@@ -1,0 +1,20 @@
+commands/rose-core-show.idl:4:1: error: role Delete_Cap: the host target has no system caps
+commands/rose-core-show.idl:9:4: error: argument Count: the host target has no out or in out arguments yet
+commands/rose-core-copy.idl:8:1: error: role Create_Endpoint: the host target has no system caps
+commands/rose-core-copy.idl:8:1: error: role Delete_Cap: the host target has no system caps
+commands/rose-core-copy.idl:13:4: error: argument Target: interface Writable_File has no host backing
+commands/rose-core-copy.idl:17:4: error: argument Batch: interface Transactional has no host backing
+commands/rose-core-copy.idl:19:4: error: argument Draft: interface Transactional_Writable_File has no host backing
+commands/rose-core-copy.idl:21:4: error: argument Ledger: interface Journal has no host backing
+commands/rose-core-copy.idl:23:4: error: argument Copied: the host target has no out or in out arguments yet
+commands/rose-core-copy.idl:25:4: error: argument Count: the host target has no out or in out arguments yet
+commands/rose-core-copy.idl:30:4: error: argument Report: the host target has no out or in out arguments yet
+commands/rose-core-serve.idl:4:1: error: a server can't be built for the host target
+commands/rose-core-serve.idl:4:1: error: role Create_Endpoint: the host target has no system caps
+commands/rose-core-serve.idl:10:4: error: argument Home: interface Directory has no host backing
+commands/rose-core-serve.idl:12:4: error: argument Result: the host target has no out or in out arguments yet
+commands/rose-core-replace.idl:7:1: error: a server can't be built for the host target
+commands/rose-core-replace.idl:7:1: error: a replaceable command can't be built for the host target
+commands/rose-core-replace.idl:7:1: error: role Create_Endpoint: the host target has no system caps
+commands/rose-core-replace.idl:7:1: error: role Cap_Set_Service: interface Constructor has no host backing
+commands/rose-core-replace.idl:12:4: error: argument Result: the host target has no out or in out arguments yet

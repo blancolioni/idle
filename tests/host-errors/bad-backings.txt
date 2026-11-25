@@ -1,0 +1,6 @@
+# Lines that the host backings file can't have.
+File
+File  Rose.Host.Files.File extra
+Stream_Reader  Reader
+File  Rose.Host.Files.File
+file  Rose.Host.Files.Other
