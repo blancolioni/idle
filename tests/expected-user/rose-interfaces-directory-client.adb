@@ -420,6 +420,7 @@ package body Rose.Interfaces.Directory.Client is
       Get_Directory         : Rose.Capabilities.Capability)
    is
    begin
+      Client.Interface_Cap := Rose.Capabilities.Null_Capability;
       Client.Directory_Entry_Count := Directory_Entry_Count;
       Client.Directory_Entry_Name := Directory_Entry_Name;
       Client.Directory_Entry_Kind := Directory_Entry_Kind;

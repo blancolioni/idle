@@ -118,6 +118,7 @@ package body Rose.Interfaces.Reader.Client is
       Read   : Rose.Capabilities.Capability)
    is
    begin
+      Client.Interface_Cap := Rose.Capabilities.Null_Capability;
       Client.Read := Read;
       Client.Is_Open := True;
    end Open_Cap_Set;

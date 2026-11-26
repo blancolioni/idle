@@ -261,6 +261,7 @@ package body Rose.Interfaces.Exec.Client is
       Set_Standard_Output : Rose.Capabilities.Capability)
    is
    begin
+      Client.Interface_Cap := Rose.Capabilities.Null_Capability;
       Client.Launch := Launch;
       Client.Launch_Command := Launch_Command;
       Client.Metadata := Metadata;

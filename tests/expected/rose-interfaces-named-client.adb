@@ -120,6 +120,7 @@ package body Rose.Interfaces.Named.Client is
       Badge  : Rose.Capabilities.Capability)
    is
    begin
+      Client.Interface_Cap := Rose.Capabilities.Null_Capability;
       Client.Badge := Badge;
       Client.Is_Open := True;
    end Open_Cap_Set;

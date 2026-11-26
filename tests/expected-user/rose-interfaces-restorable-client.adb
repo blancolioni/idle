@@ -118,6 +118,7 @@ package body Rose.Interfaces.Restorable.Client is
       Restored : Rose.Capabilities.Capability)
    is
    begin
+      Client.Interface_Cap := Rose.Capabilities.Null_Capability;
       Client.Restored := Restored;
       Client.Is_Open := True;
    end Open_Cap_Set;

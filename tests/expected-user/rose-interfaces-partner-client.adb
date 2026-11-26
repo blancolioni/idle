@@ -158,6 +158,7 @@ package body Rose.Interfaces.Partner.Client is
       Next   : Rose.Capabilities.Capability)
    is
    begin
+      Client.Interface_Cap := Rose.Capabilities.Null_Capability;
       Client.Pair := Pair;
       Client.Next := Next;
       Client.Is_Open := True;

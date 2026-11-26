@@ -242,6 +242,7 @@ package body Rose.Interfaces.Signed.Client is
       Bounds     : Rose.Capabilities.Capability)
    is
    begin
+      Client.Interface_Cap := Rose.Capabilities.Null_Capability;
       Client.Clamp := Clamp;
       Client.Position := Position;
       Client.Offset := Offset;

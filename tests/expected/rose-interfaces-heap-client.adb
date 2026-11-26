@@ -132,6 +132,7 @@ package body Rose.Interfaces.Heap.Client is
       Request_New_Bound : Rose.Capabilities.Capability)
    is
    begin
+      Client.Interface_Cap := Rose.Capabilities.Null_Capability;
       Client.Current_Bound := Current_Bound;
       Client.Request_New_Bound := Request_New_Bound;
       Client.Is_Open := True;

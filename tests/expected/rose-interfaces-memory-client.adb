@@ -201,6 +201,7 @@ package body Rose.Interfaces.Memory.Client is
       Checkpoint           : Rose.Capabilities.Capability)
    is
    begin
+      Client.Interface_Cap := Rose.Capabilities.Null_Capability;
       Client.New_Process := New_Process;
       Client.Register_Process := Register_Process;
       Client.Page_Fault := Page_Fault;

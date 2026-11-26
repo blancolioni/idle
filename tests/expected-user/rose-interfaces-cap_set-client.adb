@@ -227,6 +227,7 @@ package body Rose.Interfaces.Cap_Set.Client is
       Length  : Rose.Capabilities.Capability)
    is
    begin
+      Client.Interface_Cap := Rose.Capabilities.Null_Capability;
       Client.Append := Append;
       Client.Get_Cap := Get_Cap;
       Client.Length := Length;

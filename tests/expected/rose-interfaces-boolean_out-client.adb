@@ -123,6 +123,7 @@ package body Rose.Interfaces.Boolean_Out.Client is
       Get    : Rose.Capabilities.Capability)
    is
    begin
+      Client.Interface_Cap := Rose.Capabilities.Null_Capability;
       Client.Get := Get;
       Client.Is_Open := True;
    end Open_Cap_Set;

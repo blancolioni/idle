@@ -184,6 +184,7 @@ package body Rose.Interfaces.Cap.Client is
       Get_Object_Id : Rose.Capabilities.Capability)
    is
    begin
+      Client.Interface_Cap := Rose.Capabilities.Null_Capability;
       Client.Destroy := Destroy;
       Client.Get_Object_Id := Get_Object_Id;
       Client.Is_Open := True;

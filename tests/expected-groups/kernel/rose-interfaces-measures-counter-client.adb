@@ -214,6 +214,7 @@ package body Rose.Interfaces.Measures.Counter.Client is
       Twin      : Rose.Capabilities.Capability)
    is
    begin
+      Client.Interface_Cap := Rose.Capabilities.Null_Capability;
       Client.Badge := Badge;
       Client.Increment := Increment;
       Client.Value := Value;

@@ -130,6 +130,7 @@ package body Rose.Interfaces.File_Reader.Client is
       Release : Rose.Capabilities.Capability)
    is
    begin
+      Client.Interface_Cap := Rose.Capabilities.Null_Capability;
       Client.Read := Read;
       Client.Release := Release;
       Client.Is_Open := True;
