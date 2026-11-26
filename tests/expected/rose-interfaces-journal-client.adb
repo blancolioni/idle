@@ -266,6 +266,7 @@ package body Rose.Interfaces.Journal.Client is
       Release              : Rose.Capabilities.Capability)
    is
    begin
+      Client.Interface_Cap := Rose.Capabilities.Null_Capability;
       Client.Size := Size;
       Client.Open_Reader := Open_Reader;
       Client.Open_Seekable_Reader := Open_Seekable_Reader;

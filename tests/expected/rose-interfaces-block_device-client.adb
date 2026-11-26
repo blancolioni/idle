@@ -154,6 +154,7 @@ package body Rose.Interfaces.Block_Device.Client is
       Write_Blocks   : Rose.Capabilities.Capability)
    is
    begin
+      Client.Interface_Cap := Rose.Capabilities.Null_Capability;
       Client.Get_Parameters := Get_Parameters;
       Client.Read_Blocks := Read_Blocks;
       Client.Write_Blocks := Write_Blocks;

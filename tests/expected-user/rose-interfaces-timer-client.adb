@@ -119,6 +119,7 @@ package body Rose.Interfaces.Timer.Client is
       Set_Timer : Rose.Capabilities.Capability)
    is
    begin
+      Client.Interface_Cap := Rose.Capabilities.Null_Capability;
       Client.Set_Timer := Set_Timer;
       Client.Is_Open := True;
    end Open_Cap_Set;

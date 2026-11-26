@@ -143,6 +143,7 @@ package body Rose.Interfaces.Seekable_File_Reader.Client is
       Seek    : Rose.Capabilities.Capability)
    is
    begin
+      Client.Interface_Cap := Rose.Capabilities.Null_Capability;
       Client.Read := Read;
       Client.Release := Release;
       Client.Seek := Seek;

@@ -320,6 +320,7 @@ package body Rose.Interfaces.Process.Client is
       Publish_Interface         : Rose.Capabilities.Capability)
    is
    begin
+      Client.Interface_Cap := Rose.Capabilities.Null_Capability;
       Client.Add_Segment := Add_Segment;
       Client.Add_Nonpersistent_Segment := Add_Nonpersistent_Segment;
       Client.Published_Interface := Published_Interface;

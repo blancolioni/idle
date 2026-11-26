@@ -137,6 +137,7 @@ package body Rose.Interfaces.Resource.Client is
       Release : Rose.Capabilities.Capability)
    is
    begin
+      Client.Interface_Cap := Rose.Capabilities.Null_Capability;
       Client.Release := Release;
       Client.Is_Open := True;
    end Open_Cap_Set;

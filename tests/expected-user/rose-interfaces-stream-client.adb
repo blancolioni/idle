@@ -154,6 +154,7 @@ package body Rose.Interfaces.Stream.Client is
       Write  : Rose.Capabilities.Capability)
    is
    begin
+      Client.Interface_Cap := Rose.Capabilities.Null_Capability;
       Client.Read := Read;
       Client.Write := Write;
       Client.Is_Open := True;

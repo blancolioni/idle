@@ -163,6 +163,7 @@ package body Rose.Interfaces.Exchange.Client is
       Partner         : Rose.Capabilities.Capability)
    is
    begin
+      Client.Interface_Cap := Rose.Capabilities.Null_Capability;
       Client.Create_Endpoint := Create_Endpoint;
       Client.Split := Split;
       Client.Rename := Rename;

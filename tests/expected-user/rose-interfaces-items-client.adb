@@ -163,6 +163,7 @@ package body Rose.Interfaces.Items.Client is
       Single : Rose.Capabilities.Capability)
    is
    begin
+      Client.Interface_Cap := Rose.Capabilities.Null_Capability;
       Client.Pair := Pair;
       Client.Store := Store;
       Client.Single := Single;

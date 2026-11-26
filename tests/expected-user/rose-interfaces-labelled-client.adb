@@ -167,6 +167,7 @@ package body Rose.Interfaces.Labelled.Client is
       Set_Label : Rose.Capabilities.Capability)
    is
    begin
+      Client.Interface_Cap := Rose.Capabilities.Null_Capability;
       Client.Badge := Badge;
       Client.Set_Label := Set_Label;
       Client.Is_Open := True;

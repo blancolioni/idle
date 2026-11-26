@@ -547,7 +547,10 @@ package body Idle.Targets.Kernel.Client is
       ----------------------
 
       --  Open a client from caps that the caller already has, one for
-      --  each subprogram, without an interface cap.
+      --  each subprogram, without an interface cap. Client is an out
+      --  parameter passed by reference, so every component is set: an
+      --  interface cap left from before would be deleted again by Close,
+      --  after its number may name another cap (#135).
 
       procedure Add_Open_Cap_Set is
          Specification : constant not null Syn.Node_Access :=
@@ -564,10 +567,13 @@ package body Idle.Targets.Kernel.Client is
             F.New_Subprogram_Body
               (Specification => Specification,
                Statements    =>
-                 [for Subprogram of Subprograms =>
-                    F.New_Assignment
-                      (F.New_Name ("Client." & Name (Subprogram)),
-                       F.New_Name (Name (Subprogram)))]
+                 [F.New_Assignment
+                    (F.New_Name ("Client.Interface_Cap"),
+                     F.New_Name ("Rose.Capabilities.Null_Capability"))]
+                 & [for Subprogram of Subprograms =>
+                      F.New_Assignment
+                        (F.New_Name ("Client." & Name (Subprogram)),
+                         F.New_Name (Name (Subprogram)))]
                  & [F.New_Assignment
                       (F.New_Name ("Client.Is_Open"),
                        F.New_Name ("True"))]));

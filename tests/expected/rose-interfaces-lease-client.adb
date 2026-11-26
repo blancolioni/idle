@@ -202,6 +202,7 @@ package body Rose.Interfaces.Lease.Client is
       Remaining : Rose.Capabilities.Capability)
    is
    begin
+      Client.Interface_Cap := Rose.Capabilities.Null_Capability;
       Client.Badge := Badge;
       Client.Increment := Increment;
       Client.Value := Value;

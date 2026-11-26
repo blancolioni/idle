@@ -239,6 +239,7 @@ package body Rose.Interfaces.Launch.Client is
       Metadata       : Rose.Capabilities.Capability)
    is
    begin
+      Client.Interface_Cap := Rose.Capabilities.Null_Capability;
       Client.Launch := Launch;
       Client.Launch_Command := Launch_Command;
       Client.Metadata := Metadata;

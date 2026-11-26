@@ -153,6 +153,7 @@ package body Rose.Interfaces.Flags.Client is
       Toggle : Rose.Capabilities.Capability)
    is
    begin
+      Client.Interface_Cap := Rose.Capabilities.Null_Capability;
       Client.Is_Set := Is_Set;
       Client.Query := Query;
       Client.Toggle := Toggle;

@@ -118,6 +118,7 @@ package body Rose.Interfaces.Seekable.Client is
       Seek   : Rose.Capabilities.Capability)
    is
    begin
+      Client.Interface_Cap := Rose.Capabilities.Null_Capability;
       Client.Seek := Seek;
       Client.Is_Open := True;
    end Open_Cap_Set;

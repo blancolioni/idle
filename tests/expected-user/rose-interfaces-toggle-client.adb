@@ -158,6 +158,7 @@ package body Rose.Interfaces.Toggle.Client is
       Switch : Rose.Capabilities.Capability)
    is
    begin
+      Client.Interface_Cap := Rose.Capabilities.Null_Capability;
       Client.Is_On := Is_On;
       Client.Switch := Switch;
       Client.Is_Open := True;
