@@ -1,0 +1,14 @@
+--  Qualified type names that name nothing (idle#115): a type that the
+--  interface doesn't declare, an interface that doesn't exist, and a
+--  parent type of either kind. And an interface that only declares types,
+--  which has no client to pass.
+
+interface Unknown is
+
+   type Lost is new Core.Units.Nonesuch;
+
+   procedure Set (Size : Core.Units.Nonesuch);
+   function Get return Nowhere.Bytes;
+   procedure Pass (Units : interface Core.Units);
+
+end Unknown;

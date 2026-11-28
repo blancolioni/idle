@@ -1,0 +1,170 @@
+with Rose.System_Calls;
+with Rose.Words;
+
+package body Rose.Interfaces.Meter.Client is
+
+   use type Rose.Invocation.Invocation_Error;
+
+   Last_Error : Rose.Invocation.Invocation_Error := Rose.Invocation.OK;
+
+   -----------
+   -- Close --
+   -----------
+
+   procedure Close (Client : in out Meter_Client) is
+   begin
+      Client.Is_Open := False;
+      Rose.System_Calls.Delete_Cap (Client.Sample);
+      Rose.System_Calls.Delete_Cap (Client.Kind);
+      Rose.System_Calls.Delete_Cap (Client.Interface_Cap);
+   end Close;
+
+   -----------------------
+   -- Get_Interface_Cap --
+   -----------------------
+
+   function Get_Interface_Cap
+     (Item : Meter_Client)
+      return Rose.Capabilities.Capability
+   is (Item.Interface_Cap);
+
+   ------------------
+   -- Get_Kind_Cap --
+   ------------------
+
+   function Get_Kind_Cap
+     (Item : Meter_Client)
+      return Rose.Capabilities.Capability
+   is (Item.Kind);
+
+   --------------------
+   -- Get_Last_Error --
+   --------------------
+
+   function Get_Last_Error
+      return Rose.Invocation.Invocation_Error
+   is (Last_Error);
+
+   --------------------
+   -- Get_Sample_Cap --
+   --------------------
+
+   function Get_Sample_Cap
+     (Item : Meter_Client)
+      return Rose.Capabilities.Capability
+   is (Item.Sample);
+
+   ---------------
+   -- Has_Error --
+   ---------------
+
+   function Has_Error return Boolean is (Last_Error /= Rose.Invocation.OK);
+
+   ----------
+   -- Kind --
+   ----------
+
+   function Kind
+     (Item : Meter_Client)
+      return Rose.Interfaces.Core.Units.Unit_Kind
+   is
+      Params : aliased Rose.Invocation.Invocation_Record;
+   begin
+      Rose.System_Calls.Initialize_Send (Params, Item.Kind);
+      Rose.System_Calls.Receive_Words (Params, 1);
+      Rose.System_Calls.Invoke_Capability (Params);
+      Last_Error := Rose.Invocation.OK;
+      if Params.Control.Flags (Rose.Invocation.Error) then
+         Last_Error := Params.Control.Error;
+      end if;
+      return Rose.Interfaces.Core.Units.Unit_Kind'Val
+        (Rose.System_Calls.Get_Word_32 (Params, 0));
+   end Kind;
+
+   ----------
+   -- Open --
+   ----------
+
+   procedure Open
+     (Client        : out Meter_Client;
+      Interface_Cap : Rose.Capabilities.Capability)
+   is
+      Params : aliased Rose.Invocation.Invocation_Record;
+      Caps   : Rose.Capabilities.Capability_Array (1 .. Subprogram_Count);
+      Index  : Natural := 0;
+      First  : Natural := Natural'Last;
+   begin
+      Client.Is_Open := False;
+      Client.Interface_Cap := Interface_Cap;
+      for Cap of Caps loop
+         if First > Index
+           or else Index - First >= Rose.Invocation.Max_Capabilities
+         then
+            First := Index;
+            Rose.System_Calls.Initialize_Send (Params, Interface_Cap);
+            Rose.System_Calls.Send_Word (Params, Natural (0));
+            Rose.System_Calls.Send_Word (Params, First);
+            Rose.System_Calls.Send_Word
+              (Params,
+               Natural'Min
+                 (Rose.Invocation.Max_Capabilities,
+                  Subprogram_Count - First));
+            Rose.System_Calls.Receive_Caps
+              (Params,
+               Natural'Min
+                 (Rose.Invocation.Max_Capabilities,
+                  Subprogram_Count - First));
+            Rose.System_Calls.Invoke_Capability (Params);
+         end if;
+         Cap :=
+           Rose.Invocation.Sent_Cap
+             (Params,
+              Rose.Invocation.Capability_Index (Index - First));
+         Index := Index + 1;
+      end loop;
+      Client.Sample := Caps (Sample_Index + 1);
+      Client.Kind := Caps (Kind_Index + 1);
+      Client.Is_Open := True;
+   end Open;
+
+   ------------------
+   -- Open_Cap_Set --
+   ------------------
+
+   procedure Open_Cap_Set
+     (Client : out Meter_Client;
+      Sample : Rose.Capabilities.Capability;
+      Kind   : Rose.Capabilities.Capability)
+   is
+   begin
+      Client.Interface_Cap := Rose.Capabilities.Null_Capability;
+      Client.Sample := Sample;
+      Client.Kind := Kind;
+      Client.Is_Open := True;
+   end Open_Cap_Set;
+
+   ------------
+   -- Sample --
+   ------------
+
+   procedure Sample
+     (Item  : Meter_Client;
+      Every : Rose.Interfaces.Core.Units.Duration;
+      Used  : out Rose.Interfaces.Core.Units.Bytes)
+   is
+      Params : aliased Rose.Invocation.Invocation_Record;
+   begin
+      Rose.System_Calls.Initialize_Send (Params, Item.Sample);
+      Rose.System_Calls.Send_Word (Params, Rose.Words.Word_64 (Every));
+      Rose.System_Calls.Receive_Words (Params, 2);
+      Rose.System_Calls.Invoke_Capability (Params);
+      Last_Error := Rose.Invocation.OK;
+      if Params.Control.Flags (Rose.Invocation.Error) then
+         Last_Error := Params.Control.Error;
+      end if;
+      Used :=
+        Rose.Interfaces.Core.Units.Bytes
+          (Rose.System_Calls.Get_Word_64 (Params, 0));
+   end Sample;
+
+end Rose.Interfaces.Meter.Client;

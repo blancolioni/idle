@@ -194,6 +194,16 @@ package body Idle.Targets.Kernel is
                begin
                   if Declared_Type.Parent.Is_Interface then
                      Unsupported ("types derived from interfaces");
+                  elsif Idle.Names.Group_Name (Parent) /= "" then
+                     --  A type of another interface (idle#115).
+                     if Types."="
+                          (Types.Resolve
+                             (Declaration, Declared_Type.Parent).Category,
+                           Types.Unknown)
+                     then
+                        Error (Declaration.File_Name, Declared_Type.Position,
+                               "unknown parent type " & Parent);
+                     end if;
                   elsif Standard_Type (Parent) = ""
                     and then not Declared.Contains (Idle.Names.Key (Parent))
                   then
@@ -358,11 +368,16 @@ package body Idle.Targets.Kernel is
          is
             Found : Idle.Syntax.Interface_Declaration;
          begin
-            if Info.Category = Interface_Value
-              and then not Idle.Hierarchy.Find (Member.Owner, Type_Name, Found)
+            if Info.Category /= Interface_Value then
+               null;
+            elsif not Idle.Hierarchy.Find (Member.Owner, Type_Name, Found)
             then
                Error (Member.File_Name, Position,
                       "unknown interface " & Type_Name);
+            elsif Idle.Hierarchy.Members (Found).Is_Empty then
+               Error (Member.File_Name, Position,
+                      "interface " & Type_Name & " has no subprograms, so it"
+                      & " only declares types, and has no client or server");
             end if;
          end Check_Interface;
 
@@ -716,7 +731,15 @@ package body Idle.Targets.Kernel is
                   --  call through or serve: its objects are the host
                   --  backings (idle#133).
 
-                  if Target /= Host_Target then
+                  --  An interface with no subprograms, of its own or
+                  --  inherited, only declares types and constants for
+                  --  other interfaces to name, as Core.Units does
+                  --  (idle#115), so there is nothing to call or serve
+                  --  either.
+
+                  if Target /= Host_Target
+                    and then not Idle.Hierarchy.Members (Item).Is_Empty
+                  then
                      Client.Generate (Item, Output_Directory, Target);
                      Server.Generate (Item, Output_Directory, Target);
                   end if;
@@ -1021,7 +1044,19 @@ package body Idle.Targets.Kernel is
                   declare
                      Parent : constant String := To_String (Item.Parent.Name);
                   begin
-                     if Standard_Type (Parent) = "" then
+                     if Idle.Names.Group_Name (Parent) /= "" then
+                        --  A type of another interface (idle#115).
+                        declare
+                           Info : constant Types.Type_Info :=
+                             Types.Resolve
+                               (Generate_Interface_Package.Item, Item.Parent);
+                        begin
+                           Context.Add (To_String (Info.Unit));
+                           return F.New_Derived_Type
+                             (Type_Name,
+                              F.New_Name (To_String (Info.Ada_Name)));
+                        end;
+                     elsif Standard_Type (Parent) = "" then
                         return F.New_Derived_Type
                           (Type_Name,
                            F.New_Name (Idle.Names.Ada_Name (Parent)));

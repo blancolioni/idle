@@ -19,7 +19,8 @@
 #     does not support yet with user-errors/. A command in user-commands/
 #     is an error for the kernel target.
 #     Then interfaces in groups (Rose ADR 0034), from groups/, for both
-#     targets, with expected-groups/. Then the host target (#133), with
+#     targets, with expected-groups/, and types shared between interfaces
+#     (#115), from shared/, for all three, with expected-shared/. Then the host target (#133), with
 #     host-backings.txt, the commands in commands/ that it can build and
 #     those in host-commands/, and expected-host/; and what it refuses,
 #     in host-errors/.
@@ -431,6 +432,57 @@ for target in kernel user; do
   fi
 done
 
+# Types of another interface, named with it (idle#115): Core.Units
+# declares only types, so it has only its package, and the interfaces that
+# name its types use them as parameters, results, record fields and parent
+# types. The expected files are in expected-shared/<target>. The errors
+# are names that name nothing, and passing an interface that has only
+# types.
+
+rm -rf output/shared && mkdir -p output/shared/kernel output/shared/user \
+  output/shared/host
+for target in kernel user host; do
+  if [ $target = kernel ]; then users=shared/meter.idl
+  else users=shared/catalogue.idl; fi
+  # shellcheck disable=SC2086
+  $idle --target $target -o output/shared/$target shared/core-units.idl \
+    $users || fail "$target target for shared types"
+  for file in $(ls expected-shared/$target); do
+    if diff -u "expected-shared/$target/$file" \
+         "output/shared/$target/$file"; then
+      pass "shared $target $file"
+    else
+      fail "shared $target $file"
+    fi
+  done
+  if [ "$(ls output/shared/$target)" = "$(ls expected-shared/$target)" ]
+  then
+    pass "files generated for shared types, $target target"
+  else
+    fail "files generated for shared types, $target target"
+  fi
+done
+
+if $idle --list-endpoints shared/catalogue.idl shared/meter.idl \
+     > output/shared/endpoints.txt \
+   && diff -u expected-shared/endpoints.txt output/shared/endpoints.txt
+then
+  pass "endpoint ids with shared types"
+else
+  fail "endpoint ids with shared types"
+fi
+
+for target in kernel user; do
+  if $idle --target $target -o output shared/unknown.idl \
+       2> output/diagnostics.txt; then
+    fail "shared type errors, $target target (expected errors)"
+  elif diff -u expected-shared/unknown.txt output/diagnostics.txt; then
+    pass "shared type errors, $target target"
+  else
+    fail "shared type errors, $target target"
+  fi
+done
+
 # 3. Diagnostics
 
 for file in errors/*.idl; do
@@ -536,7 +588,7 @@ fi
 work=$(mktemp -d) || exit 1
 trap 'rm -rf "$work"' EXIT
 for file in expected/*.ad[sb] expected-user/*.ad[sb] expected-host/*.ad[sb] \
-            expected-groups/*/*.ad[sb]; do
+            expected-groups/*/*.ad[sb] expected-shared/*/*.ad[sb]; do
   if (cd "$work" && gcc -c -gnats -gnat2022 -gnatyabcefhiklmnoprst -gnaty3 \
         -gnatwe "$OLDPWD/$file"); then
     pass "style of $file"
@@ -590,6 +642,21 @@ else
       done
     done
   done < semantic.txt
+
+  # The interfaces with shared types, and Core.Units (idle#115).
+  for target in kernel user; do
+    if [ $target = kernel ]; then flags=$kernel; else flags=$user; fi
+    dir=expected-shared/$target
+    for file in "$dir"/rose-interfaces-*.ad[sb]; do
+      # shellcheck disable=SC2086
+      if (cd "$work" && gcc -c -gnatc -gnat2012 -gnatwae -m32 -nostdinc \
+            -nostdlib -I"$OLDPWD/$dir" $flags "$OLDPWD/$file"); then
+        pass "rose shared $target $(basename "$file")"
+      else
+        fail "rose shared $target $(basename "$file")"
+      fi
+    done
+  done
 
   # Records, which only the user target has (idle#113), with the package
   # body that holds their codecs.

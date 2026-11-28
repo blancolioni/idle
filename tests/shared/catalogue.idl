@@ -1,0 +1,21 @@
+--  Types of another interface, named with it (idle#115): as parameters,
+--  results, a record field and the parent of a derived type, for the user
+--  target.
+
+interface Catalogue is
+
+   type Offset is new Core.Units.Bytes;
+
+   type Entry_Info is record
+      Name    : String;
+      Size    : Core.Units.Bytes;
+      Age     : Core.Units.Duration;
+      Of_Kind : Core.Units.Unit_Kind;
+      Start   : Offset;
+   end record;
+
+   function Total return Core.Units.Bytes;
+   procedure Resize (Size : Core.Units.Bytes; Done : out Core.Units.Percent);
+   function Find (Index : Natural) return Entry_Info;
+
+end Catalogue;

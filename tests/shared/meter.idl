@@ -1,0 +1,8 @@
+--  Types of another interface on the kernel target (idle#115).
+
+interface Meter is
+
+   procedure Sample (Every : Core.Units.Duration; Used : out Core.Units.Bytes);
+   function Kind return Core.Units.Unit_Kind;
+
+end Meter;
