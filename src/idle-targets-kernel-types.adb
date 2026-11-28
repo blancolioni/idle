@@ -214,35 +214,9 @@ package body Idle.Targets.Kernel.Types is
       User      : Boolean := False)
       return Type_Info
    is
-      Name : constant String := To_String (Reference.Name);
-      Key  : constant String := Idle.Names.Key (Name);
-
-      function Find_In
-        (Declaration : Idle.Syntax.Interface_Declaration;
-         Found       : out Type_Info)
-         return Boolean;
-      --  Look for the type in the declarations of Declaration.
-
-      -------------
-      -- Find_In --
-      -------------
-
-      function Find_In
-        (Declaration : Idle.Syntax.Interface_Declaration;
-         Found       : out Type_Info)
-         return Boolean
-      is
-      begin
-         for Item of Declaration.Types loop
-            if Idle.Names.Key (To_String (Item.Name)) = Key then
-               Found := Declared (Declaration, Item);
-               return True;
-            end if;
-         end loop;
-         return False;
-      end Find_In;
-
-      Result : Type_Info;
+      Name      : constant String := To_String (Reference.Name);
+      Declaring : Idle.Syntax.Interface_Declaration;
+      Found     : Idle.Syntax.Type_Declaration;
 
    begin
       if Reference.Is_Interface then
@@ -262,14 +236,11 @@ package body Idle.Targets.Kernel.Types is
          end;
       end if;
 
-      if Find_In (Owner, Result) then
-         return Result;
+      --  A type of Owner, of an ancestor, or of another interface that
+      --  qualifies its name (idle#115).
+      if Idle.Hierarchy.Find_Type (Owner, Name, Declaring, Found) then
+         return Declared (Declaring, Found);
       end if;
-      for Ancestor of Idle.Hierarchy.Ancestors (Owner) loop
-         if Find_In (Ancestor, Result) then
-            return Result;
-         end if;
-      end loop;
       return Predefined (Name, User);
    end Resolve;
 

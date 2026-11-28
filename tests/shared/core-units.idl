@@ -1,0 +1,11 @@
+--  Shared quantities (idle#115): an interface that declares types and no
+--  subprograms, which other interfaces name as Core.Units.Bytes.
+
+interface Core.Units is
+
+   type Bytes is new Word_64;
+   type Duration is new Integer_64;
+   type Percent is range 0 .. 100;
+   type Unit_Kind is (Size, Time);
+
+end Core.Units;

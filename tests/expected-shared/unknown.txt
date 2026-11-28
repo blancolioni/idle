@@ -1,0 +1,4 @@
+shared/unknown.idl:8:4: error: unknown parent type Core.Units.Nonesuch
+shared/unknown.idl:10:19: error: unknown type Core.Units.Nonesuch
+shared/unknown.idl:11:4: error: unknown type Nowhere.Bytes
+shared/unknown.idl:12:20: error: interface Core.Units has no subprograms, so it only declares types, and has no client or server
