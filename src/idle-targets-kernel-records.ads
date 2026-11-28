@@ -23,8 +23,10 @@ private package Idle.Targets.Kernel.Records is
    --    function Decode (Buffer : Storage_Array) return R;
    --
    --  The encoding is fixed by the IDL, not by the compiler, since streams
-   --  of records persist across checkpoints. The fields are encoded in the
-   --  order they are declared:
+   --  of records persist across checkpoints. A record starts with a header
+   --  word, little-endian: its length in bytes, header included, in the
+   --  low 24 bits, and its number of fields in the high 8. The fields
+   --  follow, in the order they are declared:
    --
    --    a scalar of one word     4 bytes, little-endian
    --    a scalar of two words    8 bytes, little-endian
@@ -38,9 +40,21 @@ private package Idle.Targets.Kernel.Records is
    --  integer in two's complement. A record parameter or result travels
    --  in the invocation buffer as its encoding, and a stream of records
    --  is their encodings one after another.
+   --
+   --  Within a series a record only gains fields, at its end, each with a
+   --  default (idle#114, Rose ADR 0048). The header lets the two ends of
+   --  an invocation differ: a decoder reads the fields it knows, up to the
+   --  sender's count, gives the rest their defaults, and skips any fields
+   --  it doesn't know by the length. A record with fewer fields than the
+   --  last one without a default, or whose length doesn't fit the buffer
+   --  or its fields, raises Constraint_Error.
+   --
+   --  Each record also has a type id, R_Type_Id, the hash of its canonical
+   --  form (see Idle.Endpoints.Record_Form), for a typed stream to name
+   --  its elements by.
 
    Generated_Names : constant Idle.Syntax.String_Vectors.Vector :=
-     ["Encode", "Decode", "Encoded_Length", "Padded",
+     ["Encode", "Decode", "Encoded_Length", "Padded", "Put_Header",
       "Put_Word_32", "Put_Word_64", "Put_String",
       "Get_Word_32", "Get_Word_64", "Get_String",
       "To_Integer_32", "To_Integer_64"];
@@ -61,9 +75,11 @@ private package Idle.Targets.Kernel.Records is
       Declared    : Idle.Syntax.String_Vectors.Vector;
       OK          : in out Boolean);
    --  Report what is wrong with the fields of Item, a record declared by
-   --  Declaration: a field named twice, or whose type is unknown, is a cap
-   --  or an interface, is an array or a storage offset, or is declared by
-   --  Declaration after Item. Declared holds the keys of the types that
+   --  Declaration: more than 255 fields, a field named twice, or whose
+   --  type is unknown, is a cap or an interface, is an array or a storage
+   --  offset, or is declared by Declaration after Item, and a default that
+   --  isn't a value of its field's type. Declared holds the keys of the
+   --  types that
    --  Declaration declares before Item. Set OK to False if there is
    --  anything to report.
 

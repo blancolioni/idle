@@ -1,0 +1,27 @@
+--  Records that gain fields (idle#114): a default for each kind of field,
+--  and a record whose fields all have defaults.
+
+interface Shelf is
+
+   type Kind is (Plain, Directory, Link);
+   type Block_Count is range 0 .. 1_000_000;
+
+   type Stamp is record
+      Seconds : Integer_64 := 0;
+      Zone    : Integer_32 := 0;
+   end record;
+
+   type File_Info is record
+      Name     : String;
+      Size     : Natural;
+      Blocks   : Block_Count := 16#100#;
+      Of_Kind  : Kind := Plain;
+      Hidden   : Boolean := False;
+      Target   : String := "none";
+      Modified : Stamp;
+   end record;
+
+   procedure Put (Info : File_Info);
+   function Get (Index : Natural) return File_Info;
+
+end Shelf;

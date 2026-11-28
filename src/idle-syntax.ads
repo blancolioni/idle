@@ -60,12 +60,30 @@ package Idle.Syntax is
    package Constant_Vectors is
      new Ada.Containers.Vectors (Positive, Constant_Declaration);
 
+   type Value_Kind is
+     (Integer_Value, Character_Value, String_Value, Name_Value);
+
+   type Aspect_Value is record
+      Kind     : Value_Kind := Name_Value;
+      Text     : Unbounded_String;
+      Position : Source_Position;
+   end record;
+   --  An aspect's value, or an argument's default. Text is the value as
+   --  written, except for a string, which is its contents: without its
+   --  quotes, with doubled quotes undoubled, concatenations joined, a text
+   --  block's common indentation removed, and a Text_File's contents read.
+   --  A character is the character itself.
+
    type Type_Kind is (Range_Type, Derived_Type, Enumeration_Type, Record_Type);
 
    type Field is record
-      Name     : Unbounded_String;
-      Of_Type  : Type_Reference;
-      Position : Source_Position;
+      Name        : Unbounded_String;
+      Of_Type     : Type_Reference;
+      Has_Default : Boolean := False;
+      Default     : Aspect_Value;
+      --  The default, as in Size : Bytes := 0, which a decoded record
+      --  takes when the sender's record has fewer fields (idle#114).
+      Position    : Source_Position;
    end record;
    --  A field of a record type (idle#113).
 
@@ -100,20 +118,6 @@ package Idle.Syntax is
 
    type Unit_Kind is (Interface_Unit, Command_Unit, Package_Unit, Role_Unit);
    --  What an IDL file declares.
-
-   type Value_Kind is
-     (Integer_Value, Character_Value, String_Value, Name_Value);
-
-   type Aspect_Value is record
-      Kind     : Value_Kind := Name_Value;
-      Text     : Unbounded_String;
-      Position : Source_Position;
-   end record;
-   --  An aspect's value, or an argument's default. Text is the value as
-   --  written, except for a string, which is its contents: without its
-   --  quotes, with doubled quotes undoubled, concatenations joined, a text
-   --  block's common indentation removed, and a Text_File's contents read.
-   --  A character is the character itself.
 
    type Aspect is record
       Name      : Unbounded_String;

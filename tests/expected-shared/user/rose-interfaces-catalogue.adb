@@ -16,6 +16,12 @@ package body Rose.Interfaces.Catalogue is
       Last   : in out Storage_Offset)
       return Unsigned_32;
 
+   procedure Put_Header
+     (Buffer : in out Storage_Array;
+      Start  : Storage_Offset;
+      Finish : Storage_Offset;
+      Count  : Unsigned_32);
+
    procedure Put_Word_64
      (Buffer : in out Storage_Array;
       Last   : in out Storage_Offset;
@@ -47,7 +53,15 @@ package body Rose.Interfaces.Catalogue is
       Last   : in out System.Storage_Elements.Storage_Offset;
       Item   : out Entry_Info)
    is
+      Start  : constant Storage_Offset := Last;
+      Header : constant Unsigned_32 := Get_Word_32 (Buffer, Last);
+      Finish : constant Storage_Offset :=
+        Start + Storage_Offset (Header and 16#FF_FFFF#);
+      Count  : constant Unsigned_32 := Shift_Right (Header, 24);
    begin
+      if Count < 5 or else (Finish < Last or else Finish > Buffer'Last) then
+         raise Constraint_Error;
+      end if;
       Item.Name :=
         Ada.Strings.Unbounded.To_Unbounded_String (Get_String (Buffer, Last));
       Item.Size :=
@@ -57,6 +71,10 @@ package body Rose.Interfaces.Catalogue is
       Item.Of_Kind :=
         Rose.Interfaces.Core.Units.Unit_Kind'Val (Get_Word_32 (Buffer, Last));
       Item.Start := Offset (Get_Word_64 (Buffer, Last));
+      if Last > Finish then
+         raise Constraint_Error;
+      end if;
+      Last := Finish;
    end Decode;
 
    ------------
@@ -83,7 +101,9 @@ package body Rose.Interfaces.Catalogue is
       Buffer : in out System.Storage_Elements.Storage_Array;
       Last   : in out System.Storage_Elements.Storage_Offset)
    is
+      Start : constant Storage_Offset := Last;
    begin
+      Last := Last + 4;
       Put_String (Buffer, Last, Ada.Strings.Unbounded.To_String (Item.Name));
       Put_Word_64 (Buffer, Last, Unsigned_64 (Item.Size));
       Put_Word_64 (Buffer, Last, Unsigned_64 (Item.Age));
@@ -93,6 +113,7 @@ package body Rose.Interfaces.Catalogue is
          Unsigned_32
            (Rose.Interfaces.Core.Units.Unit_Kind'Pos (Item.Of_Kind)));
       Put_Word_64 (Buffer, Last, Unsigned_64 (Item.Start));
+      Put_Header (Buffer, Start, Last, 5);
    end Encode;
 
    ------------
@@ -119,7 +140,7 @@ package body Rose.Interfaces.Catalogue is
       return System.Storage_Elements.Storage_Count
    is
    begin
-      return 32 + Padded
+      return 36 + Padded
         (System.Storage_Elements.Storage_Count
            (Ada.Strings.Unbounded.Length (Item.Name)));
    end Encoded_Length;
@@ -190,6 +211,27 @@ package body Rose.Interfaces.Catalogue is
    begin
       return (Length + 3) / 4 * 4;
    end Padded;
+
+   ----------------
+   -- Put_Header --
+   ----------------
+
+   procedure Put_Header
+     (Buffer : in out Storage_Array;
+      Start  : Storage_Offset;
+      Finish : Storage_Offset;
+      Count  : Unsigned_32)
+   is
+      Position : Storage_Offset := Start;
+   begin
+      if Finish - Start > 16#FF_FFFF# then
+         raise Constraint_Error;
+      end if;
+      Put_Word_32
+        (Buffer,
+         Position,
+         Unsigned_32 (Finish - Start) or Shift_Left (Count, 24));
+   end Put_Header;
 
    ----------------
    -- Put_String --

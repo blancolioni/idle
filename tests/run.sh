@@ -483,6 +483,25 @@ for target in kernel user; do
   fi
 done
 
+# Records that gain fields (idle#114): the type id that --list-endpoints
+# gives with the interface's ids, and the fields that --list-fields gives,
+# with their defaults. records/shelf is generated with the user target's
+# interfaces, in generated-user.txt.
+
+if $idle --list-endpoints records/shelf.idl > output/shelf-ids.txt \
+   && diff -u records/endpoints.txt output/shelf-ids.txt; then
+  pass "record type ids"
+else
+  fail "record type ids"
+fi
+
+if $idle --list-fields records/shelf.idl > output/shelf-fields.txt \
+   && diff -u records/fields.txt output/shelf-fields.txt; then
+  pass "record fields"
+else
+  fail "record fields"
+fi
+
 # 3. Diagnostics
 
 for file in errors/*.idl; do
@@ -570,11 +589,12 @@ else
 fi
 
 # What the user target cannot generate: a type with the name of the
-# object type, a subprogram with the name of a cap function, and records
-# that break the rules (idle#113).
+# object type, a subprogram with the name of a cap function, records that
+# break the rules (idle#113), and defaults that do (idle#114).
 
 if $idle --target user -I commands -I rose -o output \
      user-errors/clash.idl user-errors/cap_name.idl user-errors/records.idl \
+     user-errors/defaults.idl \
      2> output/diagnostics.txt; then
   fail "user target errors (expected errors)"
 elif diff -u user-errors/expected.txt output/diagnostics.txt; then
@@ -660,7 +680,8 @@ else
 
   # Records, which only the user target has (idle#113), with the package
   # body that holds their codecs.
-  for file in expected-user/rose-interfaces-listing*.ad[sb]; do
+  for file in expected-user/rose-interfaces-listing*.ad[sb] \
+              expected-user/rose-interfaces-shelf*.ad[sb]; do
     # shellcheck disable=SC2086
     if (cd "$work" && gcc -c -gnatc -gnat2012 -gnatwae -m32 -nostdinc \
           -nostdlib -I"$OLDPWD/expected-user" $user "$OLDPWD/$file"); then

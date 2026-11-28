@@ -1,0 +1,5 @@
+16#B145_2C46_7F41_7FD0#  interface rose.interfaces.shelf
+16#CDB1_2E07_9732_70AC#  rose.interfaces.shelf.put(in rose.interfaces.shelf.file_info)
+16#F601_A5BF_B527_8746#  rose.interfaces.shelf.get(in natural) return rose.interfaces.shelf.file_info
+16#6268_41B1_9634_E7B9#  record rose.interfaces.shelf.stamp
+16#E8F1_6F63_94D5_A723#  record rose.interfaces.shelf.file_info

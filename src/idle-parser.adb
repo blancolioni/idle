@@ -505,6 +505,11 @@ package body Idle.Parser is
             Component.Name := Parse_Name ("field name");
             Expect (Tok_Colon, [Tok_Semicolon]);
             Component.Of_Type := Parse_Type_Reference;
+            if Tok = Tok_Becomes then
+               Scan;
+               Component.Has_Default := True;
+               Component.Default := Parse_Value;
+            end if;
             Expect (Tok_Semicolon, [Tok_Identifier, Tok_End]);
             Into.Fields.Append (Component);
          end;
@@ -518,7 +523,8 @@ package body Idle.Parser is
       Expect (Tok_Record, [Tok_Semicolon]);
 
       if Tok = Tok_With then
-         --  Versions are idle#114.
+         --  A record changes by gaining fields with defaults, and has no
+         --  versions (Rose ADR 0048).
          Error ("a record takes no aspects");
          Skip_To ([Tok_Semicolon]);
       end if;

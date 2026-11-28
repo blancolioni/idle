@@ -3,6 +3,9 @@ with Ada.Strings.Unbounded;
 with Syn.Units;
 
 with Idle.Diagnostics;
+with Idle.Endpoints;
+with Idle.Hierarchy;
+with Idle.Literals;
 with Idle.Names;
 with Idle.Targets.Kernel.Types;
 
@@ -38,6 +41,22 @@ package body Idle.Targets.Kernel.Records is
       return String;
    --  Name, the full name of an entity, without the package of Owner if
    --  that is where it is declared.
+
+   function Default_Node
+     (F     : in out Syn.Factory.Factory;
+      Owner : Idle.Syntax.Interface_Declaration;
+      Item  : Idle.Syntax.Field)
+      return Syn.Node_Access;
+   --  The default of Item, a field of a record of Owner, as an Ada
+   --  expression, or null if it has none of its own. Check_Fields has
+   --  checked it.
+
+   function Required_Fields
+     (Owner : Idle.Syntax.Interface_Declaration;
+      Item  : Idle.Syntax.Type_Declaration)
+      return Natural;
+   --  The position of the last field of Item, a record of Owner, that has
+   --  no default: the fewest fields that a decoded record can have.
 
    function Codec_Name
      (Owner : Idle.Syntax.Interface_Declaration;
@@ -92,9 +111,124 @@ package body Idle.Targets.Kernel.Records is
 
       Names : Idle.Syntax.String_Vectors.Vector;
 
+      procedure Check_Default
+        (Field : Idle.Syntax.Field;
+         Info  : Types.Type_Info);
+      --  Report a default of Field, whose type is Info, that isn't a value
+      --  of the type.
+
       procedure Error
         (Position : Idle.Syntax.Source_Position;
          Message  : String);
+
+      -------------------
+      -- Check_Default --
+      -------------------
+
+      procedure Check_Default
+        (Field : Idle.Syntax.Field;
+         Info  : Types.Type_Info)
+      is
+         use all type Idle.Syntax.Value_Kind;
+
+         Name      : constant String := To_String (Field.Name);
+         Type_Name : constant String := To_String (Field.Of_Type.Name);
+         Value     : constant Idle.Syntax.Aspect_Value := Field.Default;
+         Text      : constant String := To_String (Value.Text);
+         Declaring : Idle.Syntax.Interface_Declaration;
+         Found     : Idle.Syntax.Type_Declaration;
+         Is_Found  : constant Boolean :=
+           Idle.Hierarchy.Find_Type
+             (Declaration, Type_Name, Declaring, Found);
+
+         function Bound
+           (Text   : Unbounded_String;
+            Result : out Long_Long_Long_Integer)
+            return Boolean
+         is (Idle.Literals.Value (To_String (Text), Result, 2 ** 64 - 1));
+         --  The value of a range type's bound, if it is a literal.
+
+         procedure Check_Number;
+         --  Check a whole number against Info and Found.
+
+         ------------------
+         -- Check_Number --
+         ------------------
+
+         procedure Check_Number is
+            Signed  : constant Boolean := Info.Encoding = Types.Signed;
+            Largest : constant Long_Long_Long_Integer :=
+              (if Info.Category = Word_Value
+               then (if Signed then 2 ** 31 - 1 else 2 ** 32 - 1)
+               else (if Signed then 2 ** 63 - 1 else 2 ** 64 - 1));
+            Number  : Long_Long_Long_Integer;
+            Low     : Long_Long_Long_Integer;
+            High    : Long_Long_Long_Integer;
+         begin
+            if Value.Kind /= Integer_Value then
+               Error (Value.Position,
+                      "the default of field " & Name
+                      & " must be a whole number");
+            elsif not Idle.Literals.Value (Text, Number, Largest) then
+               Error (Value.Position,
+                      "the default of field " & Name & " is too large for "
+                      & Type_Name);
+            elsif (Is_Found
+                   and then Idle.Syntax."=" (Found.Kind,
+                                             Idle.Syntax.Range_Type)
+                   and then Bound (Found.Low, Low)
+                   and then Bound (Found.High, High)
+                   and then Number not in Low .. High)
+              or else (Idle.Names.Key (Type_Name) = "positive"
+                       and then Number = 0)
+            then
+               Error (Value.Position,
+                      "the default of field " & Name
+                      & " is outside the range of " & Type_Name);
+            end if;
+         end Check_Number;
+
+      begin
+         case Info.Category is
+            when Record_Value =>
+               Error (Value.Position,
+                      "field " & Name & " is a record, which takes no "
+                      & "default: it has one when each field of "
+                      & Type_Name & " has one");
+            when String_Value =>
+               if Value.Kind /= String_Value then
+                  Error (Value.Position,
+                         "the default of field " & Name
+                         & " must be a string");
+               end if;
+            when Word_Value | Double_Word_Value =>
+               case Info.Encoding is
+                  when Boolean_Word =>
+                     if Value.Kind /= Name_Value
+                       or else Idle.Names.Key (Text) not in "true" | "false"
+                     then
+                        Error (Value.Position,
+                               "the default of field " & Name
+                               & " must be True or False");
+                     end if;
+                  when Enumeration =>
+                     if Value.Kind /= Name_Value
+                       or else not Is_Found
+                       or else not (for some Literal of Found.Literals =>
+                                      Idle.Names.Key (Literal)
+                                      = Idle.Names.Key (Text))
+                     then
+                        Error (Value.Position,
+                               "the default of field " & Name
+                               & " must be a literal of " & Type_Name);
+                     end if;
+                  when others =>
+                     Check_Number;
+               end case;
+            when others =>
+               null;
+         end case;
+      end Check_Default;
 
       -----------
       -- Error --
@@ -112,6 +246,12 @@ package body Idle.Targets.Kernel.Records is
       end Error;
 
    begin
+      if Natural (Item.Fields.Length) > 255 then
+         Error (Item.Position,
+                "record " & To_String (Item.Name)
+                & " has more than 255 fields");
+      end if;
+
       for Field of Item.Fields loop
          declare
             Name      : constant String := To_String (Field.Name);
@@ -158,6 +298,10 @@ package body Idle.Targets.Kernel.Records is
                   when String_Value | Record_Value =>
                      null;
                end case;
+
+               if Field.Has_Default then
+                  Check_Default (Field, Info);
+               end if;
             end if;
          end;
       end loop;
@@ -179,9 +323,21 @@ package body Idle.Targets.Kernel.Records is
       for Item of Owner.Types loop
          if Idle.Syntax."=" (Item.Kind, Idle.Syntax.Record_Type) then
             declare
-               Codec : constant Codec_Specs :=
-                 Specs (F, Idle.Names.Ada_Name (To_String (Item.Name)));
+               Record_Name : constant String :=
+                 Idle.Names.Ada_Name (To_String (Item.Name));
+               Codec       : constant Codec_Specs := Specs (F, Record_Name);
             begin
+               --  Its type id, for a typed stream to name its elements by
+               --  (idle#114).
+               Result.Append
+                 (F.New_Object
+                    (Name          => Record_Name & "_Type_Id",
+                     Object_Type   => F.New_Name ("Rose.Objects.Endpoint_Id"),
+                     Initial_Value =>
+                       F.New_Integer_Literal
+                         (Idle.Endpoints.Record_Id (Owner, Item),
+                          Base => 16, Group => 4),
+                     Is_Constant   => True));
                Result.Append (Codec.Length);
                Result.Append (Codec.Encode_Into);
                Result.Append (Codec.Encode_Function);
@@ -192,6 +348,50 @@ package body Idle.Targets.Kernel.Records is
       end loop;
       return Result.To_Array;
    end Codec_Declarations;
+
+   ------------------
+   -- Default_Node --
+   ------------------
+
+   function Default_Node
+     (F     : in out Syn.Factory.Factory;
+      Owner : Idle.Syntax.Interface_Declaration;
+      Item  : Idle.Syntax.Field)
+      return Syn.Node_Access
+   is
+      Info  : constant Types.Type_Info := Field_Info (Owner, Item);
+      Text  : constant String := To_String (Item.Default.Text);
+      Value : Long_Long_Long_Integer;
+   begin
+      if not Item.Has_Default then
+         return null;
+      end if;
+
+      case Info.Category is
+         when Types.String_Value =>
+            return F.New_Call
+              (Unbounded & ".To_Unbounded_String",
+               [F.New_String_Literal (Text)]);
+         when others =>
+            case Info.Encoding is
+               when Types.Boolean_Word =>
+                  return F.New_Name
+                    (if Idle.Names.Key (Text) = "true" then "True"
+                     else "False");
+               when Types.Enumeration =>
+                  return F.New_Name
+                    (Local_Name
+                       (Owner,
+                        To_String (Info.Unit) & "."
+                        & Idle.Names.Ada_Name (Text)));
+               when others =>
+                  if not Idle.Literals.Value (Text, Value, 2 ** 64 - 1) then
+                     raise Program_Error;
+                  end if;
+                  return F.New_Integer_Literal (Value);
+            end case;
+      end case;
+   end Default_Node;
 
    ------------------
    -- Helpers_Used --
@@ -232,9 +432,8 @@ package body Idle.Targets.Kernel.Records is
          end if;
       end loop;
 
-      --  A string's length is a word, and a double word is two.
-      Result.Word_32 :=
-        Result.Word_32 or else Result.Word_64 or else Result.Strings;
+      --  Every record's header is a word (idle#114).
+      Result.Word_32 := True;
       return Result;
    end Helpers_Used;
 
@@ -257,6 +456,25 @@ package body Idle.Targets.Kernel.Records is
          return Name;
       end if;
    end Local_Name;
+
+   ---------------------
+   -- Required_Fields --
+   ---------------------
+
+   function Required_Fields
+     (Owner : Idle.Syntax.Interface_Declaration;
+      Item  : Idle.Syntax.Type_Declaration)
+      return Natural
+   is
+      Result : Natural := 0;
+   begin
+      for Index in 1 .. Item.Fields.Last_Index loop
+         if not Idle.Hierarchy.Has_Default (Owner, Item.Fields (Index)) then
+            Result := Index;
+         end if;
+      end loop;
+      return Result;
+   end Required_Fields;
 
    -----------
    -- Specs --
@@ -330,7 +548,8 @@ package body Idle.Targets.Kernel.Records is
                Components.Append
                  (F.New_Component
                     (Idle.Names.Ada_Name (To_String (Field.Name)),
-                     F.New_Name (Text_Type)));
+                     F.New_Name (Text_Type),
+                     Default_Node (F, Owner, Field)));
             else
                if Unit /= "" and then Unit /= Package_Name (Owner) then
                   Context.Add (Unit);
@@ -339,7 +558,8 @@ package body Idle.Targets.Kernel.Records is
                  (F.New_Component
                     (Idle.Names.Ada_Name (To_String (Field.Name)),
                      F.New_Name
-                       (Local_Name (Owner, To_String (Info.Ada_Name)))));
+                       (Local_Name (Owner, To_String (Info.Ada_Name))),
+                     Default_Node (F, Owner, Field)));
             end if;
          end;
       end loop;
@@ -442,8 +662,9 @@ package body Idle.Targets.Kernel.Records is
          Codec       : constant Codec_Specs := Specs (F, Record_Name);
          Encodes     : Node_List;
          Decodes     : Node_List;
-         Fixed       : Long_Long_Long_Integer := 0;
-         --  The length of the fields whose length is fixed.
+         Fixed       : Long_Long_Long_Integer := 4;
+         --  The length of the header and of the fields whose length is
+         --  fixed.
          Varying     : Node_List;
          --  The lengths of the others.
       begin
@@ -555,11 +776,24 @@ package body Idle.Targets.Kernel.Records is
                   Statements    => [F.New_Return (Length)]));
          end;
 
+         --  The header is written last, when the length is known.
+
          Add_Body
            ("Encode",
             F.New_Subprogram_Body
               (Specification => Codec.Encode_Into,
-               Statements    => Encodes.To_Array));
+               Declarations  =>
+                 [F.New_Object
+                    ("Start", Name ("Storage_Offset"), Name ("Last"),
+                     Is_Constant => True)],
+               Statements    =>
+                 [Advance (Literal (4))]
+                 & Encodes.To_Array
+                 & [Statement
+                      ("Put_Header",
+                       [Name ("Buffer"), Name ("Start"), Name ("Last"),
+                        Literal
+                          (Long_Long_Long_Integer (Item.Fields.Length))])]));
 
          Add_Body
            ("Encode",
@@ -580,11 +814,94 @@ package body Idle.Targets.Kernel.Records is
                               Name ("Last")]),
                   F.New_Return (Name ("Result"))]));
 
-         Add_Body
-           ("Decode",
-            F.New_Subprogram_Body
-              (Specification => Codec.Decode_From,
-               Statements    => Decodes.To_Array));
+         --  A field after the sender's count takes its default, and
+         --  fields after the ones this decoder knows are skipped.
+
+         declare
+            Fields   : constant Syn.Node_Array := Decodes.To_Array;
+            Required : constant Natural := Required_Fields (Owner, Item);
+            Bad      : Syn.Node_Access :=
+              F.New_Binary
+                (F.New_Binary (Name ("Finish"), "<", Name ("Last")),
+                 "or else",
+                 F.New_Binary
+                   (Name ("Finish"), ">",
+                    F.New_Attribute (Name ("Buffer"), "Last")));
+            Body_Statements : Node_List;
+         begin
+            if Required > 0 then
+               Bad := F.New_Binary
+                 (F.New_Binary
+                    (Name ("Count"), "<",
+                     Literal (Long_Long_Long_Integer (Required))),
+                  "or else", Bad);
+            end if;
+            Body_Statements.Append
+              (F.New_If
+                 (Bad, [F.New_Raise (Name ("Constraint_Error"))]));
+
+            for Index in Fields'Range loop
+               if Index <= Required then
+                  Body_Statements.Append (Fields (Index));
+               else
+                  declare
+                     Field   : constant Idle.Syntax.Field :=
+                       Item.Fields (Index);
+                     Default : constant Syn.Node_Access :=
+                       Default_Node (F, Owner, Field);
+                  begin
+                     Body_Statements.Append
+                       (F.New_If
+                          (F.New_Binary
+                             (Name ("Count"), ">=",
+                              Literal (Long_Long_Long_Integer (Index))),
+                           [Fields (Index)],
+                           [F.New_Assignment
+                              (Name (Field_Name (Field)),
+                               (if Default = null
+                                then F.New_Raw ("(others => <>)")
+                                else Default))]));
+                  end;
+               end if;
+            end loop;
+
+            Body_Statements.Append
+              (F.New_If
+                 (F.New_Binary (Name ("Last"), ">", Name ("Finish")),
+                  [F.New_Raise (Name ("Constraint_Error"))]));
+            Body_Statements.Append
+              (F.New_Assignment (Name ("Last"), Name ("Finish")));
+
+            Add_Body
+              ("Decode",
+               F.New_Subprogram_Body
+                 (Specification => Codec.Decode_From,
+                  Declarations  =>
+                    [F.New_Object
+                       ("Start", Name ("Storage_Offset"), Name ("Last"),
+                        Is_Constant => True),
+                     F.New_Object
+                       ("Header", Name ("Unsigned_32"),
+                        Call ("Get_Word_32", Buffer_Last),
+                        Is_Constant => True),
+                     F.New_Object
+                       ("Finish", Name ("Storage_Offset"),
+                        F.New_Binary
+                          (Name ("Start"), "+",
+                           Call ("Storage_Offset",
+                                 [F.New_Binary
+                                    (Name ("Header"), "and",
+                                     F.New_Integer_Literal
+                                       (16#FF_FFFF#, Base => 16,
+                                        Group => 4))])),
+                        Is_Constant => True),
+                     F.New_Object
+                       ("Count", Name ("Unsigned_32"),
+                        Call ("Shift_Right",
+                              [Name ("Header"), Literal (24)]),
+                        Is_Constant => True)],
+                  Statements    => Body_Statements.To_Array));
+         end;
 
          Add_Body
            ("Decode",
@@ -715,6 +1032,39 @@ package body Idle.Targets.Kernel.Records is
                  [Advance (Literal (4)),
                   F.New_Return (Name ("Result"))]);
          end if;
+
+         --  A record's header: its length in the low 24 bits, and its
+         --  number of fields in the high 8 (idle#114).
+
+         Add_Helper
+           (F.New_Procedure
+              ("Put_Header",
+               [F.New_Parameter
+                  ("Buffer", Name ("Storage_Array"), Syn.In_Out_Mode),
+                F.New_Parameter ("Start", Name ("Storage_Offset")),
+                F.New_Parameter ("Finish", Name ("Storage_Offset")),
+                F.New_Parameter ("Count", Name ("Unsigned_32"))]),
+            "Put_Header",
+            Declarations =>
+              [F.New_Object
+                 ("Position", Name ("Storage_Offset"), Name ("Start"))],
+            Statements   =>
+              [F.New_If
+                 (F.New_Binary
+                    (F.New_Binary (Name ("Finish"), "-", Name ("Start")),
+                     ">",
+                     F.New_Integer_Literal
+                       (16#FF_FFFF#, Base => 16, Group => 4)),
+                  [F.New_Raise (Name ("Constraint_Error"))]),
+               Statement
+                 ("Put_Word_32",
+                  [Name ("Buffer"), Name ("Position"),
+                   F.New_Binary
+                     (Call ("Unsigned_32",
+                            [F.New_Binary
+                               (Name ("Finish"), "-", Name ("Start"))]),
+                      "or",
+                      Call ("Shift_Left", [Name ("Count"), Literal (24)]))])]);
 
          if Used.Word_64 then
             Add_Helper

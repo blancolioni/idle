@@ -2,6 +2,7 @@
 16#F470_A423_5C60_2D97#  rose.interfaces.catalogue.total return rose.interfaces.core.units.bytes
 16#880E_BAC0_D3EC_7F13#  rose.interfaces.catalogue.resize(in rose.interfaces.core.units.bytes; out rose.interfaces.core.units.percent)
 16#4021_52ED_4F74_E72C#  rose.interfaces.catalogue.find(in natural) return rose.interfaces.catalogue.entry_info
+16#E0B9_A6E7_A06D_2516#  record rose.interfaces.catalogue.entry_info
 16#23C6_FBC1_1D6A_1A2A#  interface rose.interfaces.meter
 16#4E60_B8F2_1C12_C056#  rose.interfaces.meter.sample(in rose.interfaces.core.units.duration; out rose.interfaces.core.units.bytes)
 16#BDC8_E54A_BD42_106A#  rose.interfaces.meter.kind return rose.interfaces.core.units.unit_kind

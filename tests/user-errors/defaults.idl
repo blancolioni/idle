@@ -1,0 +1,31 @@
+--  Defaults that the user target refuses (idle#114): a default that isn't
+--  a value of its field's type, a default on a field that is a record, and
+--  a type with the name of a record's type id.
+
+interface Defaults is
+
+   type Kind is (Plain, Directory);
+   type Small is range 1 .. 10;
+
+   type Inner is record
+      Count : Natural;
+   end record;
+
+   type Bad_Defaults is record
+      Count : Natural := "ten";
+      Flag  : Boolean := 1;
+      Mode  : Kind := Hidden;
+      Text  : String := 3;
+      Level : Small := 11;
+      Tiny  : Small := 0;
+      First : Positive := 0;
+      Big   : Word := 16#1_0000_0000#;
+      Part  : Inner := 0;
+      Good  : Natural := 5;
+   end record;
+
+   type Bad_Defaults_Type_Id is range 0 .. 1;
+
+   procedure Put (Item : Bad_Defaults);
+
+end Defaults;
