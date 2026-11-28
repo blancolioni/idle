@@ -1,3 +1,13 @@
 user-errors/clash.idl:4:4: error: type Clash_Object has the same name as the object type, which the interface package declares
 user-errors/cap_name.idl:6:4: error: subprogram Cap_Name_Cap has the name of a function that the object type declares
 user-errors/cap_name.idl:8:4: error: subprogram Stream_Writer_Cap has the name of a function that the object type declares
+user-errors/records.idl:10:7: error: field Size is declared twice
+user-errors/records.idl:11:7: error: unknown type No_Such_Type
+user-errors/records.idl:12:7: error: field Cap is a capability or an interface, which a record cannot hold
+user-errors/records.idl:13:7: error: field Other is a capability or an interface, which a record cannot hold
+user-errors/records.idl:14:7: error: field Data is an array, which a record cannot hold
+user-errors/records.idl:15:7: error: field Offset is a storage offset or count, which a record cannot hold yet
+user-errors/records.idl:16:7: error: type Kind is used by record Bad_Fields before it is declared
+user-errors/records.idl:17:7: error: record Bad_Fields cannot hold itself
+user-errors/records.idl:26:4: error: type Encode has the same name as a subprogram of the records' codec, which the interface package declares
+user-errors/records.idl:28:22: error: record Good is in out: a record can be an in or an out argument, but not both

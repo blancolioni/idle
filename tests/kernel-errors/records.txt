@@ -1,0 +1,3 @@
+kernel-errors/records.idl:6:4: error: record File_Info needs the user or host target: the kernel target has no records
+kernel-errors/records.idl:11:19: error: record File_Info needs the user or host target: the kernel target has no records
+kernel-errors/records.idl:12:4: error: record File_Info needs the user or host target: the kernel target has no records

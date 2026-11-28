@@ -1187,9 +1187,22 @@ package body Idle.Targets.Kernel.Server is
             else (others => <>));
          Returns_String : constant Boolean :=
            Subprogram.Is_Function and then Result.Category = String_Value;
+         Returns_Record : constant Boolean :=
+           Subprogram.Is_Function and then Result.Category = Record_Value;
+         --  A record result is encoded in the buffer, and its length sent
+         --  as a data word (idle#113).
 
          Specification : constant not null Syn.Node_Access :=
            F.New_Procedure (Handle (Subprogram), Handler_Spec_Parameters);
+
+         Storage_Info : constant Types.Type_Info :=
+           (Category       => Storage_Value,
+            Encoding       => Types.Not_A_Word,
+            Ada_Name       =>
+              To_Unbounded_String ("System.Storage_Elements.Storage_Array"),
+            Unit           => To_Unbounded_String ("System.Storage_Elements"),
+            Interface_Name => Null_Unbounded_String);
+         --  The type of the buffer that holds a record's encoding.
 
          function Parameters return not null Syn.Node_Access
          is (F.New_Name ("Parameters"));
@@ -1365,7 +1378,38 @@ package body Idle.Targets.Kernel.Server is
                Argument    : constant Syn.Node_Access :=
                  F.New_Name (Object_Name);
             begin
-               if Packed and then Parameter.Mode = Idle.Syntax.In_Mode
+               if Info.Category = Record_Value then
+                  --  The record is decoded from its encoding, or for an
+                  --  out record, encoded in the buffer after the call.
+                  Body_Context.Add ("System.Storage_Elements");
+                  if Packed and then Parameter.Mode = Idle.Syntax.In_Mode
+                  then
+                     Add_Item_Overlay (Object_Name & "_Buffer", Storage_Info);
+                  else
+                     Declarations.Append
+                       (Buffer_Overlay
+                          (Object_Name & "_Buffer",
+                           Storage_Type (Storage_Info, Sent_Buffer_Length)));
+                  end if;
+                  if Parameter.Mode = Idle.Syntax.In_Mode then
+                     Declarations.Append
+                       (F.New_Object
+                          (Object_Name, Object_Type,
+                           F.New_Call
+                             (To_String (Info.Unit) & ".Decode",
+                              [F.New_Name (Object_Name & "_Buffer")]),
+                           Is_Constant => True));
+                  else
+                     Declarations.Append
+                       (F.New_Object (Object_Name, Object_Type));
+                     Declarations.Append
+                       (F.New_Object
+                          (Object_Name & "_Last",
+                           F.New_Name
+                             ("System.Storage_Elements.Storage_Offset"),
+                           Literal (0)));
+                  end if;
+               elsif Packed and then Parameter.Mode = Idle.Syntax.In_Mode
                  and then Types.Is_Buffer (Info)
                then
                   Add_Item_Overlay (Object_Name, Info);
@@ -1448,7 +1492,7 @@ package body Idle.Targets.Kernel.Server is
                           (Buffer_Overlay
                              (Object_Name,
                               Storage_Type (Info, Sent_Buffer_Length)));
-                     when Unknown =>
+                     when Record_Value | Unknown =>
                         raise Program_Error;
                   end case;
                end if;
@@ -1463,6 +1507,19 @@ package body Idle.Targets.Kernel.Server is
          end loop;
 
          Takes_Caps := Takes_Caps or else Next_Cap > 0;
+
+         if Returns_Record then
+            Body_Context.Add ("System.Storage_Elements");
+            Declarations.Append
+              (Buffer_Overlay
+                 ("Result_Buffer",
+                  Storage_Type (Storage_Info, Sent_Buffer_Length)));
+            Declarations.Append
+              (F.New_Object
+                 ("Result_Last",
+                  F.New_Name ("System.Storage_Elements.Storage_Offset"),
+                  Literal (0)));
+         end if;
 
          if Returns_String then
             Declarations.Append
@@ -1548,6 +1605,34 @@ package body Idle.Targets.Kernel.Server is
             end if;
          end if;
 
+         --  The out records and a record result are encoded in the
+         --  buffer before the reply. One that doesn't fit raises
+         --  Constraint_Error, and so is an error reply.
+
+         for Parameter of Subprogram.Parameters loop
+            if Parameter.Mode /= Idle.Syntax.In_Mode
+              and then Types.Resolve (Member.Owner, Parameter.Of_Type, User)
+                         .Category = Record_Value
+            then
+               Statements.Append
+                 (Call (To_String
+                          (Types.Resolve
+                             (Member.Owner, Parameter.Of_Type, User).Unit)
+                        & ".Encode",
+                        [F.New_Name (Name (Parameter)),
+                         F.New_Name (Name (Parameter) & "_Buffer"),
+                         F.New_Name (Name (Parameter) & "_Last")]));
+            end if;
+         end loop;
+
+         if Returns_Record then
+            Statements.Append
+              (Call (To_String (Result.Unit) & ".Encode",
+                     [F.New_Name ("Result"),
+                      F.New_Name ("Result_Buffer"),
+                      F.New_Name ("Result_Last")]));
+         end if;
+
          Reply.Append
            (Call (System_Calls & "Initialize_Reply",
                   [Parameters, F.New_Name ("Parameters.Reply_Cap")]));
@@ -1587,6 +1672,14 @@ package body Idle.Targets.Kernel.Server is
                           (Call (System_Calls & "Send_Word",
                                  [Parameters,
                                   F.New_Name (Name (Parameter) & "_Last")]));
+                     when Record_Value =>
+                        Reply.Append
+                          (Call (System_Calls & "Send_Word",
+                                 [Parameters,
+                                  F.New_Call
+                                    ("Natural",
+                                     [F.New_Name
+                                        (Name (Parameter) & "_Last")])]));
                      when Storage_Value =>
                         null;
                      when Unknown =>
@@ -1615,6 +1708,12 @@ package body Idle.Targets.Kernel.Server is
                   Reply.Append
                     (Call (System_Calls & "Send_Word",
                            [Parameters, F.New_Name ("Last")]));
+               when Record_Value =>
+                  Reply.Append
+                    (Call (System_Calls & "Send_Word",
+                           [Parameters,
+                            F.New_Call
+                              ("Natural", [F.New_Name ("Result_Last")])]));
                when Storage_Value | Unknown =>
                   raise Program_Error;
             end case;

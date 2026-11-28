@@ -1,0 +1,14 @@
+--  The kernel target has no records (idle#113): the declaration and each
+--  use of one are refused.
+
+interface Records is
+
+   type File_Info is record
+      Name : String;
+      Size : Natural;
+   end record;
+
+   procedure Add (Info : File_Info);
+   function Find (Index : Natural) return File_Info;
+
+end Records;

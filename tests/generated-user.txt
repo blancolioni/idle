@@ -33,3 +33,4 @@ modes/boolean_out
 rose/writable_file
 rose/transactional_writable_file
 rose/reader
+records/listing

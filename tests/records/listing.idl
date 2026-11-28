@@ -1,0 +1,39 @@
+--  Record types (idle#113): every kind of field, a record in another, and
+--  records as in and out parameters and as a result, alone and beside
+--  other buffers.
+
+interface Listing is
+
+   type Kind is (Plain, Directory, Link);
+   type Block_Count is range 0 .. 1_000_000;
+
+   type Stamp is record
+      Seconds : Integer_64;
+      Zone    : Integer_32;
+   end record;
+
+   type File_Info is record
+      Name     : String;
+      Size     : Natural;
+      Blocks   : Block_Count;
+      Of_Kind  : Kind;
+      Hidden   : Boolean;
+      Raw      : Word;
+      Id       : Object_Id;
+      Modified : Stamp;
+      Target   : String;
+   end record;
+
+   --  An in record, alone and beside a string, which then travel as
+   --  items.
+   procedure Add (Info : File_Info);
+   procedure Rename (Info : File_Info; New_Name : String);
+
+   --  A record result, and an out record beside words.
+   function Find (Index : Natural) return File_Info;
+   procedure Get (Index : Natural; Info : out File_Info; Count : out Natural);
+
+   --  A record of only fixed-size fields.
+   function Now return Stamp;
+
+end Listing;

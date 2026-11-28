@@ -60,7 +60,17 @@ package Idle.Syntax is
    package Constant_Vectors is
      new Ada.Containers.Vectors (Positive, Constant_Declaration);
 
-   type Type_Kind is (Range_Type, Derived_Type, Enumeration_Type);
+   type Type_Kind is (Range_Type, Derived_Type, Enumeration_Type, Record_Type);
+
+   type Field is record
+      Name     : Unbounded_String;
+      Of_Type  : Type_Reference;
+      Position : Source_Position;
+   end record;
+   --  A field of a record type (idle#113).
+
+   package Field_Vectors is
+     new Ada.Containers.Vectors (Positive, Field);
 
    type Type_Declaration is record
       Name     : Unbounded_String;
@@ -73,8 +83,17 @@ package Idle.Syntax is
       --  The parent of a derived type.
       Literals : String_Vectors.Vector;
       --  The literals of an enumeration type.
+      Fields   : Field_Vectors.Vector;
+      --  The fields of a record type, in the order they are declared,
+      --  which is the order they are encoded in.
       Position : Source_Position;
    end record;
+   --  A type declared by an interface. A record type is written
+   --
+   --    type File_Info is record
+   --       Name : String;
+   --       Size : Natural;
+   --    end record;
 
    package Type_Vectors is
      new Ada.Containers.Vectors (Positive, Type_Declaration);

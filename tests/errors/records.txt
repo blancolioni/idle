@@ -1,0 +1,3 @@
+errors/records.idl:9:15: error: a record takes no aspects
+errors/records.idl:12:4: error: missing field: a record has at least one
+errors/records.idl:16:8: error: missing 'record'

@@ -1,0 +1,30 @@
+--  Records that the user target refuses (idle#113): fields that a record
+--  cannot hold, a field named twice, a type used before it is declared, a
+--  record that holds itself, an in out record, and a type with the name
+--  of a codec subprogram.
+
+interface Records is
+
+   type Bad_Fields is record
+      Size   : Natural;
+      Size   : Word;
+      Lost   : No_Such_Type;
+      Cap    : Capability;
+      Other  : interface Stream_Writer;
+      Data   : Storage_Array;
+      Offset : Storage_Offset;
+      Later  : Kind;
+      Self   : Bad_Fields;
+   end record;
+
+   type Kind is (Plain, Directory);
+
+   type Good is record
+      Name : String;
+   end record;
+
+   type Encode is range 0 .. 10;
+
+   procedure Update (Item : in out Good);
+
+end Records;
