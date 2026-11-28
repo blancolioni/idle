@@ -603,6 +603,10 @@ package body Idle.Targets.Kernel.Client is
             else (others => <>));
          Returns_String  : constant Boolean :=
            Subprogram.Is_Function and then Result.Category = String_Value;
+         Returns_Record  : constant Boolean :=
+           Subprogram.Is_Function and then Result.Category = Record_Value;
+         --  A record result is decoded from the reply buffer, and its
+         --  length is a data word (idle#113).
          Packed          : constant Boolean :=
            Types.Packs_Buffers (Member.Owner, Subprogram);
          --  The in strings and arrays are items in the buffer (idle#58).
@@ -632,6 +636,17 @@ package body Idle.Targets.Kernel.Client is
                      F.New_Integer_Literal
                        (Long_Long_Long_Integer (Index))])]));
          --  The data word Index of the reply, as a length.
+
+         function Received_Record
+           (Info  : Types.Type_Info;
+            Index : Natural;
+            Using : not null access function
+                      (Decoded : not null Syn.Node_Access)
+                       return not null Syn.Node_Access)
+            return not null Syn.Node_Access;
+         --  A block that copies the encoding of a record of type Info from
+         --  the reply buffer, whose length is the data word Index, and
+         --  does what Using makes of the decoded record.
 
          function Profile return Syn.Node_Array;
          --  The parameters, with a length after each out or in out
@@ -685,6 +700,42 @@ package body Idle.Targets.Kernel.Client is
             end loop;
             return Result.To_Array;
          end Profile;
+
+         ---------------------
+         -- Received_Record --
+         ---------------------
+
+         function Received_Record
+           (Info  : Types.Type_Info;
+            Index : Natural;
+            Using : not null access function
+                      (Decoded : not null Syn.Node_Access)
+                       return not null Syn.Node_Access)
+            return not null Syn.Node_Access
+         is
+            Received : constant not null Syn.Node_Access :=
+              F.New_Name ("Received");
+         begin
+            Body_Context.Add ("System.Storage_Elements");
+            return F.New_Block
+              (Declarations =>
+                 [F.New_Object
+                    ("Received",
+                     F.New_Call
+                       ("System.Storage_Elements.Storage_Array",
+                        [F.New_Binary
+                           (F.New_Integer_Literal (1), "..",
+                            F.New_Call
+                              ("System.Storage_Elements.Storage_Count",
+                               [Reply_Word (Index)]))]))],
+               Statements   =>
+                 [Call (System_Calls & "Copy_Received_Buffer",
+                        [F.New_Attribute (Received, "Length"),
+                         F.New_Attribute (Received, "Address")]),
+                  Using
+                    (F.New_Call
+                       (To_String (Info.Unit) & ".Decode", [Received]))]);
+         end Received_Record;
 
          Parameters : constant Syn.Node_Array :=
            [Item_Parameter]
@@ -766,6 +817,22 @@ package body Idle.Targets.Kernel.Client is
                   Sent := F.New_Name (Name (Parameter) & "_Storage");
                end if;
 
+               if Parameter_Info.Category = Record_Value
+                 and then Parameter.Mode /= Idle.Syntax.Out_Mode
+               then
+                  --  The record's encoding is sent (idle#113).
+                  Body_Context.Add ("System.Storage_Elements");
+                  Declarations.Append
+                    (F.New_Object
+                       (Name (Parameter) & "_Encoded",
+                        F.New_Name ("System.Storage_Elements.Storage_Array"),
+                        F.New_Call
+                          (To_String (Parameter_Info.Unit) & ".Encode",
+                           [Value]),
+                        Is_Constant => True));
+                  Sent := F.New_Name (Name (Parameter) & "_Encoded");
+               end if;
+
                Use_Type
                  (Parameter_Info,
                   Is_Out  => Parameter.Mode = Idle.Syntax.Out_Mode,
@@ -821,6 +888,10 @@ package body Idle.Targets.Kernel.Client is
                                        ("Rose.Invocation.Writable_Buffer")]),
                                  F.New_Name ("True")));
                         end if;
+                     when Record_Value =>
+                        Statements.Append
+                          (Call (System_Calls & "Send_Storage_Array",
+                                 [Params, Sent, F.New_Name ("False")]));
                      when Storage_Value =>
                         Statements.Append
                           (Call (System_Calls & "Send_Storage_Array",
@@ -831,6 +902,9 @@ package body Idle.Targets.Kernel.Client is
                      when Unknown =>
                         raise Program_Error;
                   end case;
+               elsif Parameter_Info.Category = Record_Value then
+                  Statements.Append
+                    (Call (System_Calls & "Receive_Buffer", [Params]));
                elsif User and then Parameter_Info.Category = String_Value then
                   Statements.Append
                     (Call (System_Calls & "Receive_Buffer",
@@ -852,7 +926,8 @@ package body Idle.Targets.Kernel.Client is
                if Parameter.Mode /= Idle.Syntax.In_Mode then
                   Reply_Words :=
                     Reply_Words + Types.Words (Parameter_Info)
-                    + (if Parameter_Info.Category = String_Value
+                    + (if Parameter_Info.Category
+                            in String_Value | Record_Value
                        then 1 else 0);
                   if Parameter_Info.Category in
                     Capability_Value | Interface_Value
@@ -867,7 +942,8 @@ package body Idle.Targets.Kernel.Client is
             Use_Type (Result, Is_Result => True, Decoded => True);
             Reply_Words :=
               Reply_Words
-              + (if Returns_String then 1 else Types.Words (Result));
+              + (if Returns_String or else Returns_Record then 1
+                 else Types.Words (Result));
          end if;
 
          if Reply_Words > 0 then
@@ -889,7 +965,7 @@ package body Idle.Targets.Kernel.Client is
                       F.New_Integer_Literal
                         (Long_Long_Long_Integer (Reply_Caps))]));
          end if;
-         if Returns_String then
+         if Returns_String or else Returns_Record then
             Statements.Append
               (Call (System_Calls & "Receive_Buffer", [Params]));
          end if;
@@ -953,6 +1029,18 @@ package body Idle.Targets.Kernel.Client is
                                            (F.New_Integer_Literal (1), "..",
                                             F.New_Name
                                               ("Received_Last"))])]))]));
+                     Index := Index + 1;
+                  elsif Parameter_Info.Category = Record_Value then
+                     declare
+                        function Assign
+                          (Decoded : not null Syn.Node_Access)
+                           return not null Syn.Node_Access
+                        is (F.New_Assignment (Value, Decoded));
+                     begin
+                        Statements.Append
+                          (Received_Record
+                             (Parameter_Info, Index, Assign'Access));
+                     end;
                      Index := Index + 1;
                   elsif Parameter_Info.Category = String_Value then
                      Statements.Append
@@ -1074,6 +1162,16 @@ package body Idle.Targets.Kernel.Client is
                                F.New_Name ("Result"),
                                F.New_Name ("Last")]));
                   end if;
+               when Record_Value =>
+                  declare
+                     function Return_It
+                       (Decoded : not null Syn.Node_Access)
+                        return not null Syn.Node_Access
+                     is (F.New_Return (Decoded));
+                  begin
+                     Statements.Append
+                       (Received_Record (Result, Index, Return_It'Access));
+                  end;
                when Storage_Value | Unknown =>
                   raise Program_Error;
             end case;

@@ -144,7 +144,13 @@ while read -r entry; do
     fail "user target for $entry"
     continue
   fi
-  for file in "rose-interfaces-$name.ads" \
+  package_body=
+  # Only an interface with records has a package body (idle#113).
+  if [ -f "expected-user/rose-interfaces-$name.adb" ] \
+     || [ -f "output/user/rose-interfaces-$name.adb" ]; then
+    package_body="rose-interfaces-$name.adb"
+  fi
+  for file in "rose-interfaces-$name.ads" $package_body \
               "rose-interfaces-$name-client.ads" \
               "rose-interfaces-$name-client.adb" \
               "rose-interfaces-$name-server.ads" \
@@ -441,7 +447,8 @@ done
 # Interfaces that the kernel target rejects. The other files in
 # kernel-errors/ are their parents.
 
-for name in orphan loop_a twice bounds typo clash cap_array buffers caps words; do
+for name in orphan loop_a twice bounds typo clash cap_array buffers caps words \
+            records; do
   file="kernel-errors/$name.idl"
   if $idle --target kernel -o output "$file" \
        2> output/diagnostics.txt; then
@@ -511,10 +518,11 @@ else
 fi
 
 # What the user target cannot generate: a type with the name of the
-# object type, and a subprogram with the name of a cap function.
+# object type, a subprogram with the name of a cap function, and records
+# that break the rules (idle#113).
 
 if $idle --target user -I commands -I rose -o output \
-     user-errors/clash.idl user-errors/cap_name.idl \
+     user-errors/clash.idl user-errors/cap_name.idl user-errors/records.idl \
      2> output/diagnostics.txt; then
   fail "user target errors (expected errors)"
 elif diff -u user-errors/expected.txt output/diagnostics.txt; then
@@ -582,6 +590,18 @@ else
       done
     done
   done < semantic.txt
+
+  # Records, which only the user target has (idle#113), with the package
+  # body that holds their codecs.
+  for file in expected-user/rose-interfaces-listing*.ad[sb]; do
+    # shellcheck disable=SC2086
+    if (cd "$work" && gcc -c -gnatc -gnat2012 -gnatwae -m32 -nostdinc \
+          -nostdlib -I"$OLDPWD/expected-user" $user "$OLDPWD/$file"); then
+      pass "rose user $(basename "$file")"
+    else
+      fail "rose user $(basename "$file")"
+    fi
+  done
 
   # The interfaces in groups, and their groups' packages.
   for target in kernel user; do

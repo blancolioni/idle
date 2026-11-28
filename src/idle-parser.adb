@@ -77,6 +77,10 @@ package body Idle.Parser is
    --  file being parsed, without its final line break.
    procedure Parse_Type_Declaration (Item : in out Interface_Declaration);
 
+   procedure Parse_Record_Fields (Into : in out Type_Declaration);
+   --  The fields of the record type Into, from after "record" to after
+   --  "end record" (idle#113).
+
    function Same_Name (Left, Right : String) return Boolean
    is (Ada.Characters.Handling.To_Lower (Left)
        = Ada.Characters.Handling.To_Lower (Right));
@@ -487,6 +491,39 @@ package body Idle.Parser is
       return Result;
    end Parse_Qualified_Name;
 
+   -------------------------
+   -- Parse_Record_Fields --
+   -------------------------
+
+   procedure Parse_Record_Fields (Into : in out Type_Declaration) is
+   begin
+      while Tok = Tok_Identifier loop
+         declare
+            Component : Field;
+         begin
+            Component.Position := Current_Position;
+            Component.Name := Parse_Name ("field name");
+            Expect (Tok_Colon, [Tok_Semicolon]);
+            Component.Of_Type := Parse_Type_Reference;
+            Expect (Tok_Semicolon, [Tok_Identifier, Tok_End]);
+            Into.Fields.Append (Component);
+         end;
+      end loop;
+
+      if Into.Fields.Is_Empty then
+         Error ("missing field: a record has at least one");
+      end if;
+
+      Expect (Tok_End, [Tok_Record, Tok_Semicolon]);
+      Expect (Tok_Record, [Tok_Semicolon]);
+
+      if Tok = Tok_With then
+         --  Versions are idle#114.
+         Error ("a record takes no aspects");
+         Skip_To ([Tok_Semicolon]);
+      end if;
+   end Parse_Record_Fields;
+
    ----------------
    -- Parse_Role --
    ----------------
@@ -625,6 +662,11 @@ package body Idle.Parser is
             Scan;
             Result.Kind := Derived_Type;
             Result.Parent := Parse_Type_Reference;
+
+         when Tok_Record =>
+            Scan;
+            Result.Kind := Record_Type;
+            Parse_Record_Fields (Result);
 
          when Tok_Left_Paren =>
             Scan;

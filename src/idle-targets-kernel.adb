@@ -11,6 +11,7 @@ with Idle.Hierarchy;
 with Idle.Names;
 with Idle.Targets.Kernel.Client;
 with Idle.Targets.Kernel.Commands;
+with Idle.Targets.Kernel.Records;
 with Idle.Targets.Kernel.Server;
 with Idle.Targets.Kernel.Support;
 with Idle.Targets.Kernel.Types;
@@ -23,9 +24,13 @@ package body Idle.Targets.Kernel is
 
    Endpoint_Type : constant String := "Rose.Objects.Endpoint_Id";
 
-   function Check (Item : Idle.Syntax.Interface_Declaration) return Boolean;
-   --  Report anything in Item that the kernel target does not support.
-   --  True if there was nothing to report.
+   function Check
+     (Item   : Idle.Syntax.Interface_Declaration;
+      Target : Idle.Targets.Target)
+      return Boolean;
+   --  Report anything in Item that the kernel target does not support,
+   --  and records, which only the user and host targets support, if
+   --  Target is the kernel target. True if there was nothing to report.
 
    function Check_User
      (Item : Idle.Syntax.Interface_Declaration)
@@ -88,7 +93,10 @@ package body Idle.Targets.Kernel is
    -- Check --
    -----------
 
-   function Check (Item : Idle.Syntax.Interface_Declaration) return Boolean
+   function Check
+     (Item   : Idle.Syntax.Interface_Declaration;
+      Target : Idle.Targets.Target)
+      return Boolean
    is
       Errors_Before : constant Natural := Idle.Diagnostics.Error_Count;
       Ancestors     : constant Idle.Hierarchy.Interface_Vectors.Vector :=
@@ -194,6 +202,18 @@ package body Idle.Targets.Kernel is
                   end if;
                end;
             end if;
+            if Declared_Type.Kind in Idle.Syntax.Record_Type then
+               if Target = Kernel_Target then
+                  Error (Declaration.File_Name, Declared_Type.Position,
+                         "record " & To_String (Declared_Type.Name)
+                         & " needs the user or host target: the kernel "
+                         & "target has no records");
+               else
+                  Records.Check_Fields
+                    (Declaration, Declared_Type, Declared, OK);
+               end if;
+            end if;
+
             Declared.Append (Idle.Names.Key (To_String (Declared_Type.Name)));
          end loop;
       end Check_Declarations;
@@ -272,6 +292,12 @@ package body Idle.Targets.Kernel is
          end loop;
 
          Add (Count_Name, "the number of subprograms");
+
+         if Records.Has_Records (Item) then
+            for Generated_Name of Records.Generated_Names loop
+               Add (Generated_Name, "a subprogram of the records' codec");
+            end loop;
+         end if;
 
          for Declared_Constant of Item.Constants loop
             Check (To_String (Declared_Constant.Name), "constant",
@@ -352,6 +378,18 @@ package body Idle.Targets.Kernel is
                if Info.Category = Unknown then
                   Error (Member.File_Name, Parameter.Position,
                          "unknown type " & Type_Name);
+               elsif Info.Category = Record_Value
+                 and then Target = Kernel_Target
+               then
+                  Error (Member.File_Name, Parameter.Position,
+                         "record " & Type_Name & " needs the user or host "
+                         & "target: the kernel target has no records");
+               elsif Info.Category = Record_Value
+                 and then Parameter.Mode = Idle.Syntax.In_Out_Mode
+               then
+                  Error (Member.File_Name, Parameter.Position,
+                         "record " & Type_Name & " is in out: a record can "
+                         & "be an in or an out argument, but not both");
                else
                   Check_Interface (Info, Type_Name, Parameter.Position);
 
@@ -372,7 +410,8 @@ package body Idle.Targets.Kernel is
                   end if;
                   if Parameter.Mode /= Idle.Syntax.In_Mode then
                      Reply_Words := Reply_Words + Types.Words (Info)
-                       + (if Info.Category = String_Value then 1 else 0);
+                       + (if Info.Category in String_Value | Record_Value
+                          then 1 else 0);
                   end if;
 
                   if Types.Is_Buffer (Info) then
@@ -399,6 +438,16 @@ package body Idle.Targets.Kernel is
                   when Storage_Value =>
                      Error (Member.File_Name, Subprogram.Position,
                             Unsupported_Text ("results of type " & Type_Name));
+                  when Record_Value =>
+                     if Target = Kernel_Target then
+                        Error (Member.File_Name, Subprogram.Position,
+                               "record " & Type_Name & " needs the user or "
+                               & "host target: the kernel target has no "
+                               & "records");
+                     end if;
+                     Buffers := Buffers + 1;
+                     Packable := False;
+                     Reply_Words := Reply_Words + 1;
                   when String_Value =>
                      Buffers := Buffers + 1;
                      Packable := False;
@@ -656,7 +705,7 @@ package body Idle.Targets.Kernel is
    begin
       case Item.Kind is
          when Idle.Syntax.Interface_Unit =>
-            if Check (Item) then
+            if Check (Item, Target) then
                --  After Check, which reports an interface that is its own
                --  ancestor, since the warning looks at the ancestors.
                Warn_Unreleased (Item);
@@ -989,6 +1038,9 @@ package body Idle.Targets.Kernel is
                     (Type_Name,
                      [for Literal of Item.Literals =>
                         F.New_Name (Idle.Names.Ada_Name (Literal))]);
+               when Record_Type =>
+                  return Records.Type_Node
+                    (F, Generate_Interface_Package.Item, Item, Context);
             end case;
          end Type_Node;
 
@@ -1055,8 +1107,13 @@ package body Idle.Targets.Kernel is
       --  else that opens the interface cap, use these positions rather
       --  than assuming an order.
 
+      Has_Records : constant Boolean := Records.Has_Records (Item);
+
       Declarations : constant Syn.Node_Array :=
         Types_And_Constants
+        & (if Has_Records
+           then Records.Codec_Declarations (F, Item, Context)
+           else Syn.No_Nodes)
         & [for Ancestor of Idle.Hierarchy.Ancestors (Item) =>
            Endpoint_Constant
              (Interface_Name (Ancestor),
@@ -1097,6 +1154,10 @@ package body Idle.Targets.Kernel is
                    "Rose.Interfaces." & Idle.Names.Ada_Name (Name),
                  Public_Part => Declarations & User_Declarations)),
          Output_Directory);
+
+      if Has_Records then
+         Records.Write_Body (Item, Context, Output_Directory);
+      end if;
 
       --  An interface in a group, such as Storage.Bank, is a child of the
       --  group's package, Rose.Interfaces.Storage, which declares nothing

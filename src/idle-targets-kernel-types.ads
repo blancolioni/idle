@@ -26,6 +26,9 @@ private package Idle.Targets.Kernel.Types is
       --  The invocation buffer.
       Storage_Value,
       --  The invocation buffer.
+      Record_Value,
+      --  The invocation buffer, holding the record's encoding (idle#113).
+      --  User and host targets only.
       Interface_Value,
       --  One cap slot, holding the interface cap.
       Unknown);
@@ -89,7 +92,7 @@ private package Idle.Targets.Kernel.Types is
    --  The number of data words a value of Info takes.
 
    function Is_Buffer (Info : Type_Info) return Boolean
-   is (Info.Category in String_Value | Storage_Value);
+   is (Info.Category in String_Value | Storage_Value | Record_Value);
 
    function Packs_Buffers
      (Owner : Idle.Syntax.Interface_Declaration;

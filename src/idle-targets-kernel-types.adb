@@ -43,6 +43,8 @@ package body Idle.Targets.Kernel.Types is
             return Info (Word_Value, Converted, Type_Name, Package_Name);
          when Idle.Syntax.Enumeration_Type =>
             return Info (Word_Value, Enumeration, Type_Name, Package_Name);
+         when Idle.Syntax.Record_Type =>
+            return Info (Record_Value, Not_A_Word, Type_Name, Package_Name);
          when Idle.Syntax.Derived_Type =>
             declare
                Parent : constant Type_Info := Resolve (Owner, Item.Parent);
