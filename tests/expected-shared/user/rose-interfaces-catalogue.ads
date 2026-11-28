@@ -19,6 +19,8 @@ package Rose.Interfaces.Catalogue is
    Entry_Info_Type_Id  : constant Rose.Objects.Endpoint_Id :=
      16#E0B9_A6E7_A06D_2516#;
 
+   function Entry_Info_Fields return System.Storage_Elements.Storage_Array;
+
    function Encoded_Length
      (Item : Entry_Info)
       return System.Storage_Elements.Storage_Count;

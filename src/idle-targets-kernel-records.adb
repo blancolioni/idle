@@ -130,6 +130,9 @@ package body Idle.Targets.Kernel.Records is
       Word_32    : Boolean := False;
       Word_64    : Boolean := False;
       Strings    : Boolean := False;
+      --  Padded and Put_String, which every field table needs.
+      Text       : Boolean := False;
+      --  Get_String, for a string field.
       Integer_32 : Boolean := False;
       Integer_64 : Boolean := False;
    end record;
@@ -634,6 +637,10 @@ package body Idle.Targets.Kernel.Records is
                          (Idle.Endpoints.Record_Id (Owner, Item),
                           Base => 16, Group => 4),
                      Is_Constant   => True));
+               Result.Append
+                 (F.New_Function
+                    (Record_Name & "_Fields",
+                     F.New_Name (Storage & ".Storage_Array")));
                Result.Append (Codec.Length);
                Result.Append (Codec.Encode_Into);
                Result.Append (Codec.Encode_Function);
@@ -735,7 +742,7 @@ package body Idle.Targets.Kernel.Records is
                            Result.Integer_64 := True;
                         end if;
                      when String_Value =>
-                        Result.Strings := True;
+                        Result.Text := True;
                      when others =>
                         null;
                   end case;
@@ -744,8 +751,10 @@ package body Idle.Targets.Kernel.Records is
          end if;
       end loop;
 
-      --  Every record's header is a word (idle#114).
+      --  Every record's header is a word (idle#114), and its field table
+      --  has strings (#145).
       Result.Word_32 := Has_Records (Owner);
+      Result.Strings := Has_Records (Owner);
       return Result;
    end Helpers_Used;
 
@@ -1336,6 +1345,121 @@ package body Idle.Targets.Kernel.Records is
                   Statements    => [F.New_Return (Length)]));
          end;
 
+         --  The field table (#145).
+
+         declare
+            Table  : Node_List;
+            Length : Long_Long_Long_Integer := 0;
+
+            procedure Put_Word (Value : Long_Long_Long_Integer);
+            procedure Put_Text (Text : String);
+            procedure Put_Table
+              (Table_Owner : Idle.Syntax.Interface_Declaration;
+               Of_Record   : Idle.Syntax.Type_Declaration);
+
+            ---------------
+            -- Put_Table --
+            ---------------
+
+            procedure Put_Table
+              (Table_Owner : Idle.Syntax.Interface_Declaration;
+               Of_Record   : Idle.Syntax.Type_Declaration)
+            is
+            begin
+               Put_Word (Long_Long_Long_Integer (Of_Record.Fields.Length));
+               for Field of Of_Record.Fields loop
+                  declare
+                     Info      : constant Types.Type_Info :=
+                       Field_Info (Table_Owner, Field);
+                     Declaring : Idle.Syntax.Interface_Declaration;
+                     Found     : Idle.Syntax.Type_Declaration;
+                     Is_Found  : constant Boolean :=
+                       Idle.Hierarchy.Find_Type
+                         (Table_Owner, To_String (Field.Of_Type.Name),
+                          Declaring, Found);
+                     Kind      : constant Long_Long_Long_Integer :=
+                       (case Info.Category is
+                           when Word_Value        =>
+                             (case Info.Encoding is
+                                 when Boolean_Word => 5,
+                                 when Enumeration  => 6,
+                                 when Signed       => 3,
+                                 when others       => 1),
+                           when Double_Word_Value =>
+                             (if Info.Encoding = Signed then 4 else 2),
+                           when String_Value      => 7,
+                           when others            => 8);
+                  begin
+                     Put_Text (Idle.Names.Key (To_String (Field.Name)));
+                     Put_Text
+                       (Idle.Endpoints.Type_Form (Table_Owner, Field.Of_Type));
+                     Put_Word (Kind);
+                     if Kind = 6 then
+                        Put_Word (Long_Long_Long_Integer
+                                    (Found.Literals.Length));
+                        for Literal of Found.Literals loop
+                           Put_Text (Idle.Names.Key (Literal));
+                        end loop;
+                     elsif Kind in 1 .. 4 then
+                        Put_Text ("");
+                     elsif Kind = 8 then
+                        if not Is_Found then
+                           raise Program_Error;
+                        end if;
+                        Put_Table (Declaring, Found);
+                     end if;
+                  end;
+               end loop;
+            end Put_Table;
+
+            --------------
+            -- Put_Text --
+            --------------
+
+            procedure Put_Text (Text : String) is
+            begin
+               Table.Append
+                 (Statement
+                    ("Put_String",
+                     [Name ("Result"), Name ("Last"),
+                      F.New_String_Literal (Text)]));
+               Length := Length + 4 + (Text'Length + 3) / 4 * 4;
+            end Put_Text;
+
+            --------------
+            -- Put_Word --
+            --------------
+
+            procedure Put_Word (Value : Long_Long_Long_Integer) is
+            begin
+               Table.Append
+                 (Statement
+                    ("Put_Word_32",
+                     [Name ("Result"), Name ("Last"), Literal (Value)]));
+               Length := Length + 4;
+            end Put_Word;
+
+         begin
+            Put_Table (Owner, Item);
+            Add_Body
+              (Record_Name & "_Fields",
+               F.New_Subprogram_Body
+                 (Specification =>
+                    F.New_Function
+                      (Record_Name & "_Fields",
+                       F.New_Name (Storage & ".Storage_Array")),
+                  Declarations  =>
+                    [F.New_Object
+                       ("Result",
+                        Call ("Storage_Array",
+                              [F.New_Binary
+                                 (Literal (1), "..", Literal (Length))])),
+                     F.New_Object
+                       ("Last", Name ("Storage_Offset"), Literal (0))],
+                  Statements    =>
+                    Table.To_Array & [F.New_Return (Name ("Result"))]));
+         end;
+
          --  The header is written last, when the length is known.
 
          Add_Body
@@ -1733,6 +1857,9 @@ package body Idle.Targets.Kernel.Records is
                      [F.New_Assignment (Name ("Element"), Literal (0))]),
                   Advance (Name ("Padding"))]);
 
+         end if;
+
+         if Used.Text then
             Add_Helper
               (F.New_Function
                  ("Get_String", Name ("String"),

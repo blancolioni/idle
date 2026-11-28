@@ -51,7 +51,19 @@ private package Idle.Targets.Kernel.Records is
    --
    --  Each record also has a type id, R_Type_Id, the hash of its canonical
    --  form (see Idle.Endpoints.Record_Form), for a typed stream to name
-   --  its elements by.
+   --  its elements by, and a field table, R_Fields, which a list of the
+   --  records starts with (#145, Rose ADR 0048), encoded as records are:
+   --
+   --    the number of fields, a word; and for each field, in order:
+   --      its name, a string, in lower case
+   --      the canonical form of its type, a string
+   --      its kind, a word: 1 unsigned word, 2 unsigned double word,
+   --        3 signed word, 4 signed double word, 5 Boolean,
+   --        6 enumeration, 7 string, 8 record
+   --      for an enumeration, the number of its literals, a word, and
+   --        each literal, a string, in lower case
+   --      for kinds 1 to 4, its unit's symbol, a string, empty until #118
+   --      for a record, its own field table
 
    Generated_Names : constant Idle.Syntax.String_Vectors.Vector :=
      ["Encode", "Decode", "Encoded_Length", "Padded", "Put_Header",

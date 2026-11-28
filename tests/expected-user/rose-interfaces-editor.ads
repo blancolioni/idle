@@ -29,6 +29,8 @@ package Rose.Interfaces.Editor is
    Location_Type_Id : constant Rose.Objects.Endpoint_Id :=
      16#9B5C_ED1E_520D_3B6F#;
 
+   function Location_Fields return System.Storage_Elements.Storage_Array;
+
    function Encoded_Length
      (Item : Location)
       return System.Storage_Elements.Storage_Count;
@@ -54,6 +56,8 @@ package Rose.Interfaces.Editor is
    Dated_Type_Id    : constant Rose.Objects.Endpoint_Id :=
      16#AC36_8ACB_A075_B158#;
 
+   function Dated_Fields return System.Storage_Elements.Storage_Array;
+
    function Encoded_Length
      (Item : Dated)
       return System.Storage_Elements.Storage_Count;
@@ -76,6 +80,8 @@ package Rose.Interfaces.Editor is
 
    Note_Type_Id     : constant Rose.Objects.Endpoint_Id :=
      16#2D95_3C03_FFCA_B8F1#;
+
+   function Note_Fields return System.Storage_Elements.Storage_Array;
 
    function Encoded_Length
      (Item : Note)

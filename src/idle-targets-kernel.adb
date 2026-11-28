@@ -315,6 +315,10 @@ package body Idle.Targets.Kernel is
                        & "_Type_Id",
                        "the type id of record "
                        & To_String (Declared_Type.Name));
+                  Add (Idle.Names.Ada_Name (To_String (Declared_Type.Name))
+                       & "_Fields",
+                       "the field table of record "
+                       & To_String (Declared_Type.Name));
                end if;
             end loop;
          end if;

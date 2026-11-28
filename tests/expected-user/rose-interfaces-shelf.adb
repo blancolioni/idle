@@ -263,6 +263,54 @@ package body Rose.Interfaces.Shelf is
         (Item.Modified);
    end Encoded_Length;
 
+   ----------------------
+   -- File_Info_Fields --
+   ----------------------
+
+   function File_Info_Fields return System.Storage_Elements.Storage_Array is
+      Result : Storage_Array (1 .. 380);
+      Last   : Storage_Offset := 0;
+   begin
+      Put_Word_32 (Result, Last, 7);
+      Put_String (Result, Last, "name");
+      Put_String (Result, Last, "string");
+      Put_Word_32 (Result, Last, 7);
+      Put_String (Result, Last, "size");
+      Put_String (Result, Last, "natural");
+      Put_Word_32 (Result, Last, 1);
+      Put_String (Result, Last, "");
+      Put_String (Result, Last, "blocks");
+      Put_String (Result, Last, "rose.interfaces.shelf.block_count");
+      Put_Word_32 (Result, Last, 1);
+      Put_String (Result, Last, "");
+      Put_String (Result, Last, "of_kind");
+      Put_String (Result, Last, "rose.interfaces.shelf.kind");
+      Put_Word_32 (Result, Last, 6);
+      Put_Word_32 (Result, Last, 3);
+      Put_String (Result, Last, "plain");
+      Put_String (Result, Last, "directory");
+      Put_String (Result, Last, "link");
+      Put_String (Result, Last, "hidden");
+      Put_String (Result, Last, "boolean");
+      Put_Word_32 (Result, Last, 5);
+      Put_String (Result, Last, "target");
+      Put_String (Result, Last, "string");
+      Put_Word_32 (Result, Last, 7);
+      Put_String (Result, Last, "modified");
+      Put_String (Result, Last, "rose.interfaces.shelf.stamp");
+      Put_Word_32 (Result, Last, 8);
+      Put_Word_32 (Result, Last, 2);
+      Put_String (Result, Last, "seconds");
+      Put_String (Result, Last, "integer_64");
+      Put_Word_32 (Result, Last, 4);
+      Put_String (Result, Last, "");
+      Put_String (Result, Last, "zone");
+      Put_String (Result, Last, "integer_32");
+      Put_Word_32 (Result, Last, 3);
+      Put_String (Result, Last, "");
+      return Result;
+   end File_Info_Fields;
+
    ----------------
    -- Get_String --
    ----------------
@@ -405,6 +453,26 @@ package body Rose.Interfaces.Shelf is
       Put_Word_32 (Buffer, Last, Unsigned_32 (Value and 16#FFFF_FFFF#));
       Put_Word_32 (Buffer, Last, Unsigned_32 (Shift_Right (Value, 32)));
    end Put_Word_64;
+
+   ------------------
+   -- Stamp_Fields --
+   ------------------
+
+   function Stamp_Fields return System.Storage_Elements.Storage_Array is
+      Result : Storage_Array (1 .. 72);
+      Last   : Storage_Offset := 0;
+   begin
+      Put_Word_32 (Result, Last, 2);
+      Put_String (Result, Last, "seconds");
+      Put_String (Result, Last, "integer_64");
+      Put_Word_32 (Result, Last, 4);
+      Put_String (Result, Last, "");
+      Put_String (Result, Last, "zone");
+      Put_String (Result, Last, "integer_32");
+      Put_Word_32 (Result, Last, 3);
+      Put_String (Result, Last, "");
+      return Result;
+   end Stamp_Fields;
 
    -------------------
    -- To_Integer_32 --

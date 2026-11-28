@@ -44,6 +44,22 @@ package body Rose.Interfaces.Editor is
 
    function To_Integer_64 (Value : Unsigned_64) return Integer_64;
 
+   ------------------
+   -- Dated_Fields --
+   ------------------
+
+   function Dated_Fields return System.Storage_Elements.Storage_Array is
+      Result : Storage_Array (1 .. 40);
+      Last   : Storage_Offset := 0;
+   begin
+      Put_Word_32 (Result, Last, 1);
+      Put_String (Result, Last, "moment");
+      Put_String (Result, Last, "integer_64");
+      Put_Word_32 (Result, Last, 4);
+      Put_String (Result, Last, "");
+      return Result;
+   end Dated_Fields;
+
    ------------
    -- Decode --
    ------------
@@ -376,6 +392,53 @@ package body Rose.Interfaces.Editor is
    begin
       return Low or Shift_Left (High, 32);
    end Get_Word_64;
+
+   ---------------------
+   -- Location_Fields --
+   ---------------------
+
+   function Location_Fields return System.Storage_Elements.Storage_Array is
+      Result : Storage_Array (1 .. 136);
+      Last   : Storage_Offset := 0;
+   begin
+      Put_Word_32 (Result, Last, 3);
+      Put_String (Result, Last, "path");
+      Put_String (Result, Last, "string");
+      Put_Word_32 (Result, Last, 7);
+      Put_String (Result, Last, "line");
+      Put_String (Result, Last, "natural");
+      Put_Word_32 (Result, Last, 1);
+      Put_String (Result, Last, "");
+      Put_String (Result, Last, "opened");
+      Put_String (Result, Last, "rose.interfaces.editor.mode");
+      Put_Word_32 (Result, Last, 6);
+      Put_Word_32 (Result, Last, 2);
+      Put_String (Result, Last, "read_only");
+      Put_String (Result, Last, "writable");
+      return Result;
+   end Location_Fields;
+
+   -----------------
+   -- Note_Fields --
+   -----------------
+
+   function Note_Fields return System.Storage_Elements.Storage_Array is
+      Result : Storage_Array (1 .. 80);
+      Last   : Storage_Offset := 0;
+   begin
+      Put_Word_32 (Result, Last, 3);
+      Put_String (Result, Last, "path");
+      Put_String (Result, Last, "string");
+      Put_Word_32 (Result, Last, 7);
+      Put_String (Result, Last, "line");
+      Put_String (Result, Last, "natural");
+      Put_Word_32 (Result, Last, 1);
+      Put_String (Result, Last, "");
+      Put_String (Result, Last, "text");
+      Put_String (Result, Last, "string");
+      Put_Word_32 (Result, Last, 7);
+      return Result;
+   end Note_Fields;
 
    ------------
    -- Padded --
