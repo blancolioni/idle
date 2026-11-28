@@ -18,6 +18,8 @@ package Rose.Interfaces.Search is
    Place_Type_Id      : constant Rose.Objects.Endpoint_Id :=
      16#752B_29A8_ACBD_8061#;
 
+   function Place_Fields return System.Storage_Elements.Storage_Array;
+
    function Encoded_Length
      (Item : Place)
       return System.Storage_Elements.Storage_Count;
@@ -40,6 +42,8 @@ package Rose.Interfaces.Search is
 
    Grep_Match_Type_Id : constant Rose.Objects.Endpoint_Id :=
      16#92ED_442D_6CCC_3F0F#;
+
+   function Grep_Match_Fields return System.Storage_Elements.Storage_Array;
 
    function Encoded_Length
      (Item : Grep_Match)

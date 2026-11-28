@@ -136,6 +136,33 @@ package body Rose.Interfaces.Finder is
            (Ada.Strings.Unbounded.Length (Item.Name)));
    end Encoded_Length;
 
+   ----------------------
+   -- File_Info_Fields --
+   ----------------------
+
+   function File_Info_Fields return System.Storage_Elements.Storage_Array is
+      Result : Storage_Array (1 .. 128);
+      Last   : Storage_Offset := 0;
+   begin
+      Put_Word_32 (Result, Last, 4);
+      Put_String (Result, Last, "name");
+      Put_String (Result, Last, "string");
+      Put_Word_32 (Result, Last, 7);
+      Put_String (Result, Last, "size");
+      Put_String (Result, Last, "natural");
+      Put_Word_32 (Result, Last, 1);
+      Put_String (Result, Last, "");
+      Put_String (Result, Last, "created");
+      Put_String (Result, Last, "integer_64");
+      Put_Word_32 (Result, Last, 4);
+      Put_String (Result, Last, "");
+      Put_String (Result, Last, "modified");
+      Put_String (Result, Last, "integer_64");
+      Put_Word_32 (Result, Last, 4);
+      Put_String (Result, Last, "");
+      return Result;
+   end File_Info_Fields;
+
    ----------------
    -- Get_String --
    ----------------

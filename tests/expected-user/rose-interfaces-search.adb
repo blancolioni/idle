@@ -253,6 +253,32 @@ package body Rose.Interfaces.Search is
       return Result;
    end Get_Word_32;
 
+   -----------------------
+   -- Grep_Match_Fields --
+   -----------------------
+
+   function Grep_Match_Fields return System.Storage_Elements.Storage_Array is
+      Result : Storage_Array (1 .. 132);
+      Last   : Storage_Offset := 0;
+   begin
+      Put_Word_32 (Result, Last, 2);
+      Put_String (Result, Last, "where");
+      Put_String (Result, Last, "rose.interfaces.search.place");
+      Put_Word_32 (Result, Last, 8);
+      Put_Word_32 (Result, Last, 2);
+      Put_String (Result, Last, "file");
+      Put_String (Result, Last, "string");
+      Put_Word_32 (Result, Last, 7);
+      Put_String (Result, Last, "line");
+      Put_String (Result, Last, "natural");
+      Put_Word_32 (Result, Last, 1);
+      Put_String (Result, Last, "");
+      Put_String (Result, Last, "text");
+      Put_String (Result, Last, "string");
+      Put_Word_32 (Result, Last, 7);
+      return Result;
+   end Grep_Match_Fields;
+
    ------------
    -- Padded --
    ------------
@@ -261,6 +287,25 @@ package body Rose.Interfaces.Search is
    begin
       return (Length + 3) / 4 * 4;
    end Padded;
+
+   ------------------
+   -- Place_Fields --
+   ------------------
+
+   function Place_Fields return System.Storage_Elements.Storage_Array is
+      Result : Storage_Array (1 .. 56);
+      Last   : Storage_Offset := 0;
+   begin
+      Put_Word_32 (Result, Last, 2);
+      Put_String (Result, Last, "file");
+      Put_String (Result, Last, "string");
+      Put_Word_32 (Result, Last, 7);
+      Put_String (Result, Last, "line");
+      Put_String (Result, Last, "natural");
+      Put_Word_32 (Result, Last, 1);
+      Put_String (Result, Last, "");
+      return Result;
+   end Place_Fields;
 
    ----------------
    -- Put_Header --

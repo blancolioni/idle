@@ -31,6 +31,8 @@ package Rose.Interfaces.Listing is
    Stamp_Type_Id     : constant Rose.Objects.Endpoint_Id :=
      16#2842_2EDB_86B9_10F9#;
 
+   function Stamp_Fields return System.Storage_Elements.Storage_Array;
+
    function Encoded_Length
      (Item : Stamp)
       return System.Storage_Elements.Storage_Count;
@@ -53,6 +55,8 @@ package Rose.Interfaces.Listing is
 
    File_Info_Type_Id : constant Rose.Objects.Endpoint_Id :=
      16#3582_BD20_3ADD_A47D#;
+
+   function File_Info_Fields return System.Storage_Elements.Storage_Array;
 
    function Encoded_Length
      (Item : File_Info)

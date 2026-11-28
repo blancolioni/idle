@@ -145,6 +145,39 @@ package body Rose.Interfaces.Catalogue is
            (Ada.Strings.Unbounded.Length (Item.Name)));
    end Encoded_Length;
 
+   -----------------------
+   -- Entry_Info_Fields --
+   -----------------------
+
+   function Entry_Info_Fields return System.Storage_Elements.Storage_Array is
+      Result : Storage_Array (1 .. 268);
+      Last   : Storage_Offset := 0;
+   begin
+      Put_Word_32 (Result, Last, 5);
+      Put_String (Result, Last, "name");
+      Put_String (Result, Last, "string");
+      Put_Word_32 (Result, Last, 7);
+      Put_String (Result, Last, "size");
+      Put_String (Result, Last, "rose.interfaces.core.units.bytes");
+      Put_Word_32 (Result, Last, 2);
+      Put_String (Result, Last, "");
+      Put_String (Result, Last, "age");
+      Put_String (Result, Last, "rose.interfaces.core.units.duration");
+      Put_Word_32 (Result, Last, 2);
+      Put_String (Result, Last, "");
+      Put_String (Result, Last, "of_kind");
+      Put_String (Result, Last, "rose.interfaces.core.units.unit_kind");
+      Put_Word_32 (Result, Last, 6);
+      Put_Word_32 (Result, Last, 2);
+      Put_String (Result, Last, "size");
+      Put_String (Result, Last, "time");
+      Put_String (Result, Last, "start");
+      Put_String (Result, Last, "rose.interfaces.catalogue.offset");
+      Put_Word_32 (Result, Last, 2);
+      Put_String (Result, Last, "");
+      return Result;
+   end Entry_Info_Fields;
+
    ----------------
    -- Get_String --
    ----------------

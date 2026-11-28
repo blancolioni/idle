@@ -16,6 +16,8 @@ package Rose.Interfaces.Finder is
    File_Info_Type_Id : constant Rose.Objects.Endpoint_Id :=
      16#2FCD_0DB2_952B_D641#;
 
+   function File_Info_Fields return System.Storage_Elements.Storage_Array;
+
    function Encoded_Length
      (Item : File_Info)
       return System.Storage_Elements.Storage_Count;
