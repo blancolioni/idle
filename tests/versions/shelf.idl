@@ -1,0 +1,26 @@
+--  Versions of a record (idle#114): two versions of one record, each
+--  named, a record that holds both, and operations on each. The highest
+--  version keeps the record's name, and the earlier one is File_Info_V1.
+
+interface Shelf is
+
+   type File_Info is record
+      Name : String;
+   end record;
+
+   type File_Info is record
+      Name : String;
+      Size : Natural;
+   end record with Version => 2;
+
+   type Bundle is record
+      Old     : File_Info@1;
+      Current : File_Info;
+   end record;
+
+   procedure Put (Info : File_Info@1);
+   function Get (Index : Natural) return File_Info;
+   function Get_Old (Index : Natural) return File_Info@1;
+   function Pack return Bundle;
+
+end Shelf;

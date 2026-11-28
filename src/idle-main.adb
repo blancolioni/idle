@@ -202,6 +202,14 @@ begin
             Put (Idle.Endpoints.Subprogram_Id (Item, Subprogram),
                  Idle.Endpoints.Subprogram_Form (Item, Subprogram));
          end loop;
+
+         --  The type id of each record (idle#114).
+         for Declared of Item.Types loop
+            if Idle.Syntax."=" (Declared.Kind, Idle.Syntax.Record_Type) then
+               Put (Idle.Endpoints.Record_Id (Item, Declared),
+                    Idle.Endpoints.Record_Form (Item, Declared));
+            end if;
+         end loop;
       end List;
 
    begin

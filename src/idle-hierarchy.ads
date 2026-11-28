@@ -89,7 +89,8 @@ package Idle.Hierarchy is
      (Owner     : Idle.Syntax.Interface_Declaration;
       Name      : String;
       Declaring : out Idle.Syntax.Interface_Declaration;
-      Found     : out Idle.Syntax.Type_Declaration)
+      Found     : out Idle.Syntax.Type_Declaration;
+      Version   : Natural := 0)
       return Boolean;
    --  The type Name that a declaration of Owner can name: one that Owner
    --  declares, then one that an ancestor of Owner declares, and then, for
@@ -97,5 +98,16 @@ package Idle.Hierarchy is
    --  Bytes of the interface Core.Units, which is found as a parent is
    --  (idle#115). Declaring is the interface that declares it. False if
    --  there is no such type, which includes a predefined type.
+   --
+   --  An interface can declare several versions of a record (idle#114).
+   --  A Version of zero finds the highest, and any other finds that
+   --  version, which only a record has.
+
+   function Highest_Version
+     (Owner : Idle.Syntax.Interface_Declaration;
+      Name  : String)
+      return Positive;
+   --  The highest version of the record Name that Owner declares, or 1 if
+   --  it declares none.
 
 end Idle.Hierarchy;

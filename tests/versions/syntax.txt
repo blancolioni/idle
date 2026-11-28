@@ -1,0 +1,6 @@
+versions/syntax.idl:6:16: error: an interface has no version: it is only extended, or its operations retired (Rose ADR 0031); only records have versions
+versions/syntax.idl:11:20: error: a version is a whole number from 1
+versions/syntax.idl:15:34: error: aspect Version is given twice
+versions/syntax.idl:17:32: error: a version is a whole number from 1
+versions/syntax.idl:17:48: error: a subprogram has no version; only records have versions
+versions/syntax.idl:18:32: error: missing version after '@' (a whole number from 1)

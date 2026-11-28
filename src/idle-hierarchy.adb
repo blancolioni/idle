@@ -262,7 +262,8 @@ package body Idle.Hierarchy is
      (Owner     : Idle.Syntax.Interface_Declaration;
       Name      : String;
       Declaring : out Idle.Syntax.Interface_Declaration;
-      Found     : out Idle.Syntax.Type_Declaration)
+      Found     : out Idle.Syntax.Type_Declaration;
+      Version   : Natural := 0)
       return Boolean
    is
       function Find_In
@@ -280,17 +281,24 @@ package body Idle.Hierarchy is
          Type_Name   : String)
          return Boolean
       is
+         use type Idle.Syntax.Type_Kind;
+         Result : Boolean := False;
       begin
          for Item of Declaration.Types loop
             if Idle.Names.Key (To_String (Item.Name))
               = Idle.Names.Key (Type_Name)
+              and then
+                (if Version = 0
+                 then not Result or else Item.Version > Found.Version
+                 else Item.Kind = Idle.Syntax.Record_Type
+                      and then Item.Version = Version)
             then
                Declaring := Declaration;
                Found := Item;
-               return True;
+               Result := True;
             end if;
          end loop;
-         return False;
+         return Result;
       end Find_In;
 
       Interface_Name : constant String := Idle.Names.Group_Name (Name);
@@ -312,6 +320,29 @@ package body Idle.Hierarchy is
            and then Find_In (Other, Idle.Names.Simple_Name (Name));
       end if;
    end Find_Type;
+
+   ---------------------
+   -- Highest_Version --
+   ---------------------
+
+   function Highest_Version
+     (Owner : Idle.Syntax.Interface_Declaration;
+      Name  : String)
+      return Positive
+   is
+      use type Idle.Syntax.Type_Kind;
+      Result : Positive := 1;
+   begin
+      for Item of Owner.Types loop
+         if Item.Kind = Idle.Syntax.Record_Type
+           and then Idle.Names.Key (To_String (Item.Name))
+                      = Idle.Names.Key (Name)
+         then
+            Result := Positive'Max (Result, Item.Version);
+         end if;
+      end loop;
+      return Result;
+   end Highest_Version;
 
    -------------
    -- Members --

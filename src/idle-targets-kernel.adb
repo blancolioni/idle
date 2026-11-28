@@ -224,6 +224,38 @@ package body Idle.Targets.Kernel is
                end if;
             end if;
 
+            --  A name is declared once, except that several versions of a
+            --  record are declared in increasing order (idle#114).
+
+            for Earlier_Type of Declaration.Types loop
+               exit when Idle.Syntax."="
+                 (Earlier_Type.Position, Declared_Type.Position);
+               if Idle.Names.Key (To_String (Earlier_Type.Name))
+                 = Idle.Names.Key (To_String (Declared_Type.Name))
+               then
+                  if Earlier_Type.Kind not in Idle.Syntax.Record_Type
+                    or else Declared_Type.Kind
+                              not in Idle.Syntax.Record_Type
+                  then
+                     Error (Declaration.File_Name, Declared_Type.Position,
+                            "type " & To_String (Declared_Type.Name)
+                            & " is declared twice; only a record can be "
+                            & "declared again, as a later version");
+                     exit;
+                  elsif Earlier_Type.Version >= Declared_Type.Version then
+                     Error (Declaration.File_Name, Declared_Type.Position,
+                            "version"
+                            & Positive'Image (Declared_Type.Version)
+                            & " of record "
+                            & To_String (Declared_Type.Name)
+                            & " must be higher than version"
+                            & Positive'Image (Earlier_Type.Version)
+                            & ", declared before it");
+                     exit;
+                  end if;
+               end if;
+            end loop;
+
             Declared.Append (Idle.Names.Key (To_String (Declared_Type.Name)));
          end loop;
       end Check_Declarations;
@@ -307,6 +339,30 @@ package body Idle.Targets.Kernel is
             for Generated_Name of Records.Generated_Names loop
                Add (Generated_Name, "a subprogram of the records' codec");
             end loop;
+
+            --  Each record's type id, and the names of the earlier
+            --  versions of a record (idle#114).
+
+            for Declared_Type of Item.Types loop
+               if Declared_Type.Kind in Idle.Syntax.Record_Type then
+                  declare
+                     Ada_Name : constant String :=
+                       Types.Ada_Type_Name (Item, Declared_Type);
+                     Written  : constant String :=
+                       Idle.Names.Versioned
+                         (To_String (Declared_Type.Name),
+                          Declared_Type.Version);
+                  begin
+                     Add (Ada_Name & "_Type_Id",
+                          "the type id of record " & Written);
+                     if Idle.Names.Key (Ada_Name)
+                       /= Idle.Names.Key (To_String (Declared_Type.Name))
+                     then
+                        Add (Ada_Name, "record " & Written);
+                     end if;
+                  end;
+               end if;
+            end loop;
          end if;
 
          for Declared_Constant of Item.Constants loop
@@ -388,7 +444,9 @@ package body Idle.Targets.Kernel is
                Info      : constant Types.Type_Info :=
                  Types.Resolve (Member.Owner, Parameter.Of_Type);
                Type_Name : constant String :=
-                 To_String (Parameter.Of_Type.Name);
+                 Idle.Names.Versioned
+                   (To_String (Parameter.Of_Type.Name),
+                    Parameter.Of_Type.Version);
             begin
                if Info.Category = Unknown then
                   Error (Member.File_Name, Parameter.Position,
@@ -444,7 +502,9 @@ package body Idle.Targets.Kernel is
                Info      : constant Types.Type_Info :=
                  Types.Resolve (Member.Owner, Subprogram.Result);
                Type_Name : constant String :=
-                 To_String (Subprogram.Result.Name);
+                 Idle.Names.Versioned
+                   (To_String (Subprogram.Result.Name),
+                    Subprogram.Result.Version);
             begin
                case Info.Category is
                   when Unknown =>

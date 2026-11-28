@@ -77,6 +77,14 @@ private package Idle.Targets.Kernel.Types is
    --  has no Ada.Streams, they are other names for the types of
    --  System.Storage_Elements.
 
+   function Ada_Type_Name
+     (Owner : Idle.Syntax.Interface_Declaration;
+      Item  : Idle.Syntax.Type_Declaration)
+      return String;
+   --  The simple Ada name of the type Item, declared by Owner: its name,
+   --  or for a record that is not the highest version Owner declares,
+   --  its name and its version, as File_Info_V1 (idle#114).
+
    function Is_Stream_Array (Info : Type_Info) return Boolean
    is (Info.Category = Storage_Value
        and then To_String (Info.Ada_Name)

@@ -1,0 +1,7 @@
+versions/rules.idl:9:4: error: type Kind is declared twice; only a record can be declared again, as a later version
+versions/rules.idl:15:4: error: version 1 of record Info must be higher than version 2, declared before it
+versions/rules.idl:19:4: error: version 2 of record Info must be higher than version 2, declared before it
+versions/rules.idl:24:7: error: unknown type Info@3
+versions/rules.idl:25:7: error: type Entry_Info@2 is used by record Holder before it is declared
+versions/rules.idl:37:4: error: type Entry_Info_V1 has the same name as record Entry_Info@1, which the interface package declares
+versions/rules.idl:39:19: error: unknown type Kind@1

@@ -27,6 +27,7 @@ package body Idle.Tokens is
          when Tok_Becomes           => return "':='";
          when Tok_Apostrophe        => return "''''";
          when Tok_Ampersand         => return "'&'";
+         when Tok_At                => return "'@'";
       end case;
    end Description;
 

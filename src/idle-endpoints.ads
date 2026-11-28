@@ -42,6 +42,21 @@ package Idle.Endpoints is
    --  parameters and result. Two subprograms with the same name have the
    --  same signature if these are equal.
 
+   function Record_Form
+     (Owner : Idle.Syntax.Interface_Declaration;
+      Item  : Idle.Syntax.Type_Declaration)
+      return String;
+   --  The canonical form of the record Item, declared by Owner, with its
+   --  version: record rose.interfaces.core.file_info@2 (idle#114). A
+   --  record named as a type has the same form without "record".
+
+   function Record_Id
+     (Owner : Idle.Syntax.Interface_Declaration;
+      Item  : Idle.Syntax.Type_Declaration)
+      return Endpoint_Id;
+   --  The type id of the record Item, declared by Owner, which a typed
+   --  stream gives for its elements (Rose ADR 0013).
+
    function Hash (Form : String) return Endpoint_Id;
    --  The id derived from the canonical form Form.
 

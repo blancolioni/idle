@@ -1,12 +1,12 @@
---  Record syntax that is wrong (idle#113): aspects, which wait for
---  versions (idle#114), a record with no fields, and a record that isn't
+--  Record syntax that is wrong (idle#113): an aspect other than Version,
+--  a record with no fields, and a record that isn't
 --  closed with "end record".
 
 interface Records is
 
    type Versioned is record
       Name : String;
-   end record with Version => 2;
+   end record with Colour => Blue;
 
    type Empty is record
    end record;
