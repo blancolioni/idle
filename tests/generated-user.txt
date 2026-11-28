@@ -35,3 +35,6 @@ rose/transactional_writable_file
 rose/reader
 records/listing
 records/shelf
+views/finder
+views/search
+views/editor

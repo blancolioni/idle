@@ -1,0 +1,11 @@
+--  A view, which the kernel target has no records for (idle#117).
+
+interface Views is
+
+   view Finder.File_Info as Editor.Location is
+      Path => Name;
+   end view;
+
+   procedure Ping;
+
+end Views;

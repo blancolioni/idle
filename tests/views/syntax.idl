@@ -1,0 +1,26 @@
+--  Views written wrongly (idle#117).
+
+interface Syntax is
+
+   view A.B of C as D is
+      X => Y;
+   end view;
+
+   view C as D is
+      others => <>,
+      X      => Y;
+   end view;
+
+   view C as D is
+      others => <>,
+      others => <>;
+   end view;
+
+   view C as D is
+   end view;
+
+   view C D is
+      X => Y;
+   end view;
+
+end Syntax;

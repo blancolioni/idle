@@ -1,3 +1,4 @@
+with Ada.Strings.Fixed;
 with Ada.Strings.Unbounded;
 
 with Syn.Units;
@@ -58,6 +59,49 @@ package body Idle.Targets.Kernel.Records is
    --  The position of the last field of Item, a record of Owner, that has
    --  no default: the fewest fields that a decoded record can have.
 
+   procedure Check_Constant
+     (Owner     : Idle.Syntax.Interface_Declaration;
+      Of_Type   : Idle.Syntax.Type_Reference;
+      Value     : Idle.Syntax.Aspect_Value;
+      Subject   : String;
+      File_Name : Unbounded_String;
+      OK        : in out Boolean);
+   --  Report Value, a constant given for a field of the type Of_Type, named
+   --  in Owner, if it isn't a value of the type, as Subject, such as "the
+   --  default of field Size", in File_Name. The type is not a record.
+
+   function Constant_Node
+     (F           : in out Syn.Factory.Factory;
+      Type_Owner  : Idle.Syntax.Interface_Declaration;
+      Of_Type     : Idle.Syntax.Type_Reference;
+      Value       : Idle.Syntax.Aspect_Value;
+      Local_Owner : Idle.Syntax.Interface_Declaration)
+      return not null Syn.Node_Access;
+   --  Value, a constant of the type Of_Type named in Type_Owner, as an Ada
+   --  expression in the package of Local_Owner. Check_Constant has
+   --  checked it.
+
+   function Resolve_Path
+     (Owner      : Idle.Syntax.Interface_Declaration;
+      Item       : Idle.Syntax.Type_Declaration;
+      Path       : String;
+      Path_Owner : out Idle.Syntax.Interface_Declaration;
+      Field      : out Idle.Syntax.Field)
+      return Boolean;
+   --  The field that Path names in Item, a record of Owner: a field of
+   --  Item, or a path through its fields of record type, as Where.Path.
+   --  Path_Owner is the interface that declares the record that has the
+   --  field. False if there is no such field.
+
+   function View_Body
+     (F         : in out Syn.Factory.Factory;
+      Owner     : Idle.Syntax.Interface_Declaration;
+      Item      : Idle.Syntax.View_Declaration;
+      Uses_Text : in out Boolean)
+      return not null Syn.Node_Access;
+   --  The body of the function of Item, a view of Owner. Set Uses_Text if
+   --  it names Ada.Strings.Unbounded.
+
    function Codec_Name
      (Owner : Idle.Syntax.Interface_Declaration;
       Info  : Types.Type_Info;
@@ -96,6 +140,116 @@ package body Idle.Targets.Kernel.Records is
      (Owner : Idle.Syntax.Interface_Declaration)
       return Helper_Use;
 
+   --------------------
+   -- Check_Constant --
+   --------------------
+
+   procedure Check_Constant
+     (Owner     : Idle.Syntax.Interface_Declaration;
+      Of_Type   : Idle.Syntax.Type_Reference;
+      Value     : Idle.Syntax.Aspect_Value;
+      Subject   : String;
+      File_Name : Unbounded_String;
+      OK        : in out Boolean)
+   is
+      use all type Types.Category;
+      use all type Types.Encoding;
+      use all type Idle.Syntax.Value_Kind;
+
+      Info      : constant Types.Type_Info :=
+        Types.Resolve (Owner, Of_Type, User => True);
+      Type_Name : constant String := To_String (Of_Type.Name);
+      Text      : constant String := To_String (Value.Text);
+      Declaring : Idle.Syntax.Interface_Declaration;
+      Found     : Idle.Syntax.Type_Declaration;
+      Is_Found  : constant Boolean :=
+        Idle.Hierarchy.Find_Type (Owner, Type_Name, Declaring, Found);
+
+      function Bound
+        (Text   : Unbounded_String;
+         Result : out Long_Long_Long_Integer)
+         return Boolean
+      is (Idle.Literals.Value (To_String (Text), Result, 2 ** 64 - 1));
+      --  The value of a range type's bound, if it is a literal.
+
+      procedure Check_Number;
+      --  Check a whole number against Info and Found.
+
+      procedure Error (Message : String);
+
+      ------------------
+      -- Check_Number --
+      ------------------
+
+      procedure Check_Number is
+         Signed  : constant Boolean := Info.Encoding = Types.Signed;
+         Largest : constant Long_Long_Long_Integer :=
+           (if Info.Category = Word_Value
+            then (if Signed then 2 ** 31 - 1 else 2 ** 32 - 1)
+            else (if Signed then 2 ** 63 - 1 else 2 ** 64 - 1));
+         Number  : Long_Long_Long_Integer;
+         Low     : Long_Long_Long_Integer;
+         High    : Long_Long_Long_Integer;
+      begin
+         if Value.Kind /= Integer_Value then
+            Error (" must be a whole number");
+         elsif not Idle.Literals.Value (Text, Number, Largest) then
+            Error (" is too large for " & Type_Name);
+         elsif (Is_Found
+                and then Idle.Syntax."=" (Found.Kind, Idle.Syntax.Range_Type)
+                and then Bound (Found.Low, Low)
+                and then Bound (Found.High, High)
+                and then Number not in Low .. High)
+           or else (Idle.Names.Key (Type_Name) = "positive"
+                    and then Number = 0)
+         then
+            Error (" is outside the range of " & Type_Name);
+         end if;
+      end Check_Number;
+
+      -----------
+      -- Error --
+      -----------
+
+      procedure Error (Message : String) is
+      begin
+         Idle.Diagnostics.Error
+           (To_String (File_Name), Value.Position.Line,
+            Value.Position.Column, Subject & Message);
+         OK := False;
+      end Error;
+
+   begin
+      case Info.Category is
+         when String_Value =>
+            if Value.Kind /= String_Value then
+               Error (" must be a string");
+            end if;
+         when Word_Value | Double_Word_Value =>
+            case Info.Encoding is
+               when Boolean_Word =>
+                  if Value.Kind /= Name_Value
+                    or else Idle.Names.Key (Text) not in "true" | "false"
+                  then
+                     Error (" must be True or False");
+                  end if;
+               when Enumeration =>
+                  if Value.Kind /= Name_Value
+                    or else not Is_Found
+                    or else not (for some Literal of Found.Literals =>
+                                   Idle.Names.Key (Literal)
+                                   = Idle.Names.Key (Text))
+                  then
+                     Error (" must be a literal of " & Type_Name);
+                  end if;
+               when others =>
+                  Check_Number;
+            end case;
+         when others =>
+            null;
+      end case;
+   end Check_Constant;
+
    ------------------
    -- Check_Fields --
    ------------------
@@ -129,105 +283,18 @@ package body Idle.Targets.Kernel.Records is
         (Field : Idle.Syntax.Field;
          Info  : Types.Type_Info)
       is
-         use all type Idle.Syntax.Value_Kind;
-
-         Name      : constant String := To_String (Field.Name);
-         Type_Name : constant String := To_String (Field.Of_Type.Name);
-         Value     : constant Idle.Syntax.Aspect_Value := Field.Default;
-         Text      : constant String := To_String (Value.Text);
-         Declaring : Idle.Syntax.Interface_Declaration;
-         Found     : Idle.Syntax.Type_Declaration;
-         Is_Found  : constant Boolean :=
-           Idle.Hierarchy.Find_Type
-             (Declaration, Type_Name, Declaring, Found);
-
-         function Bound
-           (Text   : Unbounded_String;
-            Result : out Long_Long_Long_Integer)
-            return Boolean
-         is (Idle.Literals.Value (To_String (Text), Result, 2 ** 64 - 1));
-         --  The value of a range type's bound, if it is a literal.
-
-         procedure Check_Number;
-         --  Check a whole number against Info and Found.
-
-         ------------------
-         -- Check_Number --
-         ------------------
-
-         procedure Check_Number is
-            Signed  : constant Boolean := Info.Encoding = Types.Signed;
-            Largest : constant Long_Long_Long_Integer :=
-              (if Info.Category = Word_Value
-               then (if Signed then 2 ** 31 - 1 else 2 ** 32 - 1)
-               else (if Signed then 2 ** 63 - 1 else 2 ** 64 - 1));
-            Number  : Long_Long_Long_Integer;
-            Low     : Long_Long_Long_Integer;
-            High    : Long_Long_Long_Integer;
-         begin
-            if Value.Kind /= Integer_Value then
-               Error (Value.Position,
-                      "the default of field " & Name
-                      & " must be a whole number");
-            elsif not Idle.Literals.Value (Text, Number, Largest) then
-               Error (Value.Position,
-                      "the default of field " & Name & " is too large for "
-                      & Type_Name);
-            elsif (Is_Found
-                   and then Idle.Syntax."=" (Found.Kind,
-                                             Idle.Syntax.Range_Type)
-                   and then Bound (Found.Low, Low)
-                   and then Bound (Found.High, High)
-                   and then Number not in Low .. High)
-              or else (Idle.Names.Key (Type_Name) = "positive"
-                       and then Number = 0)
-            then
-               Error (Value.Position,
-                      "the default of field " & Name
-                      & " is outside the range of " & Type_Name);
-            end if;
-         end Check_Number;
-
       begin
-         case Info.Category is
-            when Record_Value =>
-               Error (Value.Position,
-                      "field " & Name & " is a record, which takes no "
-                      & "default: it has one when each field of "
-                      & Type_Name & " has one");
-            when String_Value =>
-               if Value.Kind /= String_Value then
-                  Error (Value.Position,
-                         "the default of field " & Name
-                         & " must be a string");
-               end if;
-            when Word_Value | Double_Word_Value =>
-               case Info.Encoding is
-                  when Boolean_Word =>
-                     if Value.Kind /= Name_Value
-                       or else Idle.Names.Key (Text) not in "true" | "false"
-                     then
-                        Error (Value.Position,
-                               "the default of field " & Name
-                               & " must be True or False");
-                     end if;
-                  when Enumeration =>
-                     if Value.Kind /= Name_Value
-                       or else not Is_Found
-                       or else not (for some Literal of Found.Literals =>
-                                      Idle.Names.Key (Literal)
-                                      = Idle.Names.Key (Text))
-                     then
-                        Error (Value.Position,
-                               "the default of field " & Name
-                               & " must be a literal of " & Type_Name);
-                     end if;
-                  when others =>
-                     Check_Number;
-               end case;
-            when others =>
-               null;
-         end case;
+         if Info.Category = Record_Value then
+            Error (Field.Default.Position,
+                   "field " & To_String (Field.Name) & " is a record, which "
+                   & "takes no default: it has one when each field of "
+                   & To_String (Field.Of_Type.Name) & " has one");
+         else
+            Check_Constant
+              (Declaration, Field.Of_Type, Field.Default,
+               "the default of field " & To_String (Field.Name),
+               Declaration.File_Name, OK);
+         end if;
       end Check_Default;
 
       -----------
@@ -307,6 +374,235 @@ package body Idle.Targets.Kernel.Records is
       end loop;
    end Check_Fields;
 
+   -----------------
+   -- Check_Views --
+   -----------------
+
+   procedure Check_Views
+     (Declaration : Idle.Syntax.Interface_Declaration;
+      Is_Kernel   : Boolean;
+      OK          : in out Boolean)
+   is
+      use type Idle.Syntax.Value_Kind;
+
+      Seen : Idle.Syntax.String_Vectors.Vector;
+      --  The views checked, by view name, source and target.
+
+      procedure Error
+        (Position : Idle.Syntax.Source_Position;
+         Message  : String);
+
+      function Find_Record
+        (Reference : Idle.Syntax.Type_Reference;
+         Owner     : out Idle.Syntax.Interface_Declaration;
+         Item      : out Idle.Syntax.Type_Declaration)
+         return Boolean
+      is (not Reference.Is_Interface
+          and then Idle.Hierarchy.Find_Type
+                     (Declaration, To_String (Reference.Name), Owner, Item)
+          and then Idle.Syntax."=" (Item.Kind, Idle.Syntax.Record_Type));
+
+      function Field_Index
+        (Item : Idle.Syntax.Type_Declaration;
+         Name : String)
+         return Natural;
+      --  The position of the field Name of Item, or zero.
+
+      -----------
+      -- Error --
+      -----------
+
+      procedure Error
+        (Position : Idle.Syntax.Source_Position;
+         Message  : String)
+      is
+      begin
+         Idle.Diagnostics.Error
+           (To_String (Declaration.File_Name), Position.Line,
+            Position.Column, Message);
+         OK := False;
+      end Error;
+
+      -----------------
+      -- Field_Index --
+      -----------------
+
+      function Field_Index
+        (Item : Idle.Syntax.Type_Declaration;
+         Name : String)
+         return Natural
+      is
+      begin
+         for Index in 1 .. Item.Fields.Last_Index loop
+            if Idle.Names.Key (To_String (Item.Fields (Index).Name))
+              = Idle.Names.Key (Name)
+            then
+               return Index;
+            end if;
+         end loop;
+         return 0;
+      end Field_Index;
+
+   begin
+      for View of Declaration.Views loop
+         declare
+            S            : constant String := To_String (View.Source.Name);
+            T            : constant String := To_String (View.Target.Name);
+            Name         : constant String := To_String (View.Name);
+            Source_Owner : Idle.Syntax.Interface_Declaration;
+            Target_Owner : Idle.Syntax.Interface_Declaration;
+            Source       : Idle.Syntax.Type_Declaration;
+            Target       : Idle.Syntax.Type_Declaration;
+            Given        : Idle.Syntax.String_Vectors.Vector;
+         begin
+            if Is_Kernel then
+               Error (View.Position,
+                      "view of " & S & " as " & T & " needs the user or "
+                      & "host target: the kernel target has no records");
+            elsif not Find_Record (View.Source, Source_Owner, Source) then
+               Error (View.Position, "unknown record " & S);
+            elsif not Find_Record (View.Target, Target_Owner, Target) then
+               Error (View.Position, "unknown record " & T);
+            elsif Idle.Endpoints.Record_Form (Source_Owner, Source)
+              = Idle.Endpoints.Record_Form (Target_Owner, Target)
+            then
+               Error (View.Position,
+                      "a view of " & S & " as itself: a record needs no "
+                      & "view of itself");
+            else
+               declare
+                  Key : constant String :=
+                    Idle.Names.Key (Name) & " "
+                    & Idle.Endpoints.Record_Form (Source_Owner, Source)
+                    & " as "
+                    & Idle.Endpoints.Record_Form (Target_Owner, Target);
+               begin
+                  if Seen.Contains (Key) then
+                     Error (View.Position,
+                            (if Name = "" then "the view" else "view " & Name)
+                            & " of " & S & " as " & T
+                            & " is declared twice");
+                  end if;
+                  Seen.Append (Key);
+               end;
+
+               for Field of View.Fields loop
+                  declare
+                     Field_Name : constant String := To_String (Field.Target);
+                     Index      : constant Natural :=
+                       Field_Index (Target, Field_Name);
+                     Path       : constant String :=
+                       To_String (Field.Value.Text);
+                     Path_Owner : Idle.Syntax.Interface_Declaration;
+                     Path_Field : Idle.Syntax.Field;
+                  begin
+                     if Index = 0 then
+                        Error (Field.Position,
+                               "record " & T & " has no field " & Field_Name);
+                     elsif Given.Contains (Idle.Names.Key (Field_Name)) then
+                        Error (Field.Position,
+                               "field " & Field_Name & " is given twice");
+                     else
+                        Given.Append (Idle.Names.Key (Field_Name));
+                        declare
+                           Target_Field : constant Idle.Syntax.Field :=
+                             Target.Fields (Index);
+                           Is_Record    : constant Boolean :=
+                             Types."="
+                               (Field_Info (Target_Owner, Target_Field)
+                                  .Category,
+                                Types.Record_Value);
+                        begin
+                           if Field.Value.Kind = Idle.Syntax.Name_Value
+                             and then Resolve_Path
+                                        (Source_Owner, Source, Path,
+                                         Path_Owner, Path_Field)
+                           then
+                              if Idle.Endpoints.Type_Form
+                                   (Path_Owner, Path_Field.Of_Type)
+                                /= Idle.Endpoints.Type_Form
+                                     (Target_Owner, Target_Field.Of_Type)
+                              then
+                                 Error (Field.Value.Position,
+                                        "field " & Field_Name & " of " & T
+                                        & " is "
+                                        & To_String
+                                            (Target_Field.Of_Type.Name)
+                                        & ", and " & Path & " of " & S
+                                        & " is "
+                                        & To_String
+                                            (Path_Field.Of_Type.Name));
+                              end if;
+                           elsif Field.Value.Kind = Idle.Syntax.Name_Value
+                             and then (Is_Record
+                                       or else Ada.Strings.Fixed.Index
+                                                 (Path, ".") > 0)
+                           then
+                              Error (Field.Value.Position,
+                                     "record " & S & " has no field "
+                                     & Path);
+                           elsif Is_Record then
+                              Error (Field.Value.Position,
+                                     "field " & Field_Name & " of " & T
+                                     & " is a record: give it a field of "
+                                     & S);
+                           else
+                              Check_Constant
+                                (Target_Owner, Target_Field.Of_Type,
+                                 Field.Value,
+                                 "the value of field " & Field_Name,
+                                 Declaration.File_Name, OK);
+                           end if;
+                        end;
+                     end if;
+                  end;
+               end loop;
+
+               --  The target's other fields: by name from the source, for
+               --  others => <>, or by default.
+
+               for Target_Field of Target.Fields loop
+                  declare
+                     Field_Name : constant String :=
+                       To_String (Target_Field.Name);
+                     Index      : constant Natural :=
+                       (if View.Others_Box
+                        then Field_Index (Source, Field_Name)
+                        else 0);
+                  begin
+                     if Given.Contains (Idle.Names.Key (Field_Name)) then
+                        null;
+                     elsif Index > 0 then
+                        if Idle.Endpoints.Type_Form
+                             (Source_Owner, Source.Fields (Index).Of_Type)
+                          /= Idle.Endpoints.Type_Form
+                               (Target_Owner, Target_Field.Of_Type)
+                        then
+                           Error (View.Position,
+                                  "field " & Field_Name & " of " & T & " is "
+                                  & To_String (Target_Field.Of_Type.Name)
+                                  & ", and of " & S & " is "
+                                  & To_String
+                                      (Source.Fields (Index).Of_Type.Name)
+                                  & ": give it in the view");
+                        end if;
+                     elsif not Idle.Hierarchy.Has_Default
+                                 (Target_Owner, Target_Field)
+                     then
+                        Error (View.Position,
+                               "field " & Field_Name & " of " & T
+                               & (if View.Others_Box
+                                  then " has no field of that name in " & S
+                                  else " is not given")
+                               & ", and has no default");
+                     end if;
+                  end;
+               end loop;
+            end if;
+         end;
+      end loop;
+   end Check_Views;
+
    ------------------------
    -- Codec_Declarations --
    ------------------------
@@ -349,24 +645,23 @@ package body Idle.Targets.Kernel.Records is
       return Result.To_Array;
    end Codec_Declarations;
 
-   ------------------
-   -- Default_Node --
-   ------------------
+   -------------------
+   -- Constant_Node --
+   -------------------
 
-   function Default_Node
-     (F     : in out Syn.Factory.Factory;
-      Owner : Idle.Syntax.Interface_Declaration;
-      Item  : Idle.Syntax.Field)
-      return Syn.Node_Access
+   function Constant_Node
+     (F           : in out Syn.Factory.Factory;
+      Type_Owner  : Idle.Syntax.Interface_Declaration;
+      Of_Type     : Idle.Syntax.Type_Reference;
+      Value       : Idle.Syntax.Aspect_Value;
+      Local_Owner : Idle.Syntax.Interface_Declaration)
+      return not null Syn.Node_Access
    is
-      Info  : constant Types.Type_Info := Field_Info (Owner, Item);
-      Text  : constant String := To_String (Item.Default.Text);
-      Value : Long_Long_Long_Integer;
+      Info   : constant Types.Type_Info :=
+        Types.Resolve (Type_Owner, Of_Type, User => True);
+      Text   : constant String := To_String (Value.Text);
+      Number : Long_Long_Long_Integer;
    begin
-      if not Item.Has_Default then
-         return null;
-      end if;
-
       case Info.Category is
          when Types.String_Value =>
             return F.New_Call
@@ -381,16 +676,33 @@ package body Idle.Targets.Kernel.Records is
                when Types.Enumeration =>
                   return F.New_Name
                     (Local_Name
-                       (Owner,
+                       (Local_Owner,
                         To_String (Info.Unit) & "."
                         & Idle.Names.Ada_Name (Text)));
                when others =>
-                  if not Idle.Literals.Value (Text, Value, 2 ** 64 - 1) then
+                  if not Idle.Literals.Value (Text, Number, 2 ** 64 - 1) then
                      raise Program_Error;
                   end if;
-                  return F.New_Integer_Literal (Value);
+                  return F.New_Integer_Literal (Number);
             end case;
       end case;
+   end Constant_Node;
+
+   ------------------
+   -- Default_Node --
+   ------------------
+
+   function Default_Node
+     (F     : in out Syn.Factory.Factory;
+      Owner : Idle.Syntax.Interface_Declaration;
+      Item  : Idle.Syntax.Field)
+      return Syn.Node_Access
+   is
+   begin
+      if not Item.Has_Default then
+         return null;
+      end if;
+      return Constant_Node (F, Owner, Item.Of_Type, Item.Default, Owner);
    end Default_Node;
 
    ------------------
@@ -433,7 +745,7 @@ package body Idle.Targets.Kernel.Records is
       end loop;
 
       --  Every record's header is a word (idle#114).
-      Result.Word_32 := True;
+      Result.Word_32 := Has_Records (Owner);
       return Result;
    end Helpers_Used;
 
@@ -475,6 +787,49 @@ package body Idle.Targets.Kernel.Records is
       end loop;
       return Result;
    end Required_Fields;
+
+   ------------------
+   -- Resolve_Path --
+   ------------------
+
+   function Resolve_Path
+     (Owner      : Idle.Syntax.Interface_Declaration;
+      Item       : Idle.Syntax.Type_Declaration;
+      Path       : String;
+      Path_Owner : out Idle.Syntax.Interface_Declaration;
+      Field      : out Idle.Syntax.Field)
+      return Boolean
+   is
+      Dot  : constant Natural := Ada.Strings.Fixed.Index (Path, ".");
+      Head : constant String :=
+        (if Dot = 0 then Path else Path (Path'First .. Dot - 1));
+   begin
+      for Candidate of Item.Fields loop
+         if Idle.Names.Key (To_String (Candidate.Name))
+           = Idle.Names.Key (Head)
+         then
+            if Dot = 0 then
+               Path_Owner := Owner;
+               Field := Candidate;
+               return True;
+            end if;
+
+            declare
+               Next_Owner : Idle.Syntax.Interface_Declaration;
+               Next       : Idle.Syntax.Type_Declaration;
+            begin
+               return Idle.Hierarchy.Find_Type
+                        (Owner, To_String (Candidate.Of_Type.Name),
+                         Next_Owner, Next)
+                 and then Idle.Syntax."=" (Next.Kind, Idle.Syntax.Record_Type)
+                 and then Resolve_Path
+                            (Next_Owner, Next, Path (Dot + 1 .. Path'Last),
+                             Path_Owner, Field);
+            end;
+         end if;
+      end loop;
+      return False;
+   end Resolve_Path;
 
    -----------
    -- Specs --
@@ -566,6 +921,211 @@ package body Idle.Targets.Kernel.Records is
       return F.New_Record_Type
         (Idle.Names.Ada_Name (To_String (Item.Name)), Components.To_Array);
    end Type_Node;
+
+   ---------------
+   -- View_Body --
+   ---------------
+
+   function View_Body
+     (F         : in out Syn.Factory.Factory;
+      Owner     : Idle.Syntax.Interface_Declaration;
+      Item      : Idle.Syntax.View_Declaration;
+      Uses_Text : in out Boolean)
+      return not null Syn.Node_Access
+   is
+      use type Idle.Syntax.Value_Kind;
+
+      Source_Owner : Idle.Syntax.Interface_Declaration;
+      Target_Owner : Idle.Syntax.Interface_Declaration;
+      Source       : Idle.Syntax.Type_Declaration;
+      Target       : Idle.Syntax.Type_Declaration;
+      Target_Info  : constant Types.Type_Info :=
+        Types.Resolve (Owner, Item.Target, User => True);
+      Assignments  : Node_List;
+      Reads_Item   : Boolean := False;
+
+      function Item_Path (Path : String) return String;
+      --  Path, a path of fields as written, as an Ada name in Item.
+
+      ---------------
+      -- Item_Path --
+      ---------------
+
+      function Item_Path (Path : String) return String is
+         Result : Unbounded_String := To_Unbounded_String ("Item");
+         Start  : Positive := Path'First;
+      begin
+         for Index in Path'Range loop
+            if Path (Index) = '.' then
+               Append (Result,
+                       "." & Idle.Names.Ada_Name (Path (Start .. Index - 1)));
+               Start := Index + 1;
+            end if;
+         end loop;
+         Append (Result,
+                 "." & Idle.Names.Ada_Name (Path (Start .. Path'Last)));
+         return To_String (Result);
+      end Item_Path;
+
+   begin
+      if not Idle.Hierarchy.Find_Type
+               (Owner, To_String (Item.Source.Name), Source_Owner, Source)
+        or else not Idle.Hierarchy.Find_Type
+                      (Owner, To_String (Item.Target.Name), Target_Owner,
+                       Target)
+      then
+         raise Program_Error;
+      end if;
+
+      for Target_Field of Target.Fields loop
+         declare
+            Key        : constant String :=
+              Idle.Names.Key (To_String (Target_Field.Name));
+            Component  : constant String :=
+              "Result." & Idle.Names.Ada_Name (To_String (Target_Field.Name));
+            Value      : Syn.Node_Access := null;
+            Path_Owner : Idle.Syntax.Interface_Declaration;
+            Path_Field : Idle.Syntax.Field;
+         begin
+            for Given of Item.Fields loop
+               if Idle.Names.Key (To_String (Given.Target)) = Key then
+                  if Given.Value.Kind = Idle.Syntax.Name_Value
+                    and then Resolve_Path
+                               (Source_Owner, Source,
+                                To_String (Given.Value.Text),
+                                Path_Owner, Path_Field)
+                  then
+                     Value :=
+                       F.New_Name (Item_Path (To_String (Given.Value.Text)));
+                     Reads_Item := True;
+                  else
+                     Value := Constant_Node
+                       (F, Target_Owner, Target_Field.Of_Type, Given.Value,
+                        Owner);
+                     if Types."="
+                          (Field_Info (Target_Owner, Target_Field).Category,
+                           Types.String_Value)
+                     then
+                        Uses_Text := True;
+                     end if;
+                  end if;
+               end if;
+            end loop;
+
+            if Value = null
+              and then Item.Others_Box
+              and then Resolve_Path
+                         (Source_Owner, Source,
+                          To_String (Target_Field.Name),
+                          Path_Owner, Path_Field)
+            then
+               Value := F.New_Name
+                 (Item_Path (To_String (Target_Field.Name)));
+               Reads_Item := True;
+            end if;
+
+            --  Any other field keeps its default.
+
+            if Value /= null then
+               Assignments.Append (F.New_Assignment (F.New_Name (Component),
+                                                     Value));
+            end if;
+         end;
+      end loop;
+
+      declare
+         Specification : constant not null Syn.Node_Access :=
+           F.New_Function
+             (View_Function_Name (Item),
+              F.New_Name
+                (Local_Name (Owner, To_String (Target_Info.Ada_Name))),
+              [F.New_Parameter
+                 ("Item",
+                  F.New_Name
+                    (Local_Name
+                       (Owner,
+                        To_String
+                          (Types.Resolve (Owner, Item.Source, User => True)
+                             .Ada_Name))))]);
+         Unreferenced  : constant Syn.Node_Array :=
+           (if Reads_Item then Syn.No_Nodes
+            else [F.New_Raw ("pragma Unreferenced (Item);")]);
+      begin
+         if Assignments.To_Array'Length = 0 then
+            return F.New_Subprogram_Body
+              (Specification => Specification,
+               Declarations  => Unreferenced,
+               Statements    => [F.New_Return (F.New_Raw ("(others => <>)"))]);
+         else
+            return F.New_Subprogram_Body
+              (Specification => Specification,
+               Declarations  =>
+                 Unreferenced
+                 & [F.New_Object
+                      ("Result",
+                       F.New_Name
+                         (Local_Name
+                            (Owner, To_String (Target_Info.Ada_Name))))],
+               Statements    =>
+                 Assignments.To_Array
+                 & [F.New_Return (F.New_Name ("Result"))]);
+         end if;
+      end;
+   end View_Body;
+
+   -----------------------
+   -- View_Declarations --
+   -----------------------
+
+   function View_Declarations
+     (F       : in out Syn.Factory.Factory;
+      Owner   : Idle.Syntax.Interface_Declaration;
+      Context : in out Support.Context_List)
+      return Syn.Node_Array
+   is
+      Result : Node_List;
+   begin
+      for Item of Owner.Views loop
+         declare
+            Source : constant Types.Type_Info :=
+              Types.Resolve (Owner, Item.Source, User => True);
+            Target : constant Types.Type_Info :=
+              Types.Resolve (Owner, Item.Target, User => True);
+         begin
+            if To_String (Source.Unit) /= Package_Name (Owner) then
+               Context.Add (To_String (Source.Unit));
+            end if;
+            if To_String (Target.Unit) /= Package_Name (Owner) then
+               Context.Add (To_String (Target.Unit));
+            end if;
+            Result.Append
+              (F.New_Function
+                 (View_Function_Name (Item),
+                  F.New_Name (Local_Name (Owner, To_String (Target.Ada_Name))),
+                  [F.New_Parameter
+                     ("Item",
+                      F.New_Name
+                        (Local_Name (Owner, To_String (Source.Ada_Name))))]));
+         end;
+      end loop;
+      return Result.To_Array;
+   end View_Declarations;
+
+   ------------------------
+   -- View_Function_Name --
+   ------------------------
+
+   function View_Function_Name
+     (Item : Idle.Syntax.View_Declaration)
+      return String
+   is
+      Name : constant String := To_String (Item.Name);
+   begin
+      return "To_"
+        & Idle.Names.Ada_Name
+            (Idle.Names.Simple_Name (To_String (Item.Target.Name)))
+        & (if Name = "" then "" else "_" & Idle.Names.Ada_Name (Name));
+   end View_Function_Name;
 
    ----------------
    -- Write_Body --
@@ -1036,6 +1596,10 @@ package body Idle.Targets.Kernel.Records is
          --  A record's header: its length in the low 24 bits, and its
          --  number of fields in the high 8 (idle#114).
 
+         if not Has_Records (Owner) then
+            return;
+         end if;
+
          Add_Helper
            (F.New_Procedure
               ("Put_Header",
@@ -1262,7 +1826,9 @@ package body Idle.Targets.Kernel.Records is
          end if;
          Uses.Append (F.New_Use ("Standard.Interfaces"));
       end if;
-      Uses.Append (F.New_Use (Storage));
+      if Has_Records (Owner) then
+         Uses.Append (F.New_Use (Storage));
+      end if;
 
       Add_Helpers;
       for Item of Owner.Types loop
@@ -1270,6 +1836,20 @@ package body Idle.Targets.Kernel.Records is
             Add_Codec (Item);
          end if;
       end loop;
+
+      --  The views' functions (idle#117).
+
+      declare
+         Uses_Text : Boolean := False;
+      begin
+         for Item of Owner.Views loop
+            Add_Body (View_Function_Name (Item),
+                      View_Body (F, Owner, Item, Uses_Text));
+         end loop;
+         if Uses_Text and then not Spec_Context.Contains (Unbounded) then
+            Context.Add (Unbounded);
+         end if;
+      end;
 
       Syn.Units.Write
         (F.New_Compilation_Unit

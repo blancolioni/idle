@@ -1,0 +1,11 @@
+--  A second default view of Views_A's Point as Spot (idle#117).
+
+interface Views_B is
+
+   view Views_A.Point as Views_A.Spot is
+      X => X;
+   end view;
+
+   procedure Ping;
+
+end Views_B;

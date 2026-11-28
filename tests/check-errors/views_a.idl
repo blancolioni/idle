@@ -1,0 +1,20 @@
+--  The default view of Point as Spot, which Views_B also declares
+--  (idle#117).
+
+interface Views_A is
+
+   type Point is record
+      X : Natural;
+   end record;
+
+   type Spot is record
+      X : Natural;
+   end record;
+
+   view Point as Spot is
+      X => X;
+   end view;
+
+   procedure Ping;
+
+end Views_A;

@@ -151,6 +151,44 @@ package Idle.Syntax is
    package Argument_Vectors is
      new Ada.Containers.Vectors (Positive, Argument);
 
+   type View_Field is record
+      Target   : Unbounded_String;
+      Value    : Aspect_Value;
+      --  A field of the source, or a path into its records, such as
+      --  Where.Path, which is a name; or a constant.
+      Position : Source_Position;
+   end record;
+   --  Target => Value, in a view.
+
+   package View_Field_Vectors is
+     new Ada.Containers.Vectors (Positive, View_Field);
+
+   type View_Declaration is record
+      Name       : Unbounded_String;
+      --  The name of a named view, or "" for the default view of its
+      --  source as its target.
+      Source     : Type_Reference;
+      Target     : Type_Reference;
+      Fields     : View_Field_Vectors.Vector;
+      Others_Box : Boolean := False;
+      --  True for "others => <>": each target field not given takes the
+      --  source's field of the same name and type, or its default.
+      Position   : Source_Position;
+   end record;
+   --  How a record becomes another (idle#117, Rose ADR 0048):
+   --
+   --    view Grep.Grep_Match as Location is
+   --       Path   => File,
+   --       others => <>;
+   --    end view;
+   --
+   --    view Created of Files.File_Info as Dated is
+   --       At => Created;
+   --    end view;
+
+   package View_Vectors is
+     new Ada.Containers.Vectors (Positive, View_Declaration);
+
    type Interface_Declaration is record
       Kind        : Unit_Kind := Interface_Unit;
       Name        : Unbounded_String;
@@ -159,6 +197,7 @@ package Idle.Syntax is
       Constants   : Constant_Vectors.Vector;
       Types       : Type_Vectors.Vector;
       Subprograms : Subprogram_Vectors.Vector;
+      Views       : View_Vectors.Vector;
       Aspects     : Aspect_Vectors.Vector;
       Arguments   : Argument_Vectors.Vector;
       Pinned_Id   : Long_Long_Long_Integer := 0;
@@ -168,7 +207,7 @@ package Idle.Syntax is
    --  The unit an IDL file declares, which despite the name can be any
    --  Kind of unit:
    --
-   --    an interface   Parents, Constants, Types and Subprograms
+   --    an interface   Parents, Constants, Types, Subprograms and Views
    --    a command      Parents are its roles, Aspects and Arguments
    --    a package      Aspects
    --    a role         Parents are its parent roles, Arguments its members

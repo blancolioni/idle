@@ -1,0 +1,5 @@
+views/syntax.idl:5:16: error: the name of a view is a simple name
+views/syntax.idl:11:7: error: others comes after the fields of a view
+views/syntax.idl:16:19: error: others is given twice
+views/syntax.idl:20:4: error: missing field: a view gives at least one, or others
+views/syntax.idl:22:11: error: missing 'as'

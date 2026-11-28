@@ -1,0 +1,75 @@
+--  Views that break the rules (idle#117).
+
+interface Rules is
+
+   type Kind is (Plain, Fancy);
+   type Small is range 1 .. 3;
+
+   type Inner is record
+      Count : Natural;
+   end record;
+
+   type Source_Rec is record
+      Name : String;
+      Size : Natural;
+      Part : Inner;
+      Mode : Kind;
+   end record;
+
+   type Target_Rec is record
+      Title : String;
+      Size  : Word;
+      Count : Natural;
+      Part  : Inner;
+      Mode  : Kind := Plain;
+   end record;
+
+   type Tiny is record
+      Level : Small;
+   end record;
+
+   --  A field given twice, a field the target hasn't, two types that
+   --  differ, a path that isn't there, a constant for a record, and a
+   --  literal of the wrong type.
+   view Source_Rec as Target_Rec is
+      Title   => Name,
+      Title   => Name,
+      Nothing => Name,
+      Size    => Size,
+      Count   => Part.Missing,
+      Part    => 3,
+      Mode    => Strange;
+   end view;
+
+   --  Fields that others => <> can't match: Title, which the source
+   --  hasn't, Size, whose types differ, and Count.
+   view Again of Source_Rec as Target_Rec is
+      others => <>;
+   end view;
+
+   view Source_Rec as Source_Rec is
+      Name => Name;
+   end view;
+
+   view Missing as Target_Rec is
+      Title => Name;
+   end view;
+
+   view Source_Rec as Kind is
+      Title => Name;
+   end view;
+
+   view Source_Rec as Tiny is
+      Level => 4;
+   end view;
+
+   view Source_Rec as Tiny is
+      Level => 1;
+   end view;
+
+   --  The name of the function of the view of Source_Rec as Tiny.
+   type To_Tiny is range 0 .. 1;
+
+   procedure Put (Item : Source_Rec);
+
+end Rules;

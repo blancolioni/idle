@@ -1,0 +1,15 @@
+views/rules.idl:36:7: error: field Title is given twice
+views/rules.idl:37:7: error: record Target_Rec has no field Nothing
+views/rules.idl:38:18: error: field Size of Target_Rec is Word, and Size of Source_Rec is Natural
+views/rules.idl:39:18: error: record Source_Rec has no field Part.Missing
+views/rules.idl:40:18: error: field Part of Target_Rec is a record: give it a field of Source_Rec
+views/rules.idl:41:18: error: the value of field Mode must be a literal of Kind
+views/rules.idl:46:4: error: field Title of Target_Rec has no field of that name in Source_Rec, and has no default
+views/rules.idl:46:4: error: field Size of Target_Rec is Word, and of Source_Rec is Natural: give it in the view
+views/rules.idl:46:4: error: field Count of Target_Rec has no field of that name in Source_Rec, and has no default
+views/rules.idl:50:4: error: a view of Source_Rec as itself: a record needs no view of itself
+views/rules.idl:54:4: error: unknown record Missing
+views/rules.idl:58:4: error: unknown record Kind
+views/rules.idl:63:16: error: the value of field Level is outside the range of Small
+views/rules.idl:66:4: error: the view of Source_Rec as Tiny is declared twice
+views/rules.idl:71:4: error: type To_Tiny has the same name as the function of the view of Source_Rec as Tiny, which the interface package declares

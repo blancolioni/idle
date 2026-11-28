@@ -226,6 +226,8 @@ package body Idle.Targets.Kernel is
 
             Declared.Append (Idle.Names.Key (To_String (Declared_Type.Name)));
          end loop;
+
+         Records.Check_Views (Declaration, Target = Kernel_Target, OK);
       end Check_Declarations;
 
       ---------------------------
@@ -316,6 +318,13 @@ package body Idle.Targets.Kernel is
                end if;
             end loop;
          end if;
+
+         for View of Item.Views loop
+            Add (Records.View_Function_Name (View),
+                 "the function of the view of "
+                 & To_String (View.Source.Name) & " as "
+                 & To_String (View.Target.Name));
+         end loop;
 
          for Declared_Constant of Item.Constants loop
             Check (To_String (Declared_Constant.Name), "constant",
@@ -1157,6 +1166,9 @@ package body Idle.Targets.Kernel is
         & (if Has_Records
            then Records.Codec_Declarations (F, Item, Context)
            else Syn.No_Nodes)
+        & (if Records.Has_Views (Item)
+           then Records.View_Declarations (F, Item, Context)
+           else Syn.No_Nodes)
         & [for Ancestor of Idle.Hierarchy.Ancestors (Item) =>
            Endpoint_Constant
              (Interface_Name (Ancestor),
@@ -1198,7 +1210,7 @@ package body Idle.Targets.Kernel is
                  Public_Part => Declarations & User_Declarations)),
          Output_Directory);
 
-      if Has_Records then
+      if Has_Records or else Records.Has_Views (Item) then
          Records.Write_Body (Item, Context, Output_Directory);
       end if;
 

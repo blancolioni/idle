@@ -502,6 +502,28 @@ else
   fail "record fields"
 fi
 
+# Views (idle#117): views written wrongly, and views that break the
+# rules. views/finder, views/search and views/editor, whose views are of
+# the other two's records, are generated with the user target's
+# interfaces, in generated-user.txt.
+
+if $idle --syntax-only views/syntax.idl 2> output/diagnostics.txt; then
+  fail "view syntax (expected errors)"
+elif diff -u views/syntax.txt output/diagnostics.txt; then
+  pass "view syntax"
+else
+  fail "view syntax"
+fi
+
+if $idle --target user -o output views/rules.idl \
+     2> output/diagnostics.txt; then
+  fail "view rules (expected errors)"
+elif diff -u views/rules.txt output/diagnostics.txt; then
+  pass "view rules"
+else
+  fail "view rules"
+fi
+
 # 3. Diagnostics
 
 for file in errors/*.idl; do
@@ -519,7 +541,7 @@ done
 # kernel-errors/ are their parents.
 
 for name in orphan loop_a twice bounds typo clash cap_array buffers caps words \
-            records; do
+            records views; do
   file="kernel-errors/$name.idl"
   if $idle --target kernel -o output "$file" \
        2> output/diagnostics.txt; then
@@ -557,6 +579,7 @@ fi
 if $idle --check \
      check-errors/misnamed.idl check-errors/typo.idl check-errors/first.idl \
      check-errors/second.idl check-errors/both.idl check-errors/pinned.idl \
+     check-errors/views_a.idl check-errors/views_b.idl \
      2> output/check.txt; then
   fail "check errors (expected errors)"
 elif diff -u check-errors/expected.txt output/check.txt; then
@@ -681,7 +704,10 @@ else
   # Records, which only the user target has (idle#113), with the package
   # body that holds their codecs.
   for file in expected-user/rose-interfaces-listing*.ad[sb] \
-              expected-user/rose-interfaces-shelf*.ad[sb]; do
+              expected-user/rose-interfaces-shelf*.ad[sb] \
+              expected-user/rose-interfaces-finder*.ad[sb] \
+              expected-user/rose-interfaces-search*.ad[sb] \
+              expected-user/rose-interfaces-editor*.ad[sb]; do
     # shellcheck disable=SC2086
     if (cd "$work" && gcc -c -gnatc -gnat2012 -gnatwae -m32 -nostdinc \
           -nostdlib -I"$OLDPWD/expected-user" $user "$OLDPWD/$file"); then
