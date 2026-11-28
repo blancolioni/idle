@@ -254,6 +254,65 @@ package body Idle.Hierarchy is
       return True;
    end Find_Parent;
 
+   ---------------
+   -- Find_Type --
+   ---------------
+
+   function Find_Type
+     (Owner     : Idle.Syntax.Interface_Declaration;
+      Name      : String;
+      Declaring : out Idle.Syntax.Interface_Declaration;
+      Found     : out Idle.Syntax.Type_Declaration)
+      return Boolean
+   is
+      function Find_In
+        (Declaration : Idle.Syntax.Interface_Declaration;
+         Type_Name   : String)
+         return Boolean;
+      --  Look for Type_Name in the declarations of Declaration.
+
+      -------------
+      -- Find_In --
+      -------------
+
+      function Find_In
+        (Declaration : Idle.Syntax.Interface_Declaration;
+         Type_Name   : String)
+         return Boolean
+      is
+      begin
+         for Item of Declaration.Types loop
+            if Idle.Names.Key (To_String (Item.Name))
+              = Idle.Names.Key (Type_Name)
+            then
+               Declaring := Declaration;
+               Found := Item;
+               return True;
+            end if;
+         end loop;
+         return False;
+      end Find_In;
+
+      Interface_Name : constant String := Idle.Names.Group_Name (Name);
+      Other          : Idle.Syntax.Interface_Declaration;
+
+   begin
+      if Interface_Name = "" then
+         if Find_In (Owner, Name) then
+            return True;
+         end if;
+         for Ancestor of Ancestors (Owner) loop
+            if Find_In (Ancestor, Name) then
+               return True;
+            end if;
+         end loop;
+         return False;
+      else
+         return Find (Owner, Interface_Name, Other)
+           and then Find_In (Other, Idle.Names.Simple_Name (Name));
+      end if;
+   end Find_Type;
+
    -------------
    -- Members --
    -------------

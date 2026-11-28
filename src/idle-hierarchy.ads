@@ -85,4 +85,17 @@ package Idle.Hierarchy is
    --  there is no such file, or if it declares another interface; only
    --  errors in parsing the file are reported.
 
+   function Find_Type
+     (Owner     : Idle.Syntax.Interface_Declaration;
+      Name      : String;
+      Declaring : out Idle.Syntax.Interface_Declaration;
+      Found     : out Idle.Syntax.Type_Declaration)
+      return Boolean;
+   --  The type Name that a declaration of Owner can name: one that Owner
+   --  declares, then one that an ancestor of Owner declares, and then, for
+   --  a name qualified by an interface, such as Core.Units.Bytes, the type
+   --  Bytes of the interface Core.Units, which is found as a parent is
+   --  (idle#115). Declaring is the interface that declares it. False if
+   --  there is no such type, which includes a predefined type.
+
 end Idle.Hierarchy;

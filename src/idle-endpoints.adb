@@ -170,32 +170,22 @@ package body Idle.Endpoints is
       Reference : Idle.Syntax.Type_Reference)
       return String
    is
-      Key : constant String := Idle.Names.Key (To_String (Reference.Name));
-
-      function Declared_In
-        (Declaration : Idle.Syntax.Interface_Declaration)
-         return Boolean
-      is (for some Item of Declaration.Types =>
-            Idle.Names.Key (To_String (Item.Name)) = Key);
-
-      function Qualified
-        (Declaration : Idle.Syntax.Interface_Declaration)
-         return String
-      is (Prefix & Idle.Names.Key (To_String (Declaration.Name))
-          & "." & Key);
+      Key       : constant String :=
+        Idle.Names.Key (To_String (Reference.Name));
+      Declaring : Idle.Syntax.Interface_Declaration;
+      Found     : Idle.Syntax.Type_Declaration;
 
    begin
       if Reference.Is_Interface then
          return "interface " & Prefix & Key;
-      elsif Declared_In (Owner) then
-         return Qualified (Owner);
+      elsif Idle.Hierarchy.Find_Type
+              (Owner, To_String (Reference.Name), Declaring, Found)
+      then
+         --  A declared type, qualified by the interface that declares
+         --  it: Owner, an ancestor, or another interface (idle#115).
+         return Prefix & Idle.Names.Key (To_String (Declaring.Name))
+           & "." & Idle.Names.Key (To_String (Found.Name));
       end if;
-
-      for Ancestor of Idle.Hierarchy.Ancestors (Owner) loop
-         if Declared_In (Ancestor) then
-            return Qualified (Ancestor);
-         end if;
-      end loop;
 
       --  A predefined type, or an unknown one, which is reported where
       --  types are checked.
