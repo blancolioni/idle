@@ -24,6 +24,30 @@ package body Idle.Targets.Kernel.Types is
    --  The predefined type Name, for the user target if User, or a
    --  Type_Info whose Category is Unknown.
 
+   -------------------
+   -- Ada_Type_Name --
+   -------------------
+
+   function Ada_Type_Name
+     (Owner : Idle.Syntax.Interface_Declaration;
+      Item  : Idle.Syntax.Type_Declaration)
+      return String
+   is
+      use type Idle.Syntax.Type_Kind;
+      Name : constant String := Idle.Names.Ada_Name (To_String (Item.Name));
+      Image : constant String := Positive'Image (Item.Version);
+   begin
+      if Item.Kind = Idle.Syntax.Record_Type
+        and then Item.Version
+                   < Idle.Hierarchy.Highest_Version
+                       (Owner, To_String (Item.Name))
+      then
+         return Name & "_V" & Image (Image'First + 1 .. Image'Last);
+      else
+         return Name;
+      end if;
+   end Ada_Type_Name;
+
    --------------
    -- Declared --
    --------------
@@ -36,7 +60,7 @@ package body Idle.Targets.Kernel.Types is
       Package_Name : constant String :=
         "Rose.Interfaces." & Idle.Names.Ada_Name (To_String (Owner.Name));
       Type_Name    : constant String :=
-        Package_Name & "." & Idle.Names.Ada_Name (To_String (Item.Name));
+        Package_Name & "." & Ada_Type_Name (Owner, Item);
    begin
       case Item.Kind is
          when Idle.Syntax.Range_Type =>
@@ -238,7 +262,9 @@ package body Idle.Targets.Kernel.Types is
 
       --  A type of Owner, of an ancestor, or of another interface that
       --  qualifies its name (idle#115).
-      if Idle.Hierarchy.Find_Type (Owner, Name, Declaring, Found) then
+      if Idle.Hierarchy.Find_Type
+           (Owner, Name, Declaring, Found, Reference.Version)
+      then
          return Declared (Declaring, Found);
       end if;
       return Predefined (Name, User);

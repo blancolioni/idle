@@ -359,6 +359,7 @@ package body Idle.Lexer is
                         when '.' => Kind := Tok_Dot;
                         when ''' => Kind := Tok_Apostrophe;
                         when '&' => Kind := Tok_Ampersand;
+                        when '@' => Kind := Tok_At;
                         when others => null;
                      end case;
                   end if;

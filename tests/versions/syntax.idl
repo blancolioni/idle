@@ -1,0 +1,20 @@
+--  Version syntax that is wrong (idle#114): an interface or subprogram
+--  with a version, which only records have, versions that aren't whole
+--  numbers from 1, a version given twice, and '@' without a number.
+
+interface Syntax
+  with Version => 2
+is
+
+   type Info is record
+      Name : String;
+   end record with Version => 0;
+
+   type Other is record
+      Name : String;
+   end record with Version => 2, Version => 3;
+
+   procedure Zero (Item : Info@0) with Version => 1;
+   procedure Bare (Item : Info@);
+
+end Syntax;

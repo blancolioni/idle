@@ -17,7 +17,7 @@ package Idle.Tokens is
 
       Tok_Left_Paren, Tok_Right_Paren, Tok_Semicolon, Tok_Colon, Tok_Comma,
       Tok_Dot, Tok_Dot_Dot, Tok_Arrow, Tok_Becomes, Tok_Apostrophe,
-      Tok_Ampersand);
+      Tok_Ampersand, Tok_At);
 
    subtype Keyword_Token is Token range Tok_Command .. Tok_With;
 

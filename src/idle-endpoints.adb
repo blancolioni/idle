@@ -12,6 +12,19 @@ package body Idle.Endpoints is
 
    Prefix : constant String := "rose.interfaces.";
 
+   function Type_Name_Form
+     (Owner : Idle.Syntax.Interface_Declaration;
+      Item  : Idle.Syntax.Type_Declaration)
+      return String
+   is (Prefix & Idle.Names.Key (To_String (Owner.Name)) & "."
+       & Idle.Names.Key
+           (Idle.Names.Versioned
+              (To_String (Item.Name),
+               (if Idle.Syntax."=" (Item.Kind, Idle.Syntax.Record_Type)
+                then Item.Version else 0))));
+   --  The type Item, declared by Owner, as it is named in a canonical
+   --  form: qualified by Owner, and with its version if it is a record.
+
    function Type_Form
      (Owner     : Idle.Syntax.Interface_Declaration;
       Reference : Idle.Syntax.Type_Reference)
@@ -161,6 +174,26 @@ package body Idle.Endpoints is
       end if;
    end Subprogram_Id;
 
+   -----------------
+   -- Record_Form --
+   -----------------
+
+   function Record_Form
+     (Owner : Idle.Syntax.Interface_Declaration;
+      Item  : Idle.Syntax.Type_Declaration)
+      return String
+   is ("record " & Type_Name_Form (Owner, Item));
+
+   ---------------
+   -- Record_Id --
+   ---------------
+
+   function Record_Id
+     (Owner : Idle.Syntax.Interface_Declaration;
+      Item  : Idle.Syntax.Type_Declaration)
+      return Endpoint_Id
+   is (Hash (Record_Form (Owner, Item)));
+
    ---------------
    -- Type_Form --
    ---------------
@@ -179,12 +212,13 @@ package body Idle.Endpoints is
       if Reference.Is_Interface then
          return "interface " & Prefix & Key;
       elsif Idle.Hierarchy.Find_Type
-              (Owner, To_String (Reference.Name), Declaring, Found)
+              (Owner, To_String (Reference.Name), Declaring, Found,
+               Reference.Version)
       then
          --  A declared type, qualified by the interface that declares
-         --  it: Owner, an ancestor, or another interface (idle#115).
-         return Prefix & Idle.Names.Key (To_String (Declaring.Name))
-           & "." & Idle.Names.Key (To_String (Found.Name));
+         --  it: Owner, an ancestor, or another interface (idle#115). A
+         --  record has its version (idle#114).
+         return Type_Name_Form (Declaring, Found);
       end if;
 
       --  A predefined type, or an unknown one, which is reported where

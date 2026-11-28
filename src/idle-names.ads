@@ -16,6 +16,10 @@ package Idle.Names is
    --  The part of a dotted name before its last dot, as an Ada name:
    --  Storage.Bank gives Storage, and a name without a dot gives "".
 
+   function Versioned (Name : String; Version : Natural) return String;
+   --  Name, followed by "@" and Version if Version is not zero, as a type
+   --  is written in IDL: File_Info@2 (idle#114).
+
    function Key (Name : String) return String;
    --  Name in lower case, for comparing names, which IDL does without
    --  regard to case.

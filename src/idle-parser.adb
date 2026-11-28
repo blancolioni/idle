@@ -183,7 +183,23 @@ package body Idle.Parser is
             Name  : constant String := To_String (Parse_Name ("aspect name"));
             Value : Long_Long_Long_Integer;
          begin
-            if Same_Name (Name, "Versioned") then
+            if Same_Name (Name, "Version") then
+
+               --  Only records have versions (idle#114).
+
+               Error ((if On_Interface
+                       then "an interface has no version: it is only"
+                            & " extended, or its operations retired"
+                            & " (Rose ADR 0031); only records have versions"
+                       else "a subprogram has no version; only records"
+                            & " have versions"));
+               if Tok = Tok_Arrow then
+                  Scan;
+                  if Tok in Tok_Integer_Literal | Tok_Identifier then
+                     Scan;
+                  end if;
+               end if;
+            elsif Same_Name (Name, "Versioned") then
 
                --  The shell versions an argument whose interface inherits
                --  Transactional, so nothing needs to be marked.
@@ -517,11 +533,50 @@ package body Idle.Parser is
       Expect (Tok_End, [Tok_Record, Tok_Semicolon]);
       Expect (Tok_Record, [Tok_Semicolon]);
 
-      if Tok = Tok_With then
-         --  Versions are idle#114.
-         Error ("a record takes no aspects");
-         Skip_To ([Tok_Semicolon]);
-      end if;
+      declare
+         Aspects     : Aspect_Vectors.Vector;
+         Has_Version : Boolean := False;
+
+         procedure Report (At_Aspect : Aspect; Message : String);
+
+         ------------
+         -- Report --
+         ------------
+
+         procedure Report (At_Aspect : Aspect; Message : String) is
+         begin
+            Idle.Diagnostics.Error
+              (File_Name, At_Aspect.Position.Line,
+               At_Aspect.Position.Column, Message);
+         end Report;
+
+      begin
+         Parse_Aspect_List (Aspects);
+         for Item of Aspects loop
+            if not Same_Name (To_String (Item.Name), "Version") then
+               Report (Item, "unknown aspect " & To_String (Item.Name)
+                       & "; the only aspect of a record is Version");
+            elsif Has_Version then
+               Report (Item, "aspect Version is given twice");
+            else
+               declare
+                  Value : Long_Long_Long_Integer;
+               begin
+                  Has_Version := True;
+                  if Item.Value.Kind = Integer_Value
+                    and then Idle.Literals.Value
+                               (To_String (Item.Value.Text), Value,
+                                2 ** 31 - 1)
+                    and then Value >= 1
+                  then
+                     Into.Version := Positive (Value);
+                  else
+                     Report (Item, "a version is a whole number from 1");
+                  end if;
+               end;
+            end if;
+         end loop;
+      end;
    end Parse_Record_Fields;
 
    ----------------
@@ -549,7 +604,8 @@ package body Idle.Parser is
                Of_Type  =>
                  (Name         =>
                     To_Unbounded_String (Item.Parents.First_Element),
-                  Is_Interface => True),
+                  Is_Interface => True,
+                  Version      => 0),
                Position => Item.Position,
                others   => <>));
          Item.Parents.Clear;
@@ -581,7 +637,8 @@ package body Idle.Parser is
 
             Member.Of_Type :=
               (Name         => Parse_Name ("interface name"),
-               Is_Interface => True);
+               Is_Interface => True,
+               Version      => 0);
 
             if Tok in Tok_Becomes | Tok_With then
                Error ("a role member has no default or aspects");
@@ -699,6 +756,27 @@ package body Idle.Parser is
          Result.Is_Interface := True;
       end if;
       Result.Name := Parse_Qualified_Name ("type name");
+
+      --  A version of a record (idle#114).
+      if Tok = Tok_At then
+         Scan;
+         if Tok /= Tok_Integer_Literal then
+            Error ("missing version after '@' (a whole number from 1)");
+         else
+            declare
+               Value : Long_Long_Long_Integer;
+            begin
+               if Idle.Literals.Value (Tok_Text, Value, 2 ** 31 - 1)
+                 and then Value >= 1
+               then
+                  Result.Version := Natural (Value);
+               else
+                  Error ("a version is a whole number from 1");
+               end if;
+            end;
+            Scan;
+         end if;
+      end if;
       return Result;
    end Parse_Type_Reference;
 

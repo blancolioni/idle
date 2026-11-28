@@ -16,6 +16,9 @@ package Rose.Interfaces.Catalogue is
       Start   : Offset;
    end record;
 
+   Entry_Info_Type_Id  : constant Rose.Objects.Endpoint_Id :=
+     16#3CC3_5AEB_D8EF_7DFF#;
+
    function Encoded_Length
      (Item : Entry_Info)
       return System.Storage_Elements.Storage_Count;
@@ -48,7 +51,7 @@ package Rose.Interfaces.Catalogue is
      16#880E_BAC0_D3EC_7F13#;
 
    Find_Endpoint       : constant Rose.Objects.Endpoint_Id :=
-     16#4021_52ED_4F74_E72C#;
+     16#A835_0464_5610_2CA0#;
 
    Total_Index         : constant := 0;
 

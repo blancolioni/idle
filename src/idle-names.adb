@@ -74,4 +74,18 @@ package body Idle.Names is
 
    function Key (Name : String) return String is (To_Lower (Name));
 
+   ---------------
+   -- Versioned --
+   ---------------
+
+   function Versioned (Name : String; Version : Natural) return String is
+      Image : constant String := Natural'Image (Version);
+   begin
+      if Version = 0 then
+         return Name;
+      else
+         return Name & "@" & Image (Image'First + 1 .. Image'Last);
+      end if;
+   end Versioned;
+
 end Idle.Names;

@@ -28,6 +28,9 @@ package Rose.Interfaces.Listing is
       Target   : Ada.Strings.Unbounded.Unbounded_String;
    end record;
 
+   Stamp_Type_Id     : constant Rose.Objects.Endpoint_Id :=
+     16#355D_C49B_DE80_C79B#;
+
    function Encoded_Length
      (Item : Stamp)
       return System.Storage_Elements.Storage_Count;
@@ -47,6 +50,9 @@ package Rose.Interfaces.Listing is
    function Decode
      (Buffer : System.Storage_Elements.Storage_Array)
       return Stamp;
+
+   File_Info_Type_Id : constant Rose.Objects.Endpoint_Id :=
+     16#C42A_F897_3774_A5CB#;
 
    function Encoded_Length
      (Item : File_Info)
@@ -74,19 +80,19 @@ package Rose.Interfaces.Listing is
      16#8B38_45FE_68CC_450A#;
 
    Add_Endpoint      : constant Rose.Objects.Endpoint_Id :=
-     16#71F9_F09A_31A8_DC4C#;
+     16#B9D3_C571_6E71_FD05#;
 
    Rename_Endpoint   : constant Rose.Objects.Endpoint_Id :=
-     16#8E37_6F10_F983_2284#;
+     16#1D1F_9690_24FB_6A48#;
 
    Find_Endpoint     : constant Rose.Objects.Endpoint_Id :=
-     16#8AC6_37CA_F00A_A681#;
+     16#4568_4C90_A561_D427#;
 
    Get_Endpoint      : constant Rose.Objects.Endpoint_Id :=
-     16#1716_F12A_40A2_F123#;
+     16#E6C3_B9C1_253B_C444#;
 
    Now_Endpoint      : constant Rose.Objects.Endpoint_Id :=
-     16#DC59_92D3_EBA3_84D0#;
+     16#1DDC_CF9A_3C4E_F4AA#;
 
    Add_Index         : constant := 0;
 

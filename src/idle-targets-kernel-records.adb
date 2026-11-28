@@ -3,6 +3,8 @@ with Ada.Strings.Unbounded;
 with Syn.Units;
 
 with Idle.Diagnostics;
+with Idle.Endpoints;
+with Idle.Hierarchy;
 with Idle.Names;
 with Idle.Targets.Kernel.Types;
 
@@ -115,10 +117,22 @@ package body Idle.Targets.Kernel.Records is
       for Field of Item.Fields loop
          declare
             Name      : constant String := To_String (Field.Name);
-            Type_Name : constant String := To_String (Field.Of_Type.Name);
-            Key       : constant String := Idle.Names.Key (Type_Name);
+            Type_Name : constant String :=
+              Idle.Names.Versioned
+                (To_String (Field.Of_Type.Name), Field.Of_Type.Version);
+            Key       : constant String :=
+              Idle.Names.Key (To_String (Field.Of_Type.Name));
             Info      : constant Types.Type_Info :=
               Field_Info (Declaration, Field);
+            Declaring : Idle.Syntax.Interface_Declaration;
+            Found     : Idle.Syntax.Type_Declaration;
+
+            function Later
+              (Left, Right : Idle.Syntax.Source_Position)
+               return Boolean
+            is (Left.Line > Right.Line
+                or else (Left.Line = Right.Line
+                         and then Left.Column >= Right.Column));
          begin
             if Names.Contains (Idle.Names.Key (Name)) then
                Error (Field.Position,
@@ -126,13 +140,22 @@ package body Idle.Targets.Kernel.Records is
             end if;
             Names.Append (Idle.Names.Key (Name));
 
-            if Key = Idle.Names.Key (To_String (Item.Name)) then
+            if Key = Idle.Names.Key (To_String (Item.Name))
+              and then Field.Of_Type.Version in 0 | Item.Version
+            then
                Error (Field.Position,
                       "record " & To_String (Item.Name)
                       & " cannot hold itself");
-            elsif (for some Other of Declaration.Types =>
-                  Idle.Names.Key (To_String (Other.Name)) = Key)
-              and then not Declared.Contains (Key)
+            elsif ((for some Other of Declaration.Types =>
+                      Idle.Names.Key (To_String (Other.Name)) = Key)
+                   and then not Declared.Contains (Key))
+              or else
+                (Idle.Hierarchy.Find_Type
+                   (Declaration, To_String (Field.Of_Type.Name), Declaring,
+                    Found, Field.Of_Type.Version)
+                 and then Idle.Names.Key (To_String (Declaring.Name))
+                            = Idle.Names.Key (To_String (Declaration.Name))
+                 and then Later (Found.Position, Item.Position))
             then
                Error (Field.Position,
                       "type " & Type_Name & " is used by record "
@@ -180,8 +203,20 @@ package body Idle.Targets.Kernel.Records is
          if Idle.Syntax."=" (Item.Kind, Idle.Syntax.Record_Type) then
             declare
                Codec : constant Codec_Specs :=
-                 Specs (F, Idle.Names.Ada_Name (To_String (Item.Name)));
+                 Specs (F, Types.Ada_Type_Name (Owner, Item));
             begin
+               --  Its type id, which a typed stream gives for its
+               --  elements (idle#114).
+               Result.Append
+                 (F.New_Object
+                    (Name          =>
+                       Types.Ada_Type_Name (Owner, Item) & "_Type_Id",
+                     Object_Type   => F.New_Name ("Rose.Objects.Endpoint_Id"),
+                     Initial_Value =>
+                       F.New_Integer_Literal
+                         (Idle.Endpoints.Record_Id (Owner, Item),
+                          Base => 16, Group => 4),
+                     Is_Constant   => True));
                Result.Append (Codec.Length);
                Result.Append (Codec.Encode_Into);
                Result.Append (Codec.Encode_Function);
@@ -344,7 +379,7 @@ package body Idle.Targets.Kernel.Records is
          end;
       end loop;
       return F.New_Record_Type
-        (Idle.Names.Ada_Name (To_String (Item.Name)), Components.To_Array);
+        (Types.Ada_Type_Name (Owner, Item), Components.To_Array);
    end Type_Node;
 
    ----------------
@@ -437,8 +472,7 @@ package body Idle.Targets.Kernel.Records is
       -------------------
 
       procedure Add_Codec (Item : Idle.Syntax.Type_Declaration) is
-         Record_Name : constant String :=
-           Idle.Names.Ada_Name (To_String (Item.Name));
+         Record_Name : constant String := Types.Ada_Type_Name (Owner, Item);
          Codec       : constant Codec_Specs := Specs (F, Record_Name);
          Encodes     : Node_List;
          Decodes     : Node_List;

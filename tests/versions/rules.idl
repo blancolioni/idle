@@ -1,0 +1,41 @@
+--  Versions that break the rules (idle#114): a type that isn't a record
+--  declared twice, versions out of order or repeated, a version that
+--  doesn't exist, a version of a type that isn't a record, a field of a
+--  later version, and a type with the name of an earlier version.
+
+interface Rules is
+
+   type Kind is (Plain, Directory);
+   type Kind is (Other);
+
+   type Info is record
+      Name : String;
+   end record with Version => 2;
+
+   type Info is record
+      Name : String;
+   end record;
+
+   type Info is record
+      Name : String;
+   end record with Version => 2;
+
+   type Holder is record
+      Missing : Info@3;
+      Later   : Entry_Info@2;
+   end record;
+
+   type Entry_Info is record
+      Name : String;
+   end record;
+
+   type Entry_Info is record
+      Name : String;
+      Size : Natural;
+   end record with Version => 2;
+
+   type Entry_Info_V1 is range 0 .. 10;
+
+   procedure Set (Of_Kind : Kind@1);
+
+end Rules;

@@ -483,6 +483,35 @@ for target in kernel user; do
   fi
 done
 
+# Versions of records (idle#114): the record ids that --list-endpoints
+# gives with the interface's, version syntax that is wrong, and versions
+# that break the rules. versions/shelf is generated with the user
+# target's interfaces, in generated-user.txt.
+
+if $idle --list-endpoints versions/shelf.idl > output/versions.txt \
+   && diff -u versions/endpoints.txt output/versions.txt; then
+  pass "endpoint and record ids with versions"
+else
+  fail "endpoint and record ids with versions"
+fi
+
+if $idle --syntax-only versions/syntax.idl 2> output/diagnostics.txt; then
+  fail "version syntax (expected errors)"
+elif diff -u versions/syntax.txt output/diagnostics.txt; then
+  pass "version syntax"
+else
+  fail "version syntax"
+fi
+
+if $idle --target user -o output versions/rules.idl \
+     2> output/diagnostics.txt; then
+  fail "version rules (expected errors)"
+elif diff -u versions/rules.txt output/diagnostics.txt; then
+  pass "version rules"
+else
+  fail "version rules"
+fi
+
 # 3. Diagnostics
 
 for file in errors/*.idl; do
@@ -660,7 +689,8 @@ else
 
   # Records, which only the user target has (idle#113), with the package
   # body that holds their codecs.
-  for file in expected-user/rose-interfaces-listing*.ad[sb]; do
+  for file in expected-user/rose-interfaces-listing*.ad[sb] \
+              expected-user/rose-interfaces-shelf*.ad[sb]; do
     # shellcheck disable=SC2086
     if (cd "$work" && gcc -c -gnatc -gnat2012 -gnatwae -m32 -nostdinc \
           -nostdlib -I"$OLDPWD/expected-user" $user "$OLDPWD/$file"); then

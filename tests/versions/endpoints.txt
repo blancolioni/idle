@@ -1,0 +1,8 @@
+16#B145_2C46_7F41_7FD0#  interface rose.interfaces.shelf
+16#85EF_6C14_BE0A_90D2#  rose.interfaces.shelf.put(in rose.interfaces.shelf.file_info@1)
+16#6AF7_1BFD_134A_366D#  rose.interfaces.shelf.get(in natural) return rose.interfaces.shelf.file_info@2
+16#2DB2_C14F_8CEA_9DD4#  rose.interfaces.shelf.get_old(in natural) return rose.interfaces.shelf.file_info@1
+16#A35C_4142_1773_1E80#  rose.interfaces.shelf.pack return rose.interfaces.shelf.bundle@1
+16#EEFD_44ED_2F67_A837#  record rose.interfaces.shelf.file_info@1
+16#6550_025F_FA21_47E2#  record rose.interfaces.shelf.file_info@2
+16#F029_DC04_0A0C_5035#  record rose.interfaces.shelf.bundle@1

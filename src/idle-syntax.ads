@@ -22,9 +22,12 @@ package Idle.Syntax is
    type Type_Reference is record
       Name         : Unbounded_String;
       Is_Interface : Boolean := False;
+      Version      : Natural := 0;
    end record;
    --  A type named in a declaration. Is_Interface is True for
-   --  "interface X", a value of the interface X.
+   --  "interface X", a value of the interface X. Version is the version
+   --  of a record written after "@", as in File_Info@1, or zero for the
+   --  highest version declared (idle#114).
 
    type Parameter is record
       Name     : Unbounded_String;
@@ -86,6 +89,10 @@ package Idle.Syntax is
       Fields   : Field_Vectors.Vector;
       --  The fields of a record type, in the order they are declared,
       --  which is the order they are encoded in.
+      Version  : Positive := 1;
+      --  The version of a record type, from its Version aspect, or 1 if it
+      --  has none (idle#114). An interface can declare several versions of
+      --  a record, in increasing order.
       Position : Source_Position;
    end record;
    --  A type declared by an interface. A record type is written
