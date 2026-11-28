@@ -3,4 +3,5 @@ check-errors/typo.idl:3:4: error: unknown interface Nowhere: no check-errors/now
 check-errors/second.idl:5:4: error: Second.Start has the same endpoint id as First.Run
 check-errors/both.idl:4:1: error: Run is declared by both First and Both, with different signatures
 check-errors/pinned.idl:5:4: warning: the endpoint id of Pinned.Reset is pinned to its own hash, so the pin is not needed
+check-errors/views_b.idl:5:4: error: the view of Views_A.Point as Views_A.Spot is also declared by interface Views_A
 check-errors/extra.idl: warning: not compiled by this build

@@ -43,6 +43,9 @@ package body Idle.Check is
       Seen        : Name_Sets.Set;
       --  What has had its endpoint id looked up, such as "Cap.Destroy",
       --  since an inherited subprogram uses its parent's id.
+      Views       : Name_Maps.Map;
+      --  For each view, by its name, source and target, the interface
+      --  that declares it.
 
       procedure Check_Interface_Type
         (Item      : Idle.Syntax.Interface_Declaration;
@@ -284,6 +287,47 @@ package body Idle.Check is
                Idle.Hierarchy.Check_Members (Item);
                for Member of Idle.Hierarchy.Members (Item) loop
                   Use_Method_Id (Member);
+               end loop;
+
+               for View of Item.Views loop
+                  declare
+                     Source_Owner : Idle.Syntax.Interface_Declaration;
+                     Target_Owner : Idle.Syntax.Interface_Declaration;
+                     Source       : Idle.Syntax.Type_Declaration;
+                     Target       : Idle.Syntax.Type_Declaration;
+                     View_Name    : constant String :=
+                       To_String (View.Name);
+                  begin
+                     if Idle.Hierarchy.Find_Type
+                          (Item, To_String (View.Source.Name),
+                           Source_Owner, Source)
+                       and then Idle.Hierarchy.Find_Type
+                                  (Item, To_String (View.Target.Name),
+                                   Target_Owner, Target)
+                     then
+                        declare
+                           Key : constant String :=
+                             Idle.Names.Key (View_Name) & " "
+                             & Idle.Endpoints.Record_Form
+                                 (Source_Owner, Source)
+                             & " as "
+                             & Idle.Endpoints.Record_Form
+                                 (Target_Owner, Target);
+                        begin
+                           if not Views.Contains (Key) then
+                              Views.Insert (Key, Name);
+                           elsif Views (Key) /= Name then
+                              Error (Item.File_Name, View.Position,
+                                     (if View_Name = "" then "the view"
+                                      else "view " & View_Name)
+                                     & " of " & To_String (View.Source.Name)
+                                     & " as " & To_String (View.Target.Name)
+                                     & " is also declared by interface "
+                                     & Views (Key));
+                           end if;
+                        end;
+                     end if;
+                  end;
                end loop;
 
                for Subprogram of Item.Subprograms loop

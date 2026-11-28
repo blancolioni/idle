@@ -13,6 +13,12 @@ package Idle.Check is
    --      more than once;
    --    - two different interfaces or subprograms with the same endpoint
    --      id, which only a pinned id can cause in practice;
+   --    - two interfaces that declare the default view of one record as
+   --      another, or two views with the same name of one record as
+   --      another (idle#117);
+   --    - two interfaces that declare the default view of one record as
+   --      another, or two views with the same name of one record as
+   --      another (idle#117);
    --    - as warnings, a pinned id that is the same as the hash it
    --      replaces, and the other .idl files in the same directories,
    --      which the build does not compile.

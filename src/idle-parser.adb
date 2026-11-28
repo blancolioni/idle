@@ -18,7 +18,7 @@ package body Idle.Parser is
 
    Declaration_Start : constant Token_Set :=
                          [Tok_Function, Tok_Procedure, Tok_Type,
-                          Tok_Identifier, Tok_End];
+                          Tok_View, Tok_Identifier, Tok_End];
    --  Where error recovery restarts inside an interface.
 
    function Current_Position return Source_Position
@@ -76,6 +76,9 @@ package body Idle.Parser is
    --  The contents of the file Name, relative to the directory of the
    --  file being parsed, without its final line break.
    procedure Parse_Type_Declaration (Item : in out Interface_Declaration);
+
+   procedure Parse_View (Item : in out Interface_Declaration);
+   --  A view, from "view" to the semicolon after "end view" (idle#117).
 
    procedure Parse_Record_Fields (Into : in out Type_Declaration);
    --  The fields of the record type Into, from after "record" to after
@@ -296,6 +299,8 @@ package body Idle.Parser is
                Parse_Subprogram (Item);
             when Tok_Type =>
                Parse_Type_Declaration (Item);
+            when Tok_View =>
+               Parse_View (Item);
             when Tok_Identifier =>
                Parse_Constant (Item);
             when Tok_End | Tok_End_Of_File =>
@@ -769,6 +774,76 @@ package body Idle.Parser is
 
       return Result;
    end Parse_Value;
+
+   ----------------
+   -- Parse_View --
+   ----------------
+
+   procedure Parse_View (Item : in out Interface_Declaration) is
+      Result : View_Declaration;
+      First  : Type_Reference;
+   begin
+      Result.Position := Current_Position;
+      Expect (Tok_View, [Tok_Identifier]);
+      First := Parse_Type_Reference;
+
+      --  view Created of Files.File_Info as Dated: a named view.
+
+      if Tok = Tok_Identifier and then Same_Name (Tok_Text, "of") then
+         Scan;
+         if Ada.Strings.Fixed.Index (To_String (First.Name), ".") > 0 then
+            Error ("the name of a view is a simple name");
+         end if;
+         Result.Name := First.Name;
+         Result.Source := Parse_Type_Reference;
+      else
+         Result.Source := First;
+      end if;
+
+      Expect (Tok_As, [Tok_Identifier, Tok_Is]);
+      Result.Target := Parse_Type_Reference;
+      Expect (Tok_Is, [Tok_Identifier, Tok_End]);
+
+      loop
+         if Tok = Tok_Identifier and then Same_Name (Tok_Text, "others") then
+            Scan;
+            Expect (Tok_Arrow, [Tok_Box, Tok_Semicolon]);
+            Expect (Tok_Box, [Tok_Comma, Tok_Semicolon]);
+            if Result.Others_Box then
+               Error ("others is given twice");
+            end if;
+            Result.Others_Box := True;
+         elsif Tok = Tok_Identifier then
+            declare
+               Field : View_Field;
+            begin
+               if Result.Others_Box then
+                  Error ("others comes after the fields of a view");
+               end if;
+               Field.Position := Current_Position;
+               Field.Target := Parse_Name ("field name");
+               Expect (Tok_Arrow, [Tok_Identifier, Tok_Comma, Tok_Semicolon]);
+               Field.Value := Parse_Value;
+               Result.Fields.Append (Field);
+            end;
+         else
+            Error ("missing field: a view gives at least one, or others");
+            exit;
+         end if;
+         exit when Tok /= Tok_Comma;
+         Scan;
+      end loop;
+
+      if Tok /= Tok_End or else not Result.Fields.Is_Empty
+        or else Result.Others_Box
+      then
+         Expect (Tok_Semicolon, [Tok_End]);
+      end if;
+      Expect (Tok_End, [Tok_View, Tok_Semicolon]);
+      Expect (Tok_View, [Tok_Semicolon]);
+      Expect (Tok_Semicolon, Declaration_Start);
+      Item.Views.Append (Result);
+   end Parse_View;
 
    --------------------
    -- Read_Text_File --

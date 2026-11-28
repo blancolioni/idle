@@ -1,0 +1,55 @@
+--  Views (idle#117, Rose ADR 0048): records of other interfaces, which
+--  know nothing of Editor, viewed as Editor's Location and Dated. A field
+--  of the target is given by a field of the source, a path into its
+--  records, or a constant, matched by name with others => <>, or left to
+--  its default. A named view is a second way of viewing a record.
+
+interface Editor is
+
+   type Mode is (Read_Only, Writable);
+
+   type Location is record
+      Path   : String;
+      Line   : Natural := 0;
+      Opened : Mode := Read_Only;
+   end record;
+
+   type Dated is record
+      Moment : Integer_64;
+   end record;
+
+   type Note is record
+      Path : String;
+      Line : Natural;
+      Text : String;
+   end record;
+
+   view Search.Grep_Match as Location is
+      Path   => Where.File,
+      Line   => Where.Line,
+      Opened => Writable;
+   end view;
+
+   view Finder.File_Info as Location is
+      Path => Name;
+   end view;
+
+   view Finder.File_Info as Dated is
+      Moment => Modified;
+   end view;
+
+   view Created of Finder.File_Info as Dated is
+      Moment => Created;
+   end view;
+
+   view Search.Grep_Match as Dated is
+      Moment => 0;
+   end view;
+
+   view Note as Location is
+      others => <>;
+   end view;
+
+   procedure Show (Place : Location);
+
+end Editor;

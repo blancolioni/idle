@@ -1,0 +1,1 @@
+kernel-errors/views.idl:5:4: error: view of Finder.File_Info as Editor.Location needs the user or host target: the kernel target has no records

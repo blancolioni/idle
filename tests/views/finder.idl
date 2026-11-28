@@ -1,0 +1,14 @@
+--  A record that Editor views as a Location and as Dated (idle#117).
+
+interface Finder is
+
+   type File_Info is record
+      Name     : String;
+      Size     : Natural;
+      Created  : Integer_64;
+      Modified : Integer_64;
+   end record;
+
+   function Get (Index : Natural) return File_Info;
+
+end Finder;

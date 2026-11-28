@@ -100,12 +100,49 @@ private package Idle.Targets.Kernel.Records is
    --  The codec's subprograms for each record of Owner, in the order they
    --  are declared, after adding System.Storage_Elements to Context.
 
+   function Has_Views
+     (Item : Idle.Syntax.Interface_Declaration)
+      return Boolean
+   is (not Item.Views.Is_Empty);
+   --  True if Item declares a view (idle#117).
+
+   function View_Function_Name
+     (Item : Idle.Syntax.View_Declaration)
+      return String;
+   --  The Ada function that converts a record by the view Item, which the
+   --  package of the interface that declares it declares: To_Location for
+   --  the default view of a record as Location, and To_Dated_Created for
+   --  the view Created of a record as Dated.
+
+   procedure Check_Views
+     (Declaration : Idle.Syntax.Interface_Declaration;
+      Is_Kernel   : Boolean;
+      OK          : in out Boolean);
+   --  Report what is wrong with the views that Declaration declares, and
+   --  set OK to False if there is anything: a view on the kernel target,
+   --  which has no records; a source or target that isn't a record; a
+   --  view of a record as itself; a view declared twice; a field of the
+   --  target that the target doesn't have, or that is given twice; a
+   --  source field, or path into the source's records, that doesn't
+   --  exist or whose type isn't the target field's; a constant that isn't
+   --  a value of its field's type; and a target field that is neither
+   --  given, nor matched by "others => <>", nor has a default.
+
+   function View_Declarations
+     (F       : in out Syn.Factory.Factory;
+      Owner   : Idle.Syntax.Interface_Declaration;
+      Context : in out Support.Context_List)
+      return Syn.Node_Array;
+   --  The conversion function of each view of Owner, after adding the
+   --  units of its records to Context.
+
    procedure Write_Body
      (Owner            : Idle.Syntax.Interface_Declaration;
       Spec_Context     : Support.Context_List;
       Output_Directory : String);
-   --  Write the body of the package of Owner, which has records, with the
-   --  bodies of their codecs. Spec_Context is the context of the package's
-   --  spec, whose units the body doesn't name again.
+   --  Write the body of the package of Owner, which has records or views,
+   --  with the bodies of the records' codecs and the views' functions.
+   --  Spec_Context is the context of the package's spec, whose units the
+   --  body doesn't name again.
 
 end Idle.Targets.Kernel.Records;

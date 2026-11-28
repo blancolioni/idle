@@ -348,6 +348,8 @@ package body Idle.Lexer is
                      Kind := Tok_Arrow;
                   elsif Two = ":=" then
                      Kind := Tok_Becomes;
+                  elsif Two = "<>" then
+                     Kind := Tok_Box;
                   else
                      Size := 1;
                      case Ch is

@@ -1,0 +1,18 @@
+--  A record that Editor views as a Location through a path into its
+--  records, and as Dated with a constant (idle#117).
+
+interface Search is
+
+   type Place is record
+      File : String;
+      Line : Natural;
+   end record;
+
+   type Grep_Match is record
+      Where : Place;
+      Text  : String;
+   end record;
+
+   function Get (Index : Natural) return Grep_Match;
+
+end Search;
