@@ -14,7 +14,8 @@ with Idle.Targets.Kernel;
 
 procedure Idle.Main is
 
-   --  idle [--syntax-only | --check | --list-endpoints] [--target TARGET]
+   --  idle [--syntax-only | --check | --list-endpoints | --list-fields]
+   --       [--target TARGET]
    --       [--command-client] [--host-backings FILE]
    --       [-I DIRECTORY]... [-o DIRECTORY] FILE.idl...
    --
@@ -31,9 +32,11 @@ procedure Idle.Main is
    --
    --  --check checks the files together, as the interfaces a build
    --  compiles, and generates nothing (see Idle.Check). --list-endpoints
-   --  writes the endpoint id and canonical form of each interface and
-   --  each subprogram it declares to standard output (see
-   --  Idle.Endpoints).
+   --  writes the endpoint id and canonical form of each interface, each
+   --  subprogram it declares, and each record it declares, to standard
+   --  output (see Idle.Endpoints). --list-fields writes the fields of each
+   --  record, one to a line, for Rose's check that a record only gains
+   --  fields with defaults within a series (idle#114, Rose ADR 0048).
    --
    --  Endpoint ids come from the source, so --endpoints FILE, which named
    --  a table of them, is accepted and ignored, with a warning.
@@ -51,6 +54,7 @@ procedure Idle.Main is
    Syntax_Only      : Boolean := False;
    Check_Only       : Boolean := False;
    List_Only        : Boolean := False;
+   List_Fields      : Boolean := False;
    Command_Clients  : Boolean := False;
    Host_Backings    : Unbounded_String;
    Arguments_OK     : Boolean := True;
@@ -64,7 +68,8 @@ procedure Idle.Main is
    begin
       Ada.Text_IO.Put_Line
         (Ada.Text_IO.Standard_Error,
-         "usage: idle [--syntax-only | --check | --list-endpoints]"
+         "usage: idle [--syntax-only | --check | --list-endpoints"
+         & " | --list-fields]"
          & " [--target TARGET] [--command-client] [--host-backings FILE]"
          & " [-I DIRECTORY]... [-o DIRECTORY]"
          & " FILE.idl...");
@@ -86,6 +91,8 @@ begin
             Check_Only := True;
          elsif Argument = "--list-endpoints" then
             List_Only := True;
+         elsif Argument = "--list-fields" then
+            List_Fields := True;
          elsif Argument = "--command-client" then
             Command_Clients := True;
          elsif Argument = "--endpoints" or else Argument = "-o"
@@ -139,7 +146,7 @@ begin
 
    if Files.Is_Empty
      or else Boolean'Pos (Syntax_Only) + Boolean'Pos (Check_Only)
-             + Boolean'Pos (List_Only) > 1
+             + Boolean'Pos (List_Only) + Boolean'Pos (List_Fields) > 1
    then
       Arguments_OK := False;
    end if;
@@ -177,7 +184,11 @@ begin
       Parse_Errors : Natural;
 
       procedure List (Item : Idle.Syntax.Interface_Declaration);
-      --  Write the id and canonical form of Item and its subprograms.
+      --  Write the id and canonical form of Item, its subprograms and its
+      --  records.
+
+      procedure List_Record_Fields (Item : Idle.Syntax.Interface_Declaration);
+      --  Write the fields of each record of Item.
 
       ----------
       -- List --
@@ -202,7 +213,33 @@ begin
             Put (Idle.Endpoints.Subprogram_Id (Item, Subprogram),
                  Idle.Endpoints.Subprogram_Form (Item, Subprogram));
          end loop;
+
+         --  The type id of each record (idle#114).
+         for Declared of Item.Types loop
+            if Idle.Syntax."=" (Declared.Kind, Idle.Syntax.Record_Type) then
+               Put (Idle.Endpoints.Record_Id (Item, Declared),
+                    Idle.Endpoints.Record_Form (Item, Declared));
+            end if;
+         end loop;
       end List;
+
+      ------------------------
+      -- List_Record_Fields --
+      ------------------------
+
+      procedure List_Record_Fields
+        (Item : Idle.Syntax.Interface_Declaration)
+      is
+      begin
+         for Declared of Item.Types loop
+            if Idle.Syntax."=" (Declared.Kind, Idle.Syntax.Record_Type) then
+               for Index in 1 .. Declared.Fields.Last_Index loop
+                  Ada.Text_IO.Put_Line
+                    (Idle.Endpoints.Field_Form (Item, Declared, Index));
+               end loop;
+            end if;
+         end loop;
+      end List_Record_Fields;
 
    begin
 
@@ -220,6 +257,10 @@ begin
                elsif List_Only then
                   if Item.Kind in Idle.Syntax.Interface_Unit then
                      List (Item);
+                  end if;
+               elsif List_Fields then
+                  if Item.Kind in Idle.Syntax.Interface_Unit then
+                     List_Record_Fields (Item);
                   end if;
                else
                   Idle.Targets.Kernel.Generate

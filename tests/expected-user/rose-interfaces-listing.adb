@@ -14,6 +14,12 @@ package body Rose.Interfaces.Listing is
       Last   : in out Storage_Offset)
       return Unsigned_32;
 
+   procedure Put_Header
+     (Buffer : in out Storage_Array;
+      Start  : Storage_Offset;
+      Finish : Storage_Offset;
+      Count  : Unsigned_32);
+
    procedure Put_Word_64
      (Buffer : in out Storage_Array;
       Last   : in out Storage_Offset;
@@ -49,9 +55,21 @@ package body Rose.Interfaces.Listing is
       Last   : in out System.Storage_Elements.Storage_Offset;
       Item   : out Stamp)
    is
+      Start  : constant Storage_Offset := Last;
+      Header : constant Unsigned_32 := Get_Word_32 (Buffer, Last);
+      Finish : constant Storage_Offset :=
+        Start + Storage_Offset (Header and 16#FF_FFFF#);
+      Count  : constant Unsigned_32 := Shift_Right (Header, 24);
    begin
+      if Count < 2 or else (Finish < Last or else Finish > Buffer'Last) then
+         raise Constraint_Error;
+      end if;
       Item.Seconds := To_Integer_64 (Get_Word_64 (Buffer, Last));
       Item.Zone := To_Integer_32 (Get_Word_32 (Buffer, Last));
+      if Last > Finish then
+         raise Constraint_Error;
+      end if;
+      Last := Finish;
    end Decode;
 
    ------------
@@ -78,7 +96,15 @@ package body Rose.Interfaces.Listing is
       Last   : in out System.Storage_Elements.Storage_Offset;
       Item   : out File_Info)
    is
+      Start  : constant Storage_Offset := Last;
+      Header : constant Unsigned_32 := Get_Word_32 (Buffer, Last);
+      Finish : constant Storage_Offset :=
+        Start + Storage_Offset (Header and 16#FF_FFFF#);
+      Count  : constant Unsigned_32 := Shift_Right (Header, 24);
    begin
+      if Count < 9 or else (Finish < Last or else Finish > Buffer'Last) then
+         raise Constraint_Error;
+      end if;
       Item.Name :=
         Ada.Strings.Unbounded.To_Unbounded_String (Get_String (Buffer, Last));
       Item.Size := Natural (Get_Word_32 (Buffer, Last));
@@ -90,6 +116,10 @@ package body Rose.Interfaces.Listing is
       Decode (Buffer, Last, Item.Modified);
       Item.Target :=
         Ada.Strings.Unbounded.To_Unbounded_String (Get_String (Buffer, Last));
+      if Last > Finish then
+         raise Constraint_Error;
+      end if;
+      Last := Finish;
    end Decode;
 
    ------------
@@ -116,9 +146,12 @@ package body Rose.Interfaces.Listing is
       Buffer : in out System.Storage_Elements.Storage_Array;
       Last   : in out System.Storage_Elements.Storage_Offset)
    is
+      Start : constant Storage_Offset := Last;
    begin
+      Last := Last + 4;
       Put_Word_64 (Buffer, Last, Unsigned_64'Mod (Item.Seconds));
       Put_Word_32 (Buffer, Last, Unsigned_32'Mod (Item.Zone));
+      Put_Header (Buffer, Start, Last, 2);
    end Encode;
 
    ------------
@@ -145,7 +178,9 @@ package body Rose.Interfaces.Listing is
       Buffer : in out System.Storage_Elements.Storage_Array;
       Last   : in out System.Storage_Elements.Storage_Offset)
    is
+      Start : constant Storage_Offset := Last;
    begin
+      Last := Last + 4;
       Put_String (Buffer, Last, Ada.Strings.Unbounded.To_String (Item.Name));
       Put_Word_32 (Buffer, Last, Unsigned_32 (Item.Size));
       Put_Word_32 (Buffer, Last, Unsigned_32 (Item.Blocks));
@@ -155,6 +190,7 @@ package body Rose.Interfaces.Listing is
       Put_Word_64 (Buffer, Last, Unsigned_64 (Item.Id));
       Encode (Item.Modified, Buffer, Last);
       Put_String (Buffer, Last, Ada.Strings.Unbounded.To_String (Item.Target));
+      Put_Header (Buffer, Start, Last, 9);
    end Encode;
 
    ------------
@@ -182,7 +218,7 @@ package body Rose.Interfaces.Listing is
    is
       pragma Unreferenced (Item);
    begin
-      return 12;
+      return 16;
    end Encoded_Length;
 
    --------------------
@@ -194,7 +230,7 @@ package body Rose.Interfaces.Listing is
       return System.Storage_Elements.Storage_Count
    is
    begin
-      return 36 + Padded
+      return 40 + Padded
         (System.Storage_Elements.Storage_Count
            (Ada.Strings.Unbounded.Length (Item.Name))) + Encoded_Length
         (Item.Modified) + Padded
@@ -268,6 +304,27 @@ package body Rose.Interfaces.Listing is
    begin
       return (Length + 3) / 4 * 4;
    end Padded;
+
+   ----------------
+   -- Put_Header --
+   ----------------
+
+   procedure Put_Header
+     (Buffer : in out Storage_Array;
+      Start  : Storage_Offset;
+      Finish : Storage_Offset;
+      Count  : Unsigned_32)
+   is
+      Position : Storage_Offset := Start;
+   begin
+      if Finish - Start > 16#FF_FFFF# then
+         raise Constraint_Error;
+      end if;
+      Put_Word_32
+        (Buffer,
+         Position,
+         Unsigned_32 (Finish - Start) or Shift_Left (Count, 24));
+   end Put_Header;
 
    ----------------
    -- Put_String --

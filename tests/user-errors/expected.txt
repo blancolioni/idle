@@ -11,3 +11,13 @@ user-errors/records.idl:16:7: error: type Kind is used by record Bad_Fields befo
 user-errors/records.idl:17:7: error: record Bad_Fields cannot hold itself
 user-errors/records.idl:26:4: error: type Encode has the same name as a subprogram of the records' codec, which the interface package declares
 user-errors/records.idl:28:22: error: record Good is in out: a record can be an in or an out argument, but not both
+user-errors/defaults.idl:15:26: error: the default of field Count must be a whole number
+user-errors/defaults.idl:16:26: error: the default of field Flag must be True or False
+user-errors/defaults.idl:17:23: error: the default of field Mode must be a literal of Kind
+user-errors/defaults.idl:18:25: error: the default of field Text must be a string
+user-errors/defaults.idl:19:24: error: the default of field Level is outside the range of Small
+user-errors/defaults.idl:20:24: error: the default of field Tiny is outside the range of Small
+user-errors/defaults.idl:21:27: error: the default of field First is outside the range of Positive
+user-errors/defaults.idl:22:23: error: the default of field Big is too large for Word
+user-errors/defaults.idl:23:24: error: field Part is a record, which takes no default: it has one when each field of Inner has one
+user-errors/defaults.idl:27:4: error: type Bad_Defaults_Type_Id has the same name as the type id of record Bad_Defaults, which the interface package declares

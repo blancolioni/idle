@@ -307,6 +307,14 @@ package body Idle.Targets.Kernel is
             for Generated_Name of Records.Generated_Names loop
                Add (Generated_Name, "a subprogram of the records' codec");
             end loop;
+            for Declared_Type of Item.Types loop
+               if Declared_Type.Kind in Idle.Syntax.Record_Type then
+                  Add (Idle.Names.Ada_Name (To_String (Declared_Type.Name))
+                       & "_Type_Id",
+                       "the type id of record "
+                       & To_String (Declared_Type.Name));
+               end if;
+            end loop;
          end if;
 
          for Declared_Constant of Item.Constants loop

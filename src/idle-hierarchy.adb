@@ -313,6 +313,55 @@ package body Idle.Hierarchy is
       end if;
    end Find_Type;
 
+   -----------------
+   -- Has_Default --
+   -----------------
+
+   function Has_Default
+     (Owner : Idle.Syntax.Interface_Declaration;
+      Item  : Idle.Syntax.Field)
+      return Boolean
+   is
+      function Defaulted
+        (Owner : Idle.Syntax.Interface_Declaration;
+         Item  : Idle.Syntax.Field;
+         Depth : Natural)
+         return Boolean;
+      --  Depth stops a record that holds itself, through another
+      --  interface, from being followed for ever. Such a record is
+      --  reported where records are checked.
+
+      ---------------
+      -- Defaulted --
+      ---------------
+
+      function Defaulted
+        (Owner : Idle.Syntax.Interface_Declaration;
+         Item  : Idle.Syntax.Field;
+         Depth : Natural)
+         return Boolean
+      is
+         Declaring : Idle.Syntax.Interface_Declaration;
+         Found     : Idle.Syntax.Type_Declaration;
+      begin
+         if Item.Has_Default then
+            return True;
+         elsif Depth > 0
+           and then Find_Type
+                      (Owner, To_String (Item.Of_Type.Name), Declaring, Found)
+           and then Idle.Syntax."=" (Found.Kind, Idle.Syntax.Record_Type)
+         then
+            return (for all Field of Found.Fields =>
+                      Defaulted (Declaring, Field, Depth - 1));
+         else
+            return False;
+         end if;
+      end Defaulted;
+
+   begin
+      return Defaulted (Owner, Item, 32);
+   end Has_Default;
+
    -------------
    -- Members --
    -------------

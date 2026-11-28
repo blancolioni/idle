@@ -28,6 +28,9 @@ package Rose.Interfaces.Listing is
       Target   : Ada.Strings.Unbounded.Unbounded_String;
    end record;
 
+   Stamp_Type_Id     : constant Rose.Objects.Endpoint_Id :=
+     16#2842_2EDB_86B9_10F9#;
+
    function Encoded_Length
      (Item : Stamp)
       return System.Storage_Elements.Storage_Count;
@@ -47,6 +50,9 @@ package Rose.Interfaces.Listing is
    function Decode
      (Buffer : System.Storage_Elements.Storage_Array)
       return Stamp;
+
+   File_Info_Type_Id : constant Rose.Objects.Endpoint_Id :=
+     16#3582_BD20_3ADD_A47D#;
 
    function Encoded_Length
      (Item : File_Info)

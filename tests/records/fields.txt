@@ -1,0 +1,9 @@
+rose.interfaces.shelf.stamp 1 seconds integer_64 := 0
+rose.interfaces.shelf.stamp 2 zone integer_32 := 0
+rose.interfaces.shelf.file_info 1 name string
+rose.interfaces.shelf.file_info 2 size natural
+rose.interfaces.shelf.file_info 3 blocks rose.interfaces.shelf.block_count := 256
+rose.interfaces.shelf.file_info 4 of_kind rose.interfaces.shelf.kind := plain
+rose.interfaces.shelf.file_info 5 hidden boolean := false
+rose.interfaces.shelf.file_info 6 target string := "none"
+rose.interfaces.shelf.file_info 7 modified rose.interfaces.shelf.stamp := <>

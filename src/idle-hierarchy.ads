@@ -98,4 +98,12 @@ package Idle.Hierarchy is
    --  (idle#115). Declaring is the interface that declares it. False if
    --  there is no such type, which includes a predefined type.
 
+   function Has_Default
+     (Owner : Idle.Syntax.Interface_Declaration;
+      Item  : Idle.Syntax.Field)
+      return Boolean;
+   --  True if Item, a field of a record of Owner, has a default: one of
+   --  its own, or, for a field whose type is a record, a default for each
+   --  field of that record (idle#114).
+
 end Idle.Hierarchy;

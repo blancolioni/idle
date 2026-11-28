@@ -42,6 +42,46 @@ package Idle.Endpoints is
    --  parameters and result. Two subprograms with the same name have the
    --  same signature if these are equal.
 
+   function Type_Form
+     (Owner     : Idle.Syntax.Interface_Declaration;
+      Reference : Idle.Syntax.Type_Reference)
+      return String;
+   --  The canonical form of the type named by Reference in a declaration
+   --  of Owner.
+
+   function Record_Form
+     (Owner : Idle.Syntax.Interface_Declaration;
+      Item  : Idle.Syntax.Type_Declaration)
+      return String;
+   --  The canonical form of the record Item, declared by Owner, as
+   --  record rose.interfaces.shelf.file_info. It names the record and not
+   --  its fields, so it stays the same as the record gains fields
+   --  (idle#114, Rose ADR 0048).
+
+   function Record_Id
+     (Owner : Idle.Syntax.Interface_Declaration;
+      Item  : Idle.Syntax.Type_Declaration)
+      return Endpoint_Id;
+   --  The type id of the record Item, declared by Owner: the hash of its
+   --  canonical form.
+
+   function Field_Form
+     (Owner : Idle.Syntax.Interface_Declaration;
+      Item  : Idle.Syntax.Type_Declaration;
+      Index : Positive)
+      return String;
+   --  The field Index of the record Item, declared by Owner, as a line of
+   --  idle --list-fields:
+   --
+   --    rose.interfaces.shelf.file_info 2 size rose.interfaces.units.bytes
+   --      := 0
+   --
+   --  on one line: the record, the field's position and name, its type's
+   --  canonical form, and its default, if it has one. A field whose
+   --  record has a default for each of its fields has ":= <>". Rose keeps
+   --  these lines, and within a series a record only gains them at its
+   --  end, each with a default.
+
    function Hash (Form : String) return Endpoint_Id;
    --  The id derived from the canonical form Form.
 

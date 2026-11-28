@@ -16,6 +16,9 @@ package Rose.Interfaces.Catalogue is
       Start   : Offset;
    end record;
 
+   Entry_Info_Type_Id  : constant Rose.Objects.Endpoint_Id :=
+     16#E0B9_A6E7_A06D_2516#;
+
    function Encoded_Length
      (Item : Entry_Info)
       return System.Storage_Elements.Storage_Count;

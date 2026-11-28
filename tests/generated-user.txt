@@ -34,3 +34,4 @@ rose/writable_file
 rose/transactional_writable_file
 rose/reader
 records/listing
+records/shelf
